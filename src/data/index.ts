@@ -1,239 +1,259 @@
-  import { supabase } from '../lib/supabase';
-  import type {
-    BagWithBusiness,
-    Business,
-    ConsumerProfile,
-    OrderWithDetails,
-  } from '../types';
+import { supabase } from '../lib/supabase';
+import type {
+  BagWithBusiness,
+  Business,
+  ConsumerProfile,
+  OrderWithDetails,
+  SurplusBag,
+  BagPhoto,
+  Category,
+} from '../types';
 
-  /**
-   * Returns all surplus bags joined with their business, photos, and category info.
-   */
-  export async function getAllBags(): Promise<BagWithBusiness[]> {
-    const { data, error } = await supabase
-      .from('surplus_bags')
-      .select(`
-        *,
-        business:businesses(*),
-        photos:bag_photos(*)
-      `)
-      .order('created_at', { ascending: false });
+interface BagRow extends SurplusBag {
+  business: Business;
+  photos: BagPhoto[];
+}
 
-    if (error) {
-      console.error('getAllBags error:', error);
-      return [];
-    }
+interface BusinessCategoryRow {
+  business_id: string;
+  category: Category | null;
+}
 
-    // Get all business categories in one query
-    const businessIds = [...new Set((data ?? []).map((b: any) => b.business_id))];
-    const { data: bcData } = await supabase
-      .from('business_categories')
-      .select('business_id, category:categories(*)')
-      .in('business_id', businessIds);
+interface OrderRow {
+  bag: (SurplusBag & { business: Business }) | null;
+  payment: unknown[] | unknown;
+  [key: string]: unknown;
+}
 
-    const categoryMap: Record<string, any> = {};
-    for (const bc of bcData ?? []) {
-      categoryMap[bc.business_id] = bc.category;
-    }
+/**
+ * Returns all surplus bags joined with their business, photos, and category info.
+ */
+export async function getAllBags(): Promise<BagWithBusiness[]> {
+  const { data, error } = await supabase
+    .from('surplus_bags')
+    .select(`
+      *,
+      business:businesses(*),
+      photos:bag_photos(*)
+    `)
+    .order('created_at', { ascending: false });
 
-    return (data ?? []).map((bag: any) => ({
-      ...bag,
-      business: bag.business,
-      photos: bag.photos ?? [],
-      category: categoryMap[bag.business_id] ?? null,
-      isFavorite: false,
-    }));
+  if (error || !data) {
+    return [];
   }
 
-  /**
-   * Returns a single bag by ID, or undefined if not found.
-   */
-  export async function getBagById(id: string): Promise<BagWithBusiness | undefined> {
-    const { data, error } = await supabase
-      .from('surplus_bags')
-      .select(`
-        *,
-        business:businesses(*),
-        photos:bag_photos(*)
-      `)
-      .eq('id', id)
-      .single();
+  const bags = data as unknown as BagRow[];
 
-    if (error || !data) {
-      console.error('getBagById error:', error);
-      return undefined;
-    }
+  // Get all business categories in one query
+  const businessIds = [...new Set(bags.map((b) => b.business_id))];
+  const { data: bcData } = await supabase
+    .from('business_categories')
+    .select('business_id, category:categories(*)')
+    .in('business_id', businessIds);
 
-    const { data: catData } = await supabase
-      .from('business_categories')
-      .select('category:categories(*)')
-      .eq('business_id', data.business_id)
-      .limit(1)
-      .single();
-
-    return {
-      ...data,
-      business: data.business,
-      photos: data.photos ?? [],
-      category: catData?.category ?? null,
-      isFavorite: false,
-    };
+  const categoryMap: Record<string, Category | null> = {};
+  for (const bc of (bcData as unknown as BusinessCategoryRow[]) ?? []) {
+    categoryMap[bc.business_id] = bc.category;
   }
 
-  /**
-   * Returns bags filtered by category ID.
-   */
-  export async function getBagsByCategory(categoryId: string): Promise<BagWithBusiness[]> {
-    const { data: businessIds } = await supabase
-      .from('business_categories')
-      .select('business_id')
-      .eq('category_id', categoryId);
+  return bags.map((bag) => ({
+    ...bag,
+    business: bag.business,
+    photos: bag.photos ?? [],
+    category: categoryMap[bag.business_id] ?? null,
+    isFavorite: false,
+  }));
+}
 
-    if (!businessIds || businessIds.length === 0) return [];
+/**
+ * Returns a single bag by ID, or undefined if not found.
+ */
+export async function getBagById(id: string): Promise<BagWithBusiness | undefined> {
+  const { data, error } = await supabase
+    .from('surplus_bags')
+    .select(`
+      *,
+      business:businesses(*),
+      photos:bag_photos(*)
+    `)
+    .eq('id', id)
+    .single();
 
-    const ids = businessIds.map((b: any) => b.business_id);
-
-    const { data, error } = await supabase
-      .from('surplus_bags')
-      .select(`
-        *,
-        business:businesses(*),
-        photos:bag_photos(*)
-      `)
-      .in('business_id', ids)
-      .order('created_at', { ascending: false });
-
-    if (error) {
-      console.error('getBagsByCategory error:', error);
-      return [];
-    }
-
-    return (data ?? []).map((bag: any) => ({
-      ...bag,
-      business: bag.business,
-      photos: bag.photos ?? [],
-      category: null,
-      isFavorite: false,
-    }));
+  if (error || !data) {
+    return undefined;
   }
 
-  /**
-   * Returns bags from businesses that are in the user's favorites.
-   */
-  export async function getFavoriteBags(
-    favoriteBusinessIds: Set<string>,
-  ): Promise<BagWithBusiness[]> {
-    const ids = Array.from(favoriteBusinessIds);
-    if (ids.length === 0) return [];
+  const bag = data as unknown as BagRow;
 
-    const { data, error } = await supabase
-      .from('surplus_bags')
-      .select(`
-        *,
-        business:businesses(*),
-        photos:bag_photos(*)
-      `)
-      .in('business_id', ids)
-      .order('created_at', { ascending: false });
+  const { data: catData } = await supabase
+    .from('business_categories')
+    .select('category:categories(*)')
+    .eq('business_id', bag.business_id)
+    .limit(1)
+    .single();
 
-    if (error) {
-      console.error('getFavoriteBags error:', error);
-      return [];
-    }
+  const catRow = catData as unknown as { category: Category | null } | null;
 
-    return (data ?? []).map((bag: any) => ({
-      ...bag,
-      business: bag.business,
-      photos: bag.photos ?? [],
-      category: null,
-      isFavorite: true,
-    }));
+  return {
+    ...bag,
+    business: bag.business,
+    photos: bag.photos ?? [],
+    category: catRow?.category ?? null,
+    isFavorite: false,
+  };
+}
+
+/**
+ * Returns bags filtered by category ID.
+ */
+export async function getBagsByCategory(categoryId: string): Promise<BagWithBusiness[]> {
+  const { data: businessIds } = await supabase
+    .from('business_categories')
+    .select('business_id')
+    .eq('category_id', categoryId);
+
+  if (!businessIds || businessIds.length === 0) return [];
+
+  const ids = (businessIds as unknown as { business_id: string }[]).map((b) => b.business_id);
+
+  const { data, error } = await supabase
+    .from('surplus_bags')
+    .select(`
+      *,
+      business:businesses(*),
+      photos:bag_photos(*)
+    `)
+    .in('business_id', ids)
+    .order('created_at', { ascending: false });
+
+  if (error || !data) {
+    return [];
   }
 
-  /**
-   * Searches bags by query string.
-   */
-  export async function searchBags(query: string): Promise<BagWithBusiness[]> {
-    if (!query.trim()) return getAllBags();
+  return (data as unknown as BagRow[]).map((bag) => ({
+    ...bag,
+    business: bag.business,
+    photos: bag.photos ?? [],
+    category: null,
+    isFavorite: false,
+  }));
+}
 
-    const { data, error } = await supabase
-      .from('surplus_bags')
-      .select(`
-        *,
-        business:businesses(*),
-        photos:bag_photos(*)
-      `)
-      .or(`title.ilike.%${query}%,description.ilike.%${query}%`)
-      .order('created_at', { ascending: false });
+/**
+ * Returns bags from businesses that are in the user's favorites.
+ */
+export async function getFavoriteBags(
+  favoriteBusinessIds: Set<string>,
+): Promise<BagWithBusiness[]> {
+  const ids = Array.from(favoriteBusinessIds);
+  if (ids.length === 0) return [];
 
-    if (error) {
-      console.error('searchBags error:', error);
-      return [];
-    }
+  const { data, error } = await supabase
+    .from('surplus_bags')
+    .select(`
+      *,
+      business:businesses(*),
+      photos:bag_photos(*)
+    `)
+    .in('business_id', ids)
+    .order('created_at', { ascending: false });
 
-    return (data ?? []).map((bag: any) => ({
-      ...bag,
-      business: bag.business,
-      photos: bag.photos ?? [],
-      category: null,
-      isFavorite: false,
-    }));
+  if (error || !data) {
+    return [];
   }
 
-  /**
-   * Returns a business by ID.
-   */
-  export async function getBusinessById(id: string): Promise<Business | undefined> {
-    const { data, error } = await supabase
-      .from('businesses')
-      .select('*')
-      .eq('id', id)
-      .single();
+  return (data as unknown as BagRow[]).map((bag) => ({
+    ...bag,
+    business: bag.business,
+    photos: bag.photos ?? [],
+    category: null,
+    isFavorite: true,
+  }));
+}
 
-    if (error) {
-      console.error('getBusinessById error:', error);
-      return undefined;
-    }
+/**
+ * Searches bags by query string.
+ */
+export async function searchBags(query: string): Promise<BagWithBusiness[]> {
+  if (!query.trim()) return getAllBags();
 
-    return data;
+  const { data, error } = await supabase
+    .from('surplus_bags')
+    .select(`
+      *,
+      business:businesses(*),
+      photos:bag_photos(*)
+    `)
+    .or(`title.ilike.%${query}%,description.ilike.%${query}%`)
+    .order('created_at', { ascending: false });
+
+  if (error || !data) {
+    return [];
   }
 
-  /**
-   * Returns order history with full details.
-   */
-  export async function getOrderHistory(): Promise<OrderWithDetails[]> {
-    const { data, error } = await supabase
-      .from('orders')
-      .select(`
-        *,
-        bag:surplus_bags(*, business:businesses(*)),
-        payment:payments(*)
-      `)
-      .order('created_at', { ascending: false });
+  return (data as unknown as BagRow[]).map((bag) => ({
+    ...bag,
+    business: bag.business,
+    photos: bag.photos ?? [],
+    category: null,
+    isFavorite: false,
+  }));
+}
 
-    if (error) {
-      console.error('getOrderHistory error:', error);
-      return [];
-    }
+/**
+ * Returns a business by ID.
+ */
+export async function getBusinessById(id: string): Promise<Business | undefined> {
+  const { data, error } = await supabase
+    .from('businesses')
+    .select('*')
+    .eq('id', id)
+    .single();
 
-    return (data ?? []).map((order: any) => ({
+  if (error || !data) {
+    return undefined;
+  }
+
+  return data as unknown as Business;
+}
+
+/**
+ * Returns order history with full details.
+ */
+export async function getOrderHistory(): Promise<OrderWithDetails[]> {
+  const { data, error } = await supabase
+    .from('orders')
+    .select(`
+      *,
+      bag:surplus_bags(*, business:businesses(*)),
+      payment:payments(*)
+    `)
+    .order('created_at', { ascending: false });
+
+  if (error || !data) {
+    return [];
+  }
+
+  return (data as unknown as OrderRow[])
+    .filter((order) => order.bag !== null)
+    .map((order) => ({
       ...order,
-      business: order.bag?.business ?? null,
-      bag: order.bag,
-      payment: Array.isArray(order.payment) ? order.payment[0] ?? null : order.payment,
-    }));
-  }
+      business: order.bag!.business,
+      bag: order.bag!,
+      payment: Array.isArray(order.payment) ? (order.payment[0] ?? null) : order.payment,
+    })) as unknown as OrderWithDetails[];
+}
 
-  /**
-   * Returns the current user profile.
-   * Hardcoded until auth is implemented.
-   */
-  export function getUser(): ConsumerProfile {
-    return {
-      id: '00000000-0000-0000-0000-000000000001',
-      user_id: '00000000-0000-0000-0000-000000000001',
-      name: 'Usuario Demo',
-      created_at: '2024-01-01T00:00:00Z',
-      updated_at: '2024-01-01T00:00:00Z',
-    };
-  }
+/**
+ * Returns the current user profile.
+ * Hardcoded until auth is implemented.
+ */
+export function getUser(): ConsumerProfile {
+  return {
+    id: '00000000-0000-0000-0000-000000000001',
+    user_id: '00000000-0000-0000-0000-000000000001',
+    name: 'Usuario Demo',
+    created_at: '2024-01-01T00:00:00Z',
+    updated_at: '2024-01-01T00:00:00Z',
+  };
+}
