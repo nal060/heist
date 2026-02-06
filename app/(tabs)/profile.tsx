@@ -3,7 +3,7 @@ import { View, ScrollView, StyleSheet, Text, TouchableOpacity } from 'react-nati
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { colors, spacing, typography, shadows, borderRadius } from '../../src/theme';
+import { colors, spacing, typography, borderRadius } from '../../src/theme';
 import { strings } from '../../src/constants/strings';
 import { getUser, getOrderHistory } from '../../src/data';
 import Divider from '../../src/components/ui/Divider';
