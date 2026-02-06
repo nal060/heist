@@ -1,5 +1,5 @@
-import React from 'react';
-import { View, FlatList, StyleSheet, Text } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, FlatList, StyleSheet, Text, ActivityIndicator } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import BagCardVertical from '../../src/components/bags/BagCardVertical';
@@ -14,19 +14,34 @@ export default function FavoritesScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { favoriteBusinessIds, toggleFavorite } = useFavorites();
+  const [favoriteBags, setFavoriteBags] = useState<BagWithBusiness[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const favoriteBags = getFavoriteBags(favoriteBusinessIds);
+  useEffect(() => {
+    setLoading(true);
+    getFavoriteBags(favoriteBusinessIds).then((bags) => {
+      setFavoriteBags(bags);
+      setLoading(false);
+    });
+  }, [favoriteBusinessIds]);
 
   const handleBagPress = (bag: BagWithBusiness) => {
     router.push(`/bag/${bag.id}`);
   };
+
+  if (loading) {
+    return (
+      <View style={[styles.container, styles.centered, { paddingTop: insets.top }]}>
+        <ActivityIndicator size="large" color={colors.primary[500]} />
+      </View>
+    );
+  }
 
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
       <View style={styles.header}>
         <Text style={styles.title}>{strings.favorites.title}</Text>
       </View>
-
       <FlatList
         data={favoriteBags}
         renderItem={({ item }) => (
@@ -58,6 +73,10 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.background.primary,
+  },
+  centered: {
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   header: {
     paddingHorizontal: spacing.lg,

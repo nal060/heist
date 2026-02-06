@@ -9,7 +9,7 @@ type FavoritesAction =
   | { type: 'SET_FAVORITES'; businessIds: string[] };
 
 const initialState: FavoritesState = {
-  favoriteBusinessIds: new Set(['biz-1', 'biz-3']),
+  favoriteBusinessIds: new Set<string>(),
 };
 
 function favoritesReducer(state: FavoritesState, action: FavoritesAction): FavoritesState {
@@ -46,13 +46,18 @@ export function FavoritesProvider({ children }: { children: React.ReactNode }) {
     [state.favoriteBusinessIds]
   );
 
-  const toggleFavorite = useCallback(
-    (businessId: string) => dispatch({ type: 'TOGGLE_FAVORITE', businessId }),
-    []
-  );
+  const toggleFavorite = useCallback((businessId: string) => {
+    dispatch({ type: 'TOGGLE_FAVORITE', businessId });
+  }, []);
 
   return (
-    <FavoritesContext.Provider value={{ favoriteBusinessIds: state.favoriteBusinessIds, isFavorite, toggleFavorite }}>
+    <FavoritesContext.Provider
+      value={{
+        favoriteBusinessIds: state.favoriteBusinessIds,
+        isFavorite,
+        toggleFavorite,
+      }}
+    >
       {children}
     </FavoritesContext.Provider>
   );

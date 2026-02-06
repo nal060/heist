@@ -1,161 +1,239 @@
-import type {
-  BagWithBusiness,
-  Business,
-  ConsumerProfile,
-  OrderWithDetails,
-} from '../types';
-import { CATEGORIES } from './mock/categories';
-import { MOCK_BUSINESSES } from './mock/businesses';
-import { getMockBags } from './mock/bags';
-import { MOCK_BAG_PHOTOS } from './mock/photos';
-import { getMockOrders, getMockPayments } from './mock/orders';
-import { MOCK_USER } from './mock/user';
+  import { supabase } from '../lib/supabase';
+  import type {
+    BagWithBusiness,
+    Business,
+    ConsumerProfile,
+    OrderWithDetails,
+  } from '../types';
 
-/**
- * Maps a business_id to its category_id.
- * This simulates the business_categories join table.
- */
-const BUSINESS_CATEGORY_MAP: Record<string, string> = {
-  'biz-001': 'cat-2', // Panaderia Don Pan -> Panaderia
-  'biz-002': 'cat-4', // Cafe Unido -> Cafe
-  'biz-003': 'cat-3', // Super 99 -> Supermercado
-  'biz-004': 'cat-5', // Athanasiou -> Restaurante
-  'biz-005': 'cat-4', // New York Bagel Cafe -> Cafe
-  'biz-006': 'cat-1', // Mercado de Mariscos -> Comidas
-  'biz-007': 'cat-5', // Tantalo Kitchen -> Restaurante
-  'biz-008': 'cat-3', // Gran Morrison -> Supermercado
-  'biz-009': 'cat-5', // La Rana Dorada -> Restaurante
-  'biz-010': 'cat-5', // Crepes & Waffles -> Restaurante
-};
+  /**
+   * Returns all surplus bags joined with their business, photos, and category info.
+   */
+  export async function getAllBags(): Promise<BagWithBusiness[]> {
+    const { data, error } = await supabase
+      .from('surplus_bags')
+      .select(`
+        *,
+        business:businesses(*),
+        photos:bag_photos(*)
+      `)
+      .order('created_at', { ascending: false });
 
-/**
- * Builds a BagWithBusiness by joining a bag with its business, photos, and category.
- */
-function buildBagWithBusiness(
-  bag: ReturnType<typeof getMockBags>[number],
-  favoriteBusinessIds?: Set<string>,
-): BagWithBusiness | null {
-  const business = MOCK_BUSINESSES.find((b) => b.id === bag.business_id);
-  if (!business) return null;
+    if (error) {
+      console.error('getAllBags error:', error);
+      return [];
+    }
 
-  const photos = MOCK_BAG_PHOTOS.filter((p) => p.surplus_bag_id === bag.id);
-  const categoryId = BUSINESS_CATEGORY_MAP[business.id];
-  const category = categoryId
-    ? CATEGORIES.find((c) => c.id === categoryId) ?? null
-    : null;
+    // Get all business categories in one query
+    const businessIds = [...new Set((data ?? []).map((b: any) => b.business_id))];
+    const { data: bcData } = await supabase
+      .from('business_categories')
+      .select('business_id, category:categories(*)')
+      .in('business_id', businessIds);
 
-  return {
-    ...bag,
-    business,
-    photos,
-    category,
-    isFavorite: favoriteBusinessIds?.has(business.id) ?? false,
-  };
-}
+    const categoryMap: Record<string, any> = {};
+    for (const bc of bcData ?? []) {
+      categoryMap[bc.business_id] = bc.category;
+    }
 
-/**
- * Returns all surplus bags joined with their business, photos, and category info.
- */
-export function getAllBags(): BagWithBusiness[] {
-  const bags = getMockBags();
-  return bags
-    .map((bag) => buildBagWithBusiness(bag))
-    .filter((b): b is BagWithBusiness => b !== null);
-}
+    return (data ?? []).map((bag: any) => ({
+      ...bag,
+      business: bag.business,
+      photos: bag.photos ?? [],
+      category: categoryMap[bag.business_id] ?? null,
+      isFavorite: false,
+    }));
+  }
 
-/**
- * Returns bags filtered by category ID.
- */
-export function getBagsByCategory(categoryId: string): BagWithBusiness[] {
-  const allBags = getAllBags();
-  return allBags.filter((bag) => bag.category?.id === categoryId);
-}
+  /**
+   * Returns a single bag by ID, or undefined if not found.
+   */
+  export async function getBagById(id: string): Promise<BagWithBusiness | undefined> {
+    const { data, error } = await supabase
+      .from('surplus_bags')
+      .select(`
+        *,
+        business:businesses(*),
+        photos:bag_photos(*)
+      `)
+      .eq('id', id)
+      .single();
 
-/**
- * Returns a single bag by ID, or undefined if not found.
- */
-export function getBagById(id: string): BagWithBusiness | undefined {
-  const bags = getMockBags();
-  const bag = bags.find((b) => b.id === id);
-  if (!bag) return undefined;
-  return buildBagWithBusiness(bag) ?? undefined;
-}
+    if (error || !data) {
+      console.error('getBagById error:', error);
+      return undefined;
+    }
 
-/**
- * Returns bags from businesses that are in the user's favorites.
- */
-export function getFavoriteBags(
-  favoriteBusinessIds: Set<string>,
-): BagWithBusiness[] {
-  const bags = getMockBags();
-  return bags
-    .filter((bag) => favoriteBusinessIds.has(bag.business_id))
-    .map((bag) => buildBagWithBusiness(bag, favoriteBusinessIds))
-    .filter((b): b is BagWithBusiness => b !== null);
-}
+    const { data: catData } = await supabase
+      .from('business_categories')
+      .select('category:categories(*)')
+      .eq('business_id', data.business_id)
+      .limit(1)
+      .single();
 
-/**
- * Searches bags by query string, matching against bag title, description,
- * business name, or category name.
- */
-export function searchBags(query: string): BagWithBusiness[] {
-  const normalizedQuery = query.toLowerCase().trim();
-  if (!normalizedQuery) return getAllBags();
+    return {
+      ...data,
+      business: data.business,
+      photos: data.photos ?? [],
+      category: catData?.category ?? null,
+      isFavorite: false,
+    };
+  }
 
-  return getAllBags().filter((bag) => {
-    const searchableText = [
-      bag.title,
-      bag.description,
-      bag.business.name,
-      bag.business.address,
-      bag.category?.name,
-    ]
-      .filter(Boolean)
-      .join(' ')
-      .toLowerCase();
+  /**
+   * Returns bags filtered by category ID.
+   */
+  export async function getBagsByCategory(categoryId: string): Promise<BagWithBusiness[]> {
+    const { data: businessIds } = await supabase
+      .from('business_categories')
+      .select('business_id')
+      .eq('category_id', categoryId);
 
-    return searchableText.includes(normalizedQuery);
-  });
-}
+    if (!businessIds || businessIds.length === 0) return [];
 
-/**
- * Returns a business by ID.
- */
-export function getBusinessById(id: string): Business | undefined {
-  return MOCK_BUSINESSES.find((b) => b.id === id);
-}
+    const ids = businessIds.map((b: any) => b.business_id);
 
-/**
- * Returns the mock user's order history with full details (business, bag, payment).
- */
-export function getOrderHistory(): OrderWithDetails[] {
-  const orders = getMockOrders();
-  const payments = getMockPayments();
-  const bags = getMockBags();
+    const { data, error } = await supabase
+      .from('surplus_bags')
+      .select(`
+        *,
+        business:businesses(*),
+        photos:bag_photos(*)
+      `)
+      .in('business_id', ids)
+      .order('created_at', { ascending: false });
 
-  return orders
-    .map((order) => {
-      const bag = bags.find((b) => b.id === order.surplus_bag_id);
-      if (!bag) return null;
+    if (error) {
+      console.error('getBagsByCategory error:', error);
+      return [];
+    }
 
-      const business = MOCK_BUSINESSES.find((b) => b.id === bag.business_id);
-      if (!business) return null;
+    return (data ?? []).map((bag: any) => ({
+      ...bag,
+      business: bag.business,
+      photos: bag.photos ?? [],
+      category: null,
+      isFavorite: false,
+    }));
+  }
 
-      const payment = payments.find((p) => p.order_id === order.id) ?? null;
+  /**
+   * Returns bags from businesses that are in the user's favorites.
+   */
+  export async function getFavoriteBags(
+    favoriteBusinessIds: Set<string>,
+  ): Promise<BagWithBusiness[]> {
+    const ids = Array.from(favoriteBusinessIds);
+    if (ids.length === 0) return [];
 
-      return {
-        ...order,
-        business,
-        bag,
-        payment,
-      };
-    })
-    .filter((o): o is OrderWithDetails => o !== null);
-}
+    const { data, error } = await supabase
+      .from('surplus_bags')
+      .select(`
+        *,
+        business:businesses(*),
+        photos:bag_photos(*)
+      `)
+      .in('business_id', ids)
+      .order('created_at', { ascending: false });
 
-/**
- * Returns the current mock user profile.
- */
-export function getUser(): ConsumerProfile {
-  return MOCK_USER;
-}
+    if (error) {
+      console.error('getFavoriteBags error:', error);
+      return [];
+    }
+
+    return (data ?? []).map((bag: any) => ({
+      ...bag,
+      business: bag.business,
+      photos: bag.photos ?? [],
+      category: null,
+      isFavorite: true,
+    }));
+  }
+
+  /**
+   * Searches bags by query string.
+   */
+  export async function searchBags(query: string): Promise<BagWithBusiness[]> {
+    if (!query.trim()) return getAllBags();
+
+    const { data, error } = await supabase
+      .from('surplus_bags')
+      .select(`
+        *,
+        business:businesses(*),
+        photos:bag_photos(*)
+      `)
+      .or(`title.ilike.%${query}%,description.ilike.%${query}%`)
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      console.error('searchBags error:', error);
+      return [];
+    }
+
+    return (data ?? []).map((bag: any) => ({
+      ...bag,
+      business: bag.business,
+      photos: bag.photos ?? [],
+      category: null,
+      isFavorite: false,
+    }));
+  }
+
+  /**
+   * Returns a business by ID.
+   */
+  export async function getBusinessById(id: string): Promise<Business | undefined> {
+    const { data, error } = await supabase
+      .from('businesses')
+      .select('*')
+      .eq('id', id)
+      .single();
+
+    if (error) {
+      console.error('getBusinessById error:', error);
+      return undefined;
+    }
+
+    return data;
+  }
+
+  /**
+   * Returns order history with full details.
+   */
+  export async function getOrderHistory(): Promise<OrderWithDetails[]> {
+    const { data, error } = await supabase
+      .from('orders')
+      .select(`
+        *,
+        bag:surplus_bags(*, business:businesses(*)),
+        payment:payments(*)
+      `)
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      console.error('getOrderHistory error:', error);
+      return [];
+    }
+
+    return (data ?? []).map((order: any) => ({
+      ...order,
+      business: order.bag?.business ?? null,
+      bag: order.bag,
+      payment: Array.isArray(order.payment) ? order.payment[0] ?? null : order.payment,
+    }));
+  }
+
+  /**
+   * Returns the current user profile.
+   * Hardcoded until auth is implemented.
+   */
+  export function getUser(): ConsumerProfile {
+    return {
+      id: '00000000-0000-0000-0000-000000000001',
+      user_id: '00000000-0000-0000-0000-000000000001',
+      name: 'Usuario Demo',
+      created_at: '2024-01-01T00:00:00Z',
+      updated_at: '2024-01-01T00:00:00Z',
+    };
+  }

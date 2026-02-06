@@ -1,5 +1,5 @@
-import React from 'react';
-import { View, ScrollView, StyleSheet, Text, TouchableOpacity } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, ScrollView, StyleSheet, Text, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -7,12 +7,22 @@ import { colors, spacing, typography, borderRadius } from '../../src/theme';
 import { strings } from '../../src/constants/strings';
 import { getUser, getOrderHistory } from '../../src/data';
 import Divider from '../../src/components/ui/Divider';
+import type { OrderWithDetails } from '../../src/types';
 
 export default function ProfileScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const user = getUser();
-  const orders = getOrderHistory();
+  const [orders, setOrders] = useState<OrderWithDetails[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    getOrderHistory().then((data) => {
+      setOrders(data);
+      setLoading(false);
+    });
+  }, []);
+
   const completedOrders = orders.filter((o) => o.status === 'picked_up');
 
   const impactStats = [
@@ -35,6 +45,14 @@ export default function ProfileScreen() {
       color: '#FF9800',
     },
   ];
+
+  if (loading) {
+    return (
+      <View style={[styles.container, styles.centered, { paddingTop: insets.top }]}>
+        <ActivityIndicator size="large" color={colors.primary[500]} />
+      </View>
+    );
+  }
 
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
@@ -105,6 +123,10 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.background.primary,
+  },
+  centered: {
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   headerRow: {
     flexDirection: 'row',

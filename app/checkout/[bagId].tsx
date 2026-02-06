@@ -1,10 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
+  ActivityIndicator,
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -16,14 +17,30 @@ import BusinessLogo from '../../src/components/business/BusinessLogo';
 import Divider from '../../src/components/ui/Divider';
 import { formatCurrency } from '../../src/utils/formatCurrency';
 import { formatPickupWindow, getPickupLabel } from '../../src/utils/formatTime';
+import type { BagWithBusiness } from '../../src/types';
 
 export default function CheckoutScreen() {
   const { bagId } = useLocalSearchParams<{ bagId: string }>();
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const [quantity, setQuantity] = useState(1);
+  const [bag, setBag] = useState<BagWithBusiness | undefined>(undefined);
+  const [loading, setLoading] = useState(true);
 
-  const bag = getBagById(bagId);
+  useEffect(() => {
+    getBagById(bagId).then((data) => {
+      setBag(data);
+      setLoading(false);
+    });
+  }, [bagId]);
+
+  if (loading) {
+    return (
+      <View style={[styles.container, styles.centered]}>
+        <ActivityIndicator size="large" color={colors.primary[500]} />
+      </View>
+    );
+  }
 
   if (!bag) {
     return (
@@ -34,7 +51,7 @@ export default function CheckoutScreen() {
   }
 
   const subtotal = bag.discounted_price * quantity;
-  const tax = subtotal * 0.07; // Panama ITBMS 7%
+  const tax = subtotal * 0.07;
   const total = subtotal + tax;
 
   const handlePay = () => {
@@ -70,7 +87,6 @@ export default function CheckoutScreen() {
             </View>
           </View>
 
-          {/* Pickup */}
           <View style={styles.pickupRow}>
             <Ionicons name="time-outline" size={18} color={colors.primary[500]} />
             <Text style={styles.pickupText}>
@@ -165,8 +181,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-
-  // Header
   header: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -188,8 +202,6 @@ const styles = StyleSheet.create({
     fontWeight: typography.fontWeight.bold,
     color: colors.text.primary,
   },
-
-  // Cards
   card: {
     backgroundColor: colors.white,
     marginHorizontal: spacing.lg,
@@ -229,8 +241,6 @@ const styles = StyleSheet.create({
     fontSize: typography.fontSize.sm,
     color: colors.text.secondary,
   },
-
-  // Quantity
   sectionLabel: {
     fontSize: typography.fontSize.sm,
     fontWeight: typography.fontWeight.semibold,
@@ -264,8 +274,6 @@ const styles = StyleSheet.create({
     minWidth: 40,
     textAlign: 'center',
   },
-
-  // Payment
   paymentMethodRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -288,8 +296,6 @@ const styles = StyleSheet.create({
     fontSize: typography.fontSize.sm,
     color: colors.text.secondary,
   },
-
-  // Summary
   summaryRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -313,8 +319,6 @@ const styles = StyleSheet.create({
     fontWeight: typography.fontWeight.bold,
     color: colors.primary[500],
   },
-
-  // Bottom bar
   bottomBar: {
     position: 'absolute',
     bottom: 0,
