@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, FlatList, StyleSheet, Text, TouchableOpacity } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -25,7 +25,11 @@ const STATUS_BADGE_VARIANT: Record<OrderStatus, 'popular' | 'nuevo' | 'remaining
 export default function OrderHistoryScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const orders = getOrderHistory();
+  const [orders, setOrders] = useState<OrderWithDetails[]>([]);
+
+  useEffect(() => {
+    getOrderHistory().then(setOrders);
+  }, []);
 
   const renderOrder = ({ item }: { item: OrderWithDetails }) => (
     <TouchableOpacity style={styles.orderCard} activeOpacity={0.7}>
