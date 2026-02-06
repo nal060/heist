@@ -42,3 +42,6 @@ yarn-error.*
 
 # Inspiration/reference images (local only)
 inspo/
+
+# Internal docs (local only)
+docs/
