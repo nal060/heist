@@ -3,16 +3,8 @@ import type { SurplusBag } from '../../types';
 /** Returns today's date as YYYY-MM-DD string */
 const today = (): string => new Date().toISOString().split('T')[0];
 
-/** Returns yesterday's date as YYYY-MM-DD string */
-const yesterday = (): string => {
-  const d = new Date();
-  d.setDate(d.getDate() - 1);
-  return d.toISOString().split('T')[0];
-};
-
 export const getMockBags = (): SurplusBag[] => {
   const todayStr = today();
-  const yesterdayStr = yesterday();
   const now = new Date().toISOString();
 
   return [
