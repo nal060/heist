@@ -1,10 +1,11 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import {
   View,
   ScrollView,
   FlatList,
   StyleSheet,
   RefreshControl,
+  ActivityIndicator,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -25,8 +26,19 @@ export default function DiscoverScreen() {
   const { isFavorite, toggleFavorite } = useFavorites();
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
+  const [allBags, setAllBags] = useState<BagWithBusiness[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const allBags = getAllBags();
+  const loadBags = useCallback(async () => {
+    const bags = await getAllBags();
+    setAllBags(bags);
+    setLoading(false);
+  }, []);
+
+  useEffect(() => {
+    loadBags();
+  }, [loadBags]);
+
   const activeBags = allBags.filter((b) => b.status === 'active');
 
   const filteredBags = selectedCategory
@@ -36,10 +48,11 @@ export default function DiscoverScreen() {
   const nearbyBags = filteredBags.slice(0, 8);
   const recommendedBags = filteredBags.slice(4, 12);
 
-  const onRefresh = useCallback(() => {
+  const onRefresh = useCallback(async () => {
     setRefreshing(true);
-    setTimeout(() => setRefreshing(false), 1000);
-  }, []);
+    await loadBags();
+    setRefreshing(false);
+  }, [loadBags]);
 
   const handleBagPress = (bag: BagWithBusiness) => {
     router.push(`/bag/${bag.id}`);
@@ -54,6 +67,14 @@ export default function DiscoverScreen() {
       onToggleFavorite={() => toggleFavorite(item.business_id)}
     />
   );
+
+  if (loading) {
+    return (
+      <View style={[styles.container, styles.centered, { paddingTop: insets.top }]}>
+        <ActivityIndicator size="large" color={colors.primary[500]} />
+      </View>
+    );
+  }
 
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
@@ -129,6 +150,10 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.background.primary,
+  },
+  centered: {
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   categoriesContainer: {
     paddingHorizontal: spacing.lg,

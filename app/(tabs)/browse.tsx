@@ -1,10 +1,11 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
   FlatList,
   StyleSheet,
   Text,
   TouchableOpacity,
+  ActivityIndicator,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -36,9 +37,12 @@ export default function BrowseScreen() {
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [sortBy, setSortBy] = useState<SortOption>('relevance');
   const [showSortOptions, setShowSortOptions] = useState(false);
+  const [bags, setBags] = useState<BagWithBusiness[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const bags = useMemo(() => {
-    let results = searchQuery ? searchBags(searchQuery) : getAllBags();
+  const loadBags = useCallback(async () => {
+    setLoading(true);
+    let results = searchQuery ? await searchBags(searchQuery) : await getAllBags();
     results = results.filter((b) => b.status === 'active');
 
     if (selectedCategory) {
@@ -56,8 +60,13 @@ export default function BrowseScreen() {
         break;
     }
 
-    return results;
+    setBags(results);
+    setLoading(false);
   }, [searchQuery, selectedCategory, sortBy]);
+
+  useEffect(() => {
+    loadBags();
+  }, [loadBags]);
 
   const handleBagPress = (bag: BagWithBusiness) => {
     router.push(`/bag/${bag.id}`);
@@ -140,27 +149,33 @@ export default function BrowseScreen() {
       )}
 
       {/* Results */}
-      <FlatList
-        data={bags}
-        renderItem={({ item }) => (
-          <BagCardVertical
-            bag={{ ...item, isFavorite: isFavorite(item.business_id) }}
-            onPress={() => handleBagPress(item)}
-            onToggleFavorite={() => toggleFavorite(item.business_id)}
-          />
-        )}
-        keyExtractor={(item) => item.id}
-        contentContainerStyle={styles.listContainer}
-        showsVerticalScrollIndicator={false}
-        ItemSeparatorComponent={() => <View style={styles.listSeparator} />}
-        ListEmptyComponent={
-          <EmptyState
-            icon="search-outline"
-            title={strings.browse.noResults}
-            subtitle={strings.browse.noResultsSubtitle}
-          />
-        }
-      />
+      {loading ? (
+        <View style={styles.centered}>
+          <ActivityIndicator size="large" color={colors.primary[500]} />
+        </View>
+      ) : (
+        <FlatList
+          data={bags}
+          renderItem={({ item }) => (
+            <BagCardVertical
+              bag={{ ...item, isFavorite: isFavorite(item.business_id) }}
+              onPress={() => handleBagPress(item)}
+              onToggleFavorite={() => toggleFavorite(item.business_id)}
+            />
+          )}
+          keyExtractor={(item) => item.id}
+          contentContainerStyle={styles.listContainer}
+          showsVerticalScrollIndicator={false}
+          ItemSeparatorComponent={() => <View style={styles.listSeparator} />}
+          ListEmptyComponent={
+            <EmptyState
+              icon="search-outline"
+              title={strings.browse.noResults}
+              subtitle={strings.browse.noResultsSubtitle}
+            />
+          }
+        />
+      )}
     </View>
   );
 }
@@ -169,6 +184,11 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.background.primary,
+  },
+  centered: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   header: {
     paddingHorizontal: spacing.lg,

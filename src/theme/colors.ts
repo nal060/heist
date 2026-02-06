@@ -1,15 +1,15 @@
 export const colors = {
   primary: {
-    50: '#FFEBEE',
-    100: '#FFCDD2',
-    200: '#EF9A9A',
-    300: '#E57373',
-    400: '#EF5350',
-    500: '#D32F2F',
-    600: '#C62828',
-    700: '#B71C1C',
-    800: '#8E1414',
-    900: '#6D0F0F',
+    50: '#E8F0FE',
+    100: '#D2E3FC',
+    200: '#AECBFA',
+    300: '#8AB4F8',
+    400: '#669DF6',
+    500: '#4285F4',
+    600: '#3B78DC',
+    700: '#2D6BC4',
+    800: '#1F5EAC',
+    900: '#174EA6',
   },
 
   gray: {
@@ -25,10 +25,10 @@ export const colors = {
     900: '#212121',
   },
 
-  success: '#4CAF50',
-  warning: '#FF9800',
-  error: '#F44336',
-  info: '#2196F3',
+  success: '#81C995',
+  warning: '#FDD663',
+  error: '#F28B82',
+  info: '#78D9EC',
 
   background: {
     primary: '#FFFFFF',
@@ -41,7 +41,7 @@ export const colors = {
     secondary: '#757575',
     tertiary: '#9E9E9E',
     inverse: '#FFFFFF',
-    link: '#D32F2F',
+    link: '#4285F4',
   },
 
   badge: {
@@ -52,7 +52,7 @@ export const colors = {
   },
 
   tabBar: {
-    active: '#D32F2F',
+    active: '#4285F4',
     inactive: '#9E9E9E',
     bg: '#FFFFFF',
   },

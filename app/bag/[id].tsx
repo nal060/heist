@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   ScrollView,
@@ -6,6 +6,7 @@ import {
   Text,
   TouchableOpacity,
   Dimensions,
+  ActivityIndicator,
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -22,6 +23,7 @@ import Divider from '../../src/components/ui/Divider';
 import BusinessLogo from '../../src/components/business/BusinessLogo';
 import { formatPickupWindow, getPickupLabel } from '../../src/utils/formatTime';
 import { getDiscountPercentage } from '../../src/utils/formatCurrency';
+import type { BagWithBusiness } from '../../src/types';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const IMAGE_HEIGHT = 280;
@@ -31,8 +33,23 @@ export default function BagDetailScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { isFavorite, toggleFavorite } = useFavorites();
+  const [bag, setBag] = useState<BagWithBusiness | undefined>(undefined);
+  const [loading, setLoading] = useState(true);
 
-  const bag = getBagById(id);
+  useEffect(() => {
+    getBagById(id).then((data) => {
+      setBag(data);
+      setLoading(false);
+    });
+  }, [id]);
+
+  if (loading) {
+    return (
+      <View style={[styles.container, styles.centered]}>
+        <ActivityIndicator size="large" color={colors.primary[500]} />
+      </View>
+    );
+  }
 
   if (!bag) {
     return (
@@ -65,10 +82,8 @@ export default function BagDetailScreen() {
             contentFit="cover"
             transition={300}
           />
-          {/* Gradient overlay */}
           <View style={styles.heroOverlay} />
 
-          {/* Top buttons */}
           <View style={[styles.topButtons, { top: insets.top + spacing.sm }]}>
             <TouchableOpacity
               style={styles.circleButton}
@@ -88,7 +103,6 @@ export default function BagDetailScreen() {
             </TouchableOpacity>
           </View>
 
-          {/* Discount badge */}
           {discount > 0 && (
             <View style={styles.discountBadgeContainer}>
               <Badge text={`-${discount}%`} variant="discount" />
@@ -194,7 +208,6 @@ export default function BagDetailScreen() {
           </View>
         </View>
 
-        {/* Bottom spacer for sticky bar */}
         <View style={{ height: 100 }} />
       </ScrollView>
 
@@ -235,8 +248,6 @@ const styles = StyleSheet.create({
     fontSize: typography.fontSize.md,
     color: colors.text.secondary,
   },
-
-  // Hero
   heroContainer: {
     width: SCREEN_WIDTH,
     height: IMAGE_HEIGHT,
@@ -275,8 +286,6 @@ const styles = StyleSheet.create({
     bottom: spacing.md,
     left: spacing.lg,
   },
-
-  // Business
   businessSection: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -293,8 +302,6 @@ const styles = StyleSheet.create({
     fontWeight: typography.fontWeight.semibold,
     color: colors.text.primary,
   },
-
-  // Bag
   section: {
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.sm,
@@ -316,8 +323,6 @@ const styles = StyleSheet.create({
     color: colors.text.secondary,
     lineHeight: 22,
   },
-
-  // Pickup
   pickupSection: {
     flexDirection: 'row',
     alignItems: 'flex-start',
@@ -341,8 +346,6 @@ const styles = StyleSheet.create({
     fontWeight: typography.fontWeight.semibold,
     color: colors.text.primary,
   },
-
-  // Reviews
   reviewBars: {
     gap: spacing.md,
   },
@@ -368,8 +371,6 @@ const styles = StyleSheet.create({
     backgroundColor: colors.primary[500],
     borderRadius: 4,
   },
-
-  // Address
   addressRow: {
     flexDirection: 'row',
     alignItems: 'flex-start',
@@ -381,8 +382,6 @@ const styles = StyleSheet.create({
     color: colors.text.secondary,
     lineHeight: 22,
   },
-
-  // Info box
   infoBox: {
     flexDirection: 'row',
     gap: spacing.md,
@@ -396,8 +395,6 @@ const styles = StyleSheet.create({
     color: colors.text.secondary,
     lineHeight: 20,
   },
-
-  // Bottom bar
   bottomBar: {
     position: 'absolute',
     bottom: 0,
