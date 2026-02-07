@@ -7,33 +7,6 @@
   } from '../types';
 
   /**
-   * Returns all surplus bags joined with their business, photos, and category info.
-   */
-  export async function getAllBags(): Promise<BagWithBusiness[]> {
-    const { data, error } = await supabase
-      .from('surplus_bags')
-      .select(`
-        *,
-        business:businesses(
-          *,
-          business_categories(
-            category:categories(*)
-          )
-        )
-      `)
-      .order('created_at', { ascending: false });
-
-    if (error) throw error;
-
-    return (data ?? []).map((bag: any) => ({
-      ...bag,
-      business: bag.business,
-      category: bag.business?.business_categories?.[0]?.category ?? null,
-      isFavorite: false,
-    }));
-  }
-
-  /**
    * Returns a single bag by ID, or undefined if not found.
    */
   export async function getBagById(id: string): Promise<BagWithBusiness | undefined> {
@@ -136,7 +109,7 @@
    * Searches bags by query string.
    */
   export async function searchBags(query: string): Promise<BagWithBusiness[]> {
-    if (!query.trim()) return getAllBags();
+    if (!query.trim()) return [];
 
     const { data, error } = await supabase
       .from('surplus_bags')
