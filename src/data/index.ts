@@ -213,36 +213,6 @@
     });
   }
 
-  return data as unknown as Business;
-}
-
-/**
- * Returns order history with full details.
- */
-export async function getOrderHistory(): Promise<OrderWithDetails[]> {
-  const { data, error } = await supabase
-    .from('orders')
-    .select(`
-      *,
-      bag:surplus_bags(*, business:businesses(*)),
-      payment:payments(*)
-    `)
-    .order('created_at', { ascending: false });
-
-  if (error || !data) {
-    return [];
-  }
-
-  return (data as unknown as OrderRow[])
-    .filter((order) => order.bag !== null)
-    .map((order) => ({
-      ...order,
-      business: order.bag!.business,
-      bag: order.bag!,
-      payment: Array.isArray(order.payment) ? (order.payment[0] ?? null) : order.payment,
-    })) as unknown as OrderWithDetails[];
-}
-
 /**
  * Returns the current user profile.
  * Hardcoded until auth is implemented.
