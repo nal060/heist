@@ -78,8 +78,8 @@ export default function DiscoverScreen() {
   }
 
   return (
-    <View style={[styles.container, { paddingTop: insets.top }]}>
-      <LocationHeader location={strings.discover.defaultLocation} />
+    <View style={styles.container}>
+      <LocationHeader location={strings.discover.defaultLocation} paddingTop={insets.top} />
 
       <ScrollView
         showsVerticalScrollIndicator={false}
