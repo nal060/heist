@@ -17,7 +17,7 @@ import EmptyState from '../../src/components/ui/EmptyState';
 import { colors, spacing, typography } from '../../src/theme';
 import { strings } from '../../src/constants/strings';
 import { CATEGORIES } from '../../src/constants/categories';
-import { getAllBags, searchBags } from '../../src/data';
+import { searchBags } from '../../src/data';
 import { useFavorites } from '../../src/context/FavoritesContext';
 import type { BagWithBusiness } from '../../src/types';
 
@@ -42,7 +42,7 @@ export default function BrowseScreen() {
 
   const loadBags = useCallback(async () => {
     setLoading(true);
-    let results = searchQuery ? await searchBags(searchQuery) : await getAllBags();
+    let results = await searchBags(searchQuery);
     results = results.filter((b) => b.status === 'active');
 
     if (selectedCategory) {

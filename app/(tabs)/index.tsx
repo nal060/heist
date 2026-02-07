@@ -16,7 +16,8 @@ import BagCardHorizontal from '../../src/components/bags/BagCardHorizontal';
 import { colors, spacing } from '../../src/theme';
 import { strings } from '../../src/constants/strings';
 import { CATEGORIES } from '../../src/constants/categories';
-import { getAllBags } from '../../src/data';
+import { getNearbyBags } from '../../src/data';
+
 import { useFavorites } from '../../src/context/FavoritesContext';
 import type { BagWithBusiness } from '../../src/types';
 
@@ -30,7 +31,7 @@ export default function DiscoverScreen() {
   const [loading, setLoading] = useState(true);
 
   const loadBags = useCallback(async () => {
-    const bags = await getAllBags();
+    const bags: BagWithBusiness[] = await getNearbyBags(strings.discover.latitude, strings.discover.longitude);
     setAllBags(bags);
     setLoading(false);
   }, []);
@@ -77,8 +78,8 @@ export default function DiscoverScreen() {
   }
 
   return (
-    <View style={[styles.container, { paddingTop: insets.top }]}>
-      <LocationHeader location={strings.discover.defaultLocation} />
+    <View style={styles.container}>
+      <LocationHeader location={strings.discover.defaultLocation} paddingTop={insets.top} />
 
       <ScrollView
         showsVerticalScrollIndicator={false}

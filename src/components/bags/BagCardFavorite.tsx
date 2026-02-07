@@ -31,7 +31,6 @@ export default function BagCardFavorite({
   onPress,
   onToggleFavorite,
 }: BagCardFavoriteProps) {
-  const primaryPhoto = bag.photos.find((p) => p.is_primary) ?? bag.photos[0];
   const pickupWindow = formatPickupWindow(bag.pickup_start_time, bag.pickup_end_time);
   const dayLabel = getPickupLabel(bag.date);
 
@@ -45,9 +44,9 @@ export default function BagCardFavorite({
     >
       {/* Image */}
       <View style={styles.imageWrapper}>
-        {primaryPhoto ? (
+        {bag.business?.photo_url ? (
           <Image
-            source={{ uri: primaryPhoto.photo_url }}
+            source={{ uri: bag.business.photo_url }}
             style={styles.image}
             contentFit="cover"
             transition={300}

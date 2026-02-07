@@ -62,8 +62,6 @@ export default function BagDetailScreen() {
   const favorite = isFavorite(bag.business_id);
   const discount = getDiscountPercentage(bag.original_price, bag.discounted_price);
   const isAvailable = bag.status === 'active' && bag.quantity_available > 0;
-  const primaryPhoto = bag.photos.find((p) => p.is_primary) ?? bag.photos[0];
-
   const reviewBars = [
     { label: strings.bagDetail.ratingCategories.pickup, value: 0.85 },
     { label: strings.bagDetail.ratingCategories.quality, value: 0.78 },
@@ -77,7 +75,7 @@ export default function BagDetailScreen() {
         {/* Hero Image */}
         <View style={styles.heroContainer}>
           <Image
-            source={{ uri: primaryPhoto?.photo_url ?? 'https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=800&h=600&fit=crop' }}
+            source={{ uri: bag.business?.photo_url ?? 'https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=800&h=600&fit=crop' }}
             style={styles.heroImage}
             contentFit="cover"
             transition={300}

@@ -40,14 +40,6 @@ export interface SurplusBag {
   updated_at: string;
 }
 
-export interface BagPhoto {
-  id: string;
-  surplus_bag_id: string;
-  photo_url: string;
-  is_primary: boolean;
-  created_at: string;
-}
-
 export interface Category {
   id: string;
   name: string;
@@ -152,7 +144,6 @@ export interface Coupon {
 // Composed types for UI
 export interface BagWithBusiness extends SurplusBag {
   business: Business;
-  photos: BagPhoto[];
   category: Category | null;
   isFavorite: boolean;
 }

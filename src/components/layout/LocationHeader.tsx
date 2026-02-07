@@ -8,14 +8,16 @@ import { spacing } from '../../theme';
 interface LocationHeaderProps {
   location: string;
   onPress?: () => void;
+  paddingTop?: number;
 }
 
 export default function LocationHeader({
   location,
   onPress,
+  paddingTop,
 }: LocationHeaderProps) {
   const content = (
-    <View style={styles.container}>
+    <View style={[styles.container, paddingTop != null && { paddingTop: paddingTop + spacing.md }]}>
       <View style={styles.row}>
         <Ionicons
           name="location-sharp"
