@@ -2,8 +2,10 @@
   import type {
     BagWithBusiness,
     Business,
+    Category,
     ConsumerProfile,
     OrderWithDetails,
+    SurplusBag,
   } from '../types';
 
   const FIFTY_MILES_IN_METERS = 80467.2;
@@ -27,7 +29,7 @@
     if (bizError) throw bizError;
     if (!nearbyBusinesses || nearbyBusinesses.length === 0) return [];
 
-    const businessIds = nearbyBusinesses.map((b: any) => b.id);
+    const businessIds = nearbyBusinesses.map((b: { id: string }) => b.id);
 
     const { data, error } = await supabase
       .from('surplus_bags')
@@ -44,12 +46,15 @@
       .order('created_at', { ascending: false });
 
     if (error) throw error;
-    return (data ?? []).map((bag: any) => ({
-      ...bag,
-      business: bag.business,
-      category: bag.business?.business_categories?.[0]?.category ?? null,
-      isFavorite: false,
-    }));
+    return (data ?? []).map((bag) => {
+      const biz = bag.business as Business & { business_categories: { category: Category }[] };
+      return {
+        ...bag,
+        business: biz,
+        category: biz?.business_categories?.[0]?.category ?? null,
+        isFavorite: false,
+      };
+    });
   }
 
   /**
@@ -65,10 +70,7 @@
       .eq('id', id)
       .single();
 
-    if (error || !data) {
-      console.error('getBagById error:', error);
-      return undefined;
-    }
+    if (error || !data) return undefined;
 
     const { data: catData } = await supabase
       .from('business_categories')
@@ -79,8 +81,8 @@
       
     return {
       ...data,
-      business: data.business,
-      category: catData?.category ?? null,
+      business: data.business as Business,
+      category: (catData?.category as Category[] | undefined)?.[0] ?? null,
       isFavorite: false,
     };
   }
@@ -96,7 +98,7 @@
 
     if (!businessIds || businessIds.length === 0) return [];
 
-    const ids = businessIds.map((b: any) => b.business_id);
+    const ids = businessIds.map((b) => b.business_id);
 
     const { data, error } = await supabase
       .from('surplus_bags')
@@ -107,14 +109,11 @@
       .in('business_id', ids)
       .order('created_at', { ascending: false });
 
-    if (error) {
-      console.error('getBagsByCategory error:', error);
-      return [];
-    }
+    if (error) throw error;
 
-    return (data ?? []).map((bag: any) => ({
+    return (data ?? []).map((bag) => ({
       ...bag,
-      business: bag.business,
+      business: bag.business as Business,
       category: null,
       isFavorite: false,
     }));
@@ -138,14 +137,11 @@
       .in('business_id', ids)
       .order('created_at', { ascending: false });
 
-    if (error) {
-      console.error('getFavoriteBags error:', error);
-      return [];
-    }
+    if (error) throw error;
 
-    return (data ?? []).map((bag: any) => ({
+    return (data ?? []).map((bag) => ({
       ...bag,
-      business: bag.business,
+      business: bag.business as Business,
       category: null,
       isFavorite: true,
     }));
@@ -166,14 +162,11 @@
       .or(`title.ilike.%${query}%,description.ilike.%${query}%`)
       .order('created_at', { ascending: false });
 
-    if (error) {
-      console.error('searchBags error:', error);
-      return [];
-    }
+    if (error) throw error;
 
-    return (data ?? []).map((bag: any) => ({
+    return (data ?? []).map((bag) => ({
       ...bag,
-      business: bag.business,
+      business: bag.business as Business,
       category: null,
       isFavorite: false,
     }));
@@ -189,10 +182,7 @@
       .eq('id', id)
       .single();
 
-    if (error) {
-      console.error('getBusinessById error:', error);
-      return undefined;
-    }
+    if (error) return undefined;
 
     return data;
   }
@@ -210,17 +200,17 @@
       `)
       .order('created_at', { ascending: false });
 
-    if (error) {
-      console.error('getOrderHistory error:', error);
-      return [];
-    }
+    if (error) throw error;
 
-    return (data ?? []).map((order: any) => ({
-      ...order,
-      business: order.bag?.business ?? null,
-      bag: order.bag,
-      payment: Array.isArray(order.payment) ? order.payment[0] ?? null : order.payment,
-    }));
+    return (data ?? []).map((order) => {
+      const bag = order.bag as (SurplusBag & { business: Business }) | null;
+      return {
+        ...order,
+        business: bag?.business ?? null,
+        bag: bag as SurplusBag,
+        payment: Array.isArray(order.payment) ? order.payment[0] ?? null : order.payment,
+      };
+    });
   }
 
   /**
