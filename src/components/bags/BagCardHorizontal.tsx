@@ -32,7 +32,6 @@ export default function BagCardHorizontal({
   onPress,
   onToggleFavorite,
 }: BagCardHorizontalProps) {
-  const primaryPhoto = bag.photos.find((p) => p.is_primary) ?? bag.photos[0];
   const discount = getDiscountPercentage(bag.original_price, bag.discounted_price);
   const pickupWindow = formatPickupWindow(bag.pickup_start_time, bag.pickup_end_time);
 
@@ -46,9 +45,9 @@ export default function BagCardHorizontal({
     >
       {/* Hero image */}
       <View style={styles.imageContainer}>
-        {primaryPhoto ? (
+        {bag.business?.photo_url ? (
           <Image
-            source={{ uri: primaryPhoto.photo_url }}
+            source={{ uri: bag.business.photo_url }}
             style={styles.image}
             contentFit="cover"
             transition={300}

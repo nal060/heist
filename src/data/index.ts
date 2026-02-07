@@ -14,33 +14,21 @@
       .from('surplus_bags')
       .select(`
         *,
-        business:businesses(*),
-        photos:bag_photos(*)
+        business:businesses(
+          *,
+          business_categories(
+            category:categories(*)
+          )
+        )
       `)
       .order('created_at', { ascending: false });
 
-    if (error) {
-      console.error('getAllBags error:', error);
-      return [];
-    }
-
-    // Get all business categories in one query
-    const businessIds = [...new Set((data ?? []).map((b: any) => b.business_id))];
-    const { data: bcData } = await supabase
-      .from('business_categories')
-      .select('business_id, category:categories(*)')
-      .in('business_id', businessIds);
-
-    const categoryMap: Record<string, any> = {};
-    for (const bc of bcData ?? []) {
-      categoryMap[bc.business_id] = bc.category;
-    }
+    if (error) throw error;
 
     return (data ?? []).map((bag: any) => ({
       ...bag,
       business: bag.business,
-      photos: bag.photos ?? [],
-      category: categoryMap[bag.business_id] ?? null,
+      category: bag.business?.business_categories?.[0]?.category ?? null,
       isFavorite: false,
     }));
   }
@@ -53,8 +41,7 @@
       .from('surplus_bags')
       .select(`
         *,
-        business:businesses(*),
-        photos:bag_photos(*)
+        business:businesses(*)
       `)
       .eq('id', id)
       .single();
@@ -74,7 +61,6 @@
     return {
       ...data,
       business: data.business,
-      photos: data.photos ?? [],
       category: catData?.category ?? null,
       isFavorite: false,
     };
@@ -97,8 +83,7 @@
       .from('surplus_bags')
       .select(`
         *,
-        business:businesses(*),
-        photos:bag_photos(*)
+        business:businesses(*)
       `)
       .in('business_id', ids)
       .order('created_at', { ascending: false });
@@ -111,7 +96,6 @@
     return (data ?? []).map((bag: any) => ({
       ...bag,
       business: bag.business,
-      photos: bag.photos ?? [],
       category: null,
       isFavorite: false,
     }));
@@ -130,8 +114,7 @@
       .from('surplus_bags')
       .select(`
         *,
-        business:businesses(*),
-        photos:bag_photos(*)
+        business:businesses(*)
       `)
       .in('business_id', ids)
       .order('created_at', { ascending: false });
@@ -144,7 +127,6 @@
     return (data ?? []).map((bag: any) => ({
       ...bag,
       business: bag.business,
-      photos: bag.photos ?? [],
       category: null,
       isFavorite: true,
     }));
@@ -160,8 +142,7 @@
       .from('surplus_bags')
       .select(`
         *,
-        business:businesses(*),
-        photos:bag_photos(*)
+        business:businesses(*)
       `)
       .or(`title.ilike.%${query}%,description.ilike.%${query}%`)
       .order('created_at', { ascending: false });
@@ -174,7 +155,6 @@
     return (data ?? []).map((bag: any) => ({
       ...bag,
       business: bag.business,
-      photos: bag.photos ?? [],
       category: null,
       isFavorite: false,
     }));
