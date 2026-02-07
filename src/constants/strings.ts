@@ -11,6 +11,8 @@ export const strings = {
   discover: {
     locationLabel: 'Ubicacion actual',
     defaultLocation: 'Ciudad de Panama',
+    latitude: 8.95300000,
+    longitude: -79.53400000,
     nearbyOffers: 'Ofertas cerca de ti',
     neighborhoodFavorites: 'Favoritos del barrio',
     recommended: 'Recomendados para ti',

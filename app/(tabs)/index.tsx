@@ -16,6 +16,7 @@ import BagCardHorizontal from '../../src/components/bags/BagCardHorizontal';
 import { colors, spacing } from '../../src/theme';
 import { strings } from '../../src/constants/strings';
 import { CATEGORIES } from '../../src/constants/categories';
+import { getNearbyBags } from '../../src/data';
 
 import { useFavorites } from '../../src/context/FavoritesContext';
 import type { BagWithBusiness } from '../../src/types';
@@ -30,7 +31,7 @@ export default function DiscoverScreen() {
   const [loading, setLoading] = useState(true);
 
   const loadBags = useCallback(async () => {
-    const bags: BagWithBusiness[] = []; //todo retrieve nearby bags
+    const bags: BagWithBusiness[] = await getNearbyBags(strings.discover.latitude, strings.discover.longitude);
     setAllBags(bags);
     setLoading(false);
   }, []);

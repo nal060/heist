@@ -6,6 +6,52 @@
     OrderWithDetails,
   } from '../types';
 
+  const FIFTY_MILES_IN_METERS = 80467.2;
+
+  /**
+   * Returns surplus bags from businesses within 50 miles of the given coordinates.
+   */
+  export async function getNearbyBags(
+    latitude: number,
+    longitude: number
+  ): Promise<BagWithBusiness[]> {
+    const { data: nearbyBusinesses, error: bizError } = await supabase.rpc(
+      'get_nearby_business_ids',
+      {
+        user_lat: latitude,
+        user_lon: longitude,
+        radius_meters: FIFTY_MILES_IN_METERS,
+      },
+    );
+
+    if (bizError) throw bizError;
+    if (!nearbyBusinesses || nearbyBusinesses.length === 0) return [];
+
+    const businessIds = nearbyBusinesses.map((b: any) => b.id);
+
+    const { data, error } = await supabase
+      .from('surplus_bags')
+      .select(`
+        *,
+        business:businesses(
+          *,
+          business_categories(
+            category:categories(*)
+          )
+        )
+      `)
+      .in('business_id', businessIds)
+      .order('created_at', { ascending: false });
+
+    if (error) throw error;
+    return (data ?? []).map((bag: any) => ({
+      ...bag,
+      business: bag.business,
+      category: bag.business?.business_categories?.[0]?.category ?? null,
+      isFavorite: false,
+    }));
+  }
+
   /**
    * Returns a single bag by ID, or undefined if not found.
    */
@@ -30,7 +76,7 @@
       .eq('business_id', data.business_id)
       .limit(1)
       .single();
-
+      
     return {
       ...data,
       business: data.business,
