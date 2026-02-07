@@ -213,16 +213,46 @@
     });
   }
 
-  /**
-   * Returns the current user profile.
-   * Hardcoded until auth is implemented.
-   */
-  export function getUser(): ConsumerProfile {
-    return {
-      id: '00000000-0000-0000-0000-000000000001',
-      user_id: '00000000-0000-0000-0000-000000000001',
-      name: 'Usuario Demo',
-      created_at: '2024-01-01T00:00:00Z',
-      updated_at: '2024-01-01T00:00:00Z',
-    };
+  return data as unknown as Business;
+}
+
+/**
+ * Returns order history with full details.
+ */
+export async function getOrderHistory(): Promise<OrderWithDetails[]> {
+  const { data, error } = await supabase
+    .from('orders')
+    .select(`
+      *,
+      bag:surplus_bags(*, business:businesses(*)),
+      payment:payments(*)
+    `)
+    .order('created_at', { ascending: false });
+
+  if (error || !data) {
+    return [];
   }
+
+  return (data as unknown as OrderRow[])
+    .filter((order) => order.bag !== null)
+    .map((order) => ({
+      ...order,
+      business: order.bag!.business,
+      bag: order.bag!,
+      payment: Array.isArray(order.payment) ? (order.payment[0] ?? null) : order.payment,
+    })) as unknown as OrderWithDetails[];
+}
+
+/**
+ * Returns the current user profile.
+ * Hardcoded until auth is implemented.
+ */
+export function getUser(): ConsumerProfile {
+  return {
+    id: '00000000-0000-0000-0000-000000000001',
+    user_id: '00000000-0000-0000-0000-000000000001',
+    name: 'Usuario Demo',
+    created_at: '2024-01-01T00:00:00Z',
+    updated_at: '2024-01-01T00:00:00Z',
+  };
+}
