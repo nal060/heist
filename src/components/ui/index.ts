@@ -9,3 +9,4 @@ export { default as SectionHeader } from './SectionHeader';
 export { default as IconButton } from './IconButton';
 export { default as Divider } from './Divider';
 export { default as EmptyState } from './EmptyState';
+export { default as ErrorState } from './ErrorState';
