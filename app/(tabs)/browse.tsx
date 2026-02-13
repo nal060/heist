@@ -18,6 +18,7 @@ import { colors, spacing, typography } from '../../src/theme';
 import { strings } from '../../src/constants/strings';
 import { CATEGORIES } from '../../src/constants/categories';
 import { searchBags } from '../../src/data';
+import ErrorState from '../../src/components/ui/ErrorState';
 import { useFavorites } from '../../src/context/FavoritesContext';
 import type { BagWithBusiness } from '../../src/types';
 
@@ -39,29 +40,36 @@ export default function BrowseScreen() {
   const [showSortOptions, setShowSortOptions] = useState(false);
   const [bags, setBags] = useState<BagWithBusiness[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
 
   const loadBags = useCallback(async () => {
-    setLoading(true);
-    let results = await searchBags(searchQuery);
-    results = results.filter((b) => b.status === 'active');
+    try {
+      setLoading(true);
+      setError(false);
+      let results = await searchBags(searchQuery);
+      results = results.filter((b) => b.status === 'active');
 
-    if (selectedCategory) {
-      results = results.filter((b) => b.category?.id === selectedCategory);
+      if (selectedCategory) {
+        results = results.filter((b) => b.category?.id === selectedCategory);
+      }
+
+      switch (sortBy) {
+        case 'price':
+          results = [...results].sort((a, b) => a.discounted_price - b.discounted_price);
+          break;
+        case 'rating':
+          results = [...results].sort((a, b) => b.business.rating - a.business.rating);
+          break;
+        default:
+          break;
+      }
+
+      setBags(results);
+    } catch {
+      setError(true);
+    } finally {
+      setLoading(false);
     }
-
-    switch (sortBy) {
-      case 'price':
-        results = [...results].sort((a, b) => a.discounted_price - b.discounted_price);
-        break;
-      case 'rating':
-        results = [...results].sort((a, b) => b.business.rating - a.business.rating);
-        break;
-      default:
-        break;
-    }
-
-    setBags(results);
-    setLoading(false);
   }, [searchQuery, selectedCategory, sortBy]);
 
   useEffect(() => {
@@ -152,6 +160,10 @@ export default function BrowseScreen() {
       {loading ? (
         <View style={styles.centered}>
           <ActivityIndicator size="large" color={colors.primary[500]} />
+        </View>
+      ) : error ? (
+        <View style={styles.centered}>
+          <ErrorState onRetry={loadBags} />
         </View>
       ) : (
         <FlatList

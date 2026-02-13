@@ -7,6 +7,7 @@ import EmptyState from '../../src/components/ui/EmptyState';
 import { colors, spacing, typography } from '../../src/theme';
 import { strings } from '../../src/constants/strings';
 import { getFavoriteBags } from '../../src/data';
+import ErrorState from '../../src/components/ui/ErrorState';
 import { useFavorites } from '../../src/context/FavoritesContext';
 import type { BagWithBusiness } from '../../src/types';
 
@@ -16,13 +17,21 @@ export default function FavoritesScreen() {
   const { favoriteBusinessIds, toggleFavorite } = useFavorites();
   const [favoriteBags, setFavoriteBags] = useState<BagWithBusiness[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
 
   useEffect(() => {
     setLoading(true);
-    getFavoriteBags(favoriteBusinessIds).then((bags) => {
-      setFavoriteBags(bags);
-      setLoading(false);
-    });
+    setError(false);
+    getFavoriteBags(favoriteBusinessIds)
+      .then((bags) => {
+        setFavoriteBags(bags);
+      })
+      .catch(() => {
+        setError(true);
+      })
+      .finally(() => {
+        setLoading(false);
+      });
   }, [favoriteBusinessIds]);
 
   const handleBagPress = (bag: BagWithBusiness) => {
@@ -33,6 +42,21 @@ export default function FavoritesScreen() {
     return (
       <View style={[styles.container, styles.centered, { paddingTop: insets.top }]}>
         <ActivityIndicator size="large" color={colors.primary[500]} />
+      </View>
+    );
+  }
+
+  if (error) {
+    return (
+      <View style={[styles.container, styles.centered, { paddingTop: insets.top }]}>
+        <ErrorState onRetry={() => {
+          setLoading(true);
+          setError(false);
+          getFavoriteBags(favoriteBusinessIds)
+            .then((bags) => setFavoriteBags(bags))
+            .catch(() => setError(true))
+            .finally(() => setLoading(false));
+        }} />
       </View>
     );
   }

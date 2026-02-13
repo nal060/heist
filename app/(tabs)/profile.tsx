@@ -6,6 +6,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { colors, spacing, typography, borderRadius } from '../../src/theme';
 import { strings } from '../../src/constants/strings';
 import { getUser, getOrderHistory } from '../../src/data';
+import ErrorState from '../../src/components/ui/ErrorState';
 import Divider from '../../src/components/ui/Divider';
 import type { OrderWithDetails } from '../../src/types';
 
@@ -15,12 +16,19 @@ export default function ProfileScreen() {
   const user = getUser();
   const [orders, setOrders] = useState<OrderWithDetails[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
+
+  const loadOrders = () => {
+    setLoading(true);
+    setError(false);
+    getOrderHistory()
+      .then((data) => setOrders(data))
+      .catch(() => setError(true))
+      .finally(() => setLoading(false));
+  };
 
   useEffect(() => {
-    getOrderHistory().then((data) => {
-      setOrders(data);
-      setLoading(false);
-    });
+    loadOrders();
   }, []);
 
   const completedOrders = orders.filter((o) => o.status === 'picked_up');
@@ -50,6 +58,14 @@ export default function ProfileScreen() {
     return (
       <View style={[styles.container, styles.centered, { paddingTop: insets.top }]}>
         <ActivityIndicator size="large" color={colors.primary[500]} />
+      </View>
+    );
+  }
+
+  if (error) {
+    return (
+      <View style={[styles.container, styles.centered, { paddingTop: insets.top }]}>
+        <ErrorState onRetry={loadOrders} />
       </View>
     );
   }

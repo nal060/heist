@@ -141,6 +141,7 @@ export const strings = {
     loading: 'Cargando...',
     error: 'Algo salio mal',
     retry: 'Reintentar',
+    bagNotFound: 'Bolsa no encontrada',
     cancel: 'Cancelar',
     confirm: 'Confirmar',
     save: 'Guardar',

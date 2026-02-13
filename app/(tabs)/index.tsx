@@ -17,6 +17,7 @@ import { colors, spacing } from '../../src/theme';
 import { strings } from '../../src/constants/strings';
 import { CATEGORIES } from '../../src/constants/categories';
 import { getNearbyBags } from '../../src/data';
+import ErrorState from '../../src/components/ui/ErrorState';
 
 import { useFavorites } from '../../src/context/FavoritesContext';
 import type { BagWithBusiness } from '../../src/types';
@@ -29,11 +30,18 @@ export default function DiscoverScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [allBags, setAllBags] = useState<BagWithBusiness[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
 
   const loadBags = useCallback(async () => {
-    const bags: BagWithBusiness[] = await getNearbyBags(strings.discover.latitude, strings.discover.longitude);
-    setAllBags(bags);
-    setLoading(false);
+    try {
+      setError(false);
+      const bags: BagWithBusiness[] = await getNearbyBags(strings.discover.latitude, strings.discover.longitude);
+      setAllBags(bags);
+    } catch {
+      setError(true);
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
   useEffect(() => {
@@ -73,6 +81,14 @@ export default function DiscoverScreen() {
     return (
       <View style={[styles.container, styles.centered, { paddingTop: insets.top }]}>
         <ActivityIndicator size="large" color={colors.primary[500]} />
+      </View>
+    );
+  }
+
+  if (error) {
+    return (
+      <View style={[styles.container, styles.centered, { paddingTop: insets.top }]}>
+        <ErrorState onRetry={loadBags} />
       </View>
     );
   }

@@ -26,7 +26,9 @@
       },
     );
 
-    if (bizError) throw bizError;
+    if (bizError) {
+      throw new Error('Failed to fetch nearby businesses: ' + bizError.message);
+    }
     if (!nearbyBusinesses || nearbyBusinesses.length === 0) return [];
 
     const businessIds = nearbyBusinesses.map((b: { id: string }) => b.id);
@@ -45,7 +47,9 @@
       .in('business_id', businessIds)
       .order('created_at', { ascending: false });
 
-    if (error) throw error;
+    if (error) {
+      throw new Error('Failed to fetch nearby bags: ' + error.message);
+    }
     return (data ?? []).map((bag) => {
       const biz = bag.business as Business & { business_categories: { category: Category }[] };
       return {
@@ -109,7 +113,9 @@
       .in('business_id', ids)
       .order('created_at', { ascending: false });
 
-    if (error) throw error;
+    if (error) {
+      throw new Error('Failed to fetch bags by category: ' + error.message);
+    }
 
     return (data ?? []).map((bag) => ({
       ...bag,
@@ -137,7 +143,9 @@
       .in('business_id', ids)
       .order('created_at', { ascending: false });
 
-    if (error) throw error;
+    if (error) {
+      throw new Error('Failed to fetch favorite bags: ' + error.message);
+    }
 
     return (data ?? []).map((bag) => ({
       ...bag,
@@ -162,7 +170,9 @@
       .or(`title.ilike.%${query}%,description.ilike.%${query}%`)
       .order('created_at', { ascending: false });
 
-    if (error) throw error;
+    if (error) {
+      throw new Error('Failed to search bags: ' + error.message);
+    }
 
     return (data ?? []).map((bag) => ({
       ...bag,
@@ -200,7 +210,9 @@
       `)
       .order('created_at', { ascending: false });
 
-    if (error) throw error;
+    if (error) {
+      throw new Error('Failed to fetch order history: ' + error.message);
+    }
 
     return (data ?? []).map((order) => {
       const bag = order.bag as (SurplusBag & { business: Business }) | null;

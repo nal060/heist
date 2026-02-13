@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
   ScrollView,
@@ -15,6 +15,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { colors, spacing, typography, borderRadius, shadows } from '../../src/theme';
 import { strings } from '../../src/constants/strings';
 import { getBagById } from '../../src/data';
+import ErrorState from '../../src/components/ui/ErrorState';
 import { useFavorites } from '../../src/context/FavoritesContext';
 import PriceDisplay from '../../src/components/ui/PriceDisplay';
 import Badge from '../../src/components/ui/Badge';
@@ -35,13 +36,20 @@ export default function BagDetailScreen() {
   const { isFavorite, toggleFavorite } = useFavorites();
   const [bag, setBag] = useState<BagWithBusiness | undefined>(undefined);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
+
+  const loadBag = useCallback(() => {
+    setLoading(true);
+    setError(false);
+    getBagById(id)
+      .then((data) => setBag(data))
+      .catch(() => setError(true))
+      .finally(() => setLoading(false));
+  }, [id]);
 
   useEffect(() => {
-    getBagById(id).then((data) => {
-      setBag(data);
-      setLoading(false);
-    });
-  }, [id]);
+    loadBag();
+  }, [loadBag]);
 
   if (loading) {
     return (
@@ -51,10 +59,18 @@ export default function BagDetailScreen() {
     );
   }
 
+  if (error) {
+    return (
+      <View style={[styles.container, styles.centered]}>
+        <ErrorState onRetry={loadBag} />
+      </View>
+    );
+  }
+
   if (!bag) {
     return (
       <View style={[styles.container, styles.centered]}>
-        <Text style={styles.errorText}>Bolsa no encontrada</Text>
+        <Text style={styles.errorText}>{strings.common.bagNotFound}</Text>
       </View>
     );
   }
