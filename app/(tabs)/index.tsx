@@ -19,12 +19,14 @@ import { getNearbyBags, getCategories } from '../../src/data';
 import ErrorState from '../../src/components/ui/ErrorState';
 
 import { useFavorites } from '../../src/context/FavoritesContext';
+import { useLocation } from '../../src/context/LocationContext';
 import type { BagWithBusiness, Category } from '../../src/types';
 
 export default function DiscoverScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { isFavorite, toggleFavorite } = useFavorites();
+  const { location } = useLocation();
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
   const [allBags, setAllBags] = useState<BagWithBusiness[]>([]);
@@ -32,11 +34,14 @@ export default function DiscoverScreen() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
 
+  const lat = location?.latitude ?? strings.discover.latitude;
+  const lon = location?.longitude ?? strings.discover.longitude;
+
   const loadBags = useCallback(async () => {
     try {
       setError(false);
       const [bags, cats] = await Promise.all([
-        getNearbyBags(strings.discover.latitude, strings.discover.longitude),
+        getNearbyBags(lat, lon),
         getCategories(),
       ]);
       setAllBags(bags);
@@ -46,7 +51,7 @@ export default function DiscoverScreen() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [lat, lon]);
 
   useEffect(() => {
     loadBags();
@@ -100,7 +105,7 @@ export default function DiscoverScreen() {
   return (
     <View style={styles.container}>
       <LocationHeader
-        location={strings.discover.defaultLocation}
+        location={location?.name ?? strings.discover.defaultLocation}
         paddingTop={insets.top}
         onPress={() => router.push('/change-location')}
       />

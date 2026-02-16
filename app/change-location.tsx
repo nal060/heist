@@ -18,6 +18,7 @@ import * as Location from 'expo-location';
 import { colors, spacing, typography } from '../src/theme';
 import { strings } from '../src/constants/strings';
 import { FIFTY_MILES_IN_METERS } from '../src/data';
+import { useLocation } from '../src/context/LocationContext';
 
 interface MockAddress {
   id: string;
@@ -106,17 +107,33 @@ export default function ChangeLocationScreen() {
     }
   }
 
-  function handleConfirm() {
-    router.back();
+  const { location: savedLocation, setLocation } = useLocation();
+
+  async function handleConfirm() {
+    if (!selectedAddress) return;
+    await setLocation({
+      name: selectedAddress.name,
+      latitude: selectedAddress.latitude,
+      longitude: selectedAddress.longitude,
+    });
+    if (savedLocation) {
+      router.back();
+    } else {
+      router.replace('/(tabs)');
+    }
   }
 
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
       {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()} hitSlop={8}>
-          <Ionicons name="arrow-back" size={24} color={colors.text.primary} />
-        </TouchableOpacity>
+        {savedLocation ? (
+          <TouchableOpacity onPress={() => router.back()} hitSlop={8}>
+            <Ionicons name="arrow-back" size={24} color={colors.text.primary} />
+          </TouchableOpacity>
+        ) : (
+          <View style={{ width: 24 }} />
+        )}
         <Text style={styles.headerTitle}>{strings.changeLocation.title}</Text>
         <View style={{ width: 24 }} />
       </View>

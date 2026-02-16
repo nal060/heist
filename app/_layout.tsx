@@ -3,12 +3,14 @@ import { StatusBar } from 'expo-status-bar';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { StyleSheet } from 'react-native';
 import { FavoritesProvider } from '../src/context/FavoritesContext';
+import { LocationProvider } from '../src/context/LocationContext';
 import { colors } from '../src/theme';
 
 export default function RootLayout() {
   return (
     <GestureHandlerRootView style={styles.root}>
-      <FavoritesProvider>
+      <LocationProvider>
+        <FavoritesProvider>
         <StatusBar style="dark" />
         <Stack
           screenOptions={{
@@ -60,7 +62,8 @@ export default function RootLayout() {
             }}
           />
         </Stack>
-      </FavoritesProvider>
+        </FavoritesProvider>
+      </LocationProvider>
     </GestureHandlerRootView>
   );
 }
