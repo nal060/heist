@@ -39,6 +39,13 @@ export default function RootLayout() {
             }}
           />
           <Stack.Screen
+            name="change-location"
+            options={{
+              presentation: 'card',
+              animation: 'slide_from_right',
+            }}
+          />
+          <Stack.Screen
             name="settings"
             options={{
               presentation: 'card',

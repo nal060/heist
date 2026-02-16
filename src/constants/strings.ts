@@ -136,6 +136,14 @@ export const strings = {
     },
   },
 
+  // Change location
+  changeLocation: {
+    title: 'Cambiar ubicacion',
+    searchPlaceholder: 'Buscar direccion...',
+    locateMe: 'Ubicarme',
+    confirm: 'Confirmar ubicacion',
+  },
+
   // Common
   common: {
     loading: 'Cargando...',

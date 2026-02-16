@@ -16,46 +16,37 @@ export default function LocationHeader({
   onPress,
   paddingTop,
 }: LocationHeaderProps) {
-  const content = (
+  return (
     <View style={[styles.container, paddingTop != null && { paddingTop: paddingTop + spacing.md }]}>
       <View style={styles.row}>
-        <Ionicons
-          name="location-sharp"
-          size={18}
-          color={colors.text.inverse}
-          style={styles.pinIcon}
-        />
+
+        {onPress && (
+          <TouchableOpacity
+            onPress={onPress}
+            hitSlop={8}
+            activeOpacity={0.7}
+            accessibilityRole="button"
+            accessibilityLabel="Cambiar ubicacion"
+          >
+          <Ionicons
+            name="location-sharp"
+            size={18}
+            color={colors.text.inverse}
+            style={styles.pinIcon}
+          />
+          </TouchableOpacity>
+        )}
+
         <View style={styles.textWrapper}>
           <Text style={styles.label}>Ubicacion actual</Text>
           <Text style={styles.location} numberOfLines={1}>
             {location}
           </Text>
         </View>
-        {onPress && (
-          <Ionicons
-            name="chevron-down"
-            size={20}
-            color={colors.text.inverse}
-          />
-        )}
+
       </View>
     </View>
   );
-
-  if (onPress) {
-    return (
-      <TouchableOpacity
-        onPress={onPress}
-        activeOpacity={0.8}
-        accessibilityRole="button"
-        accessibilityLabel={`Ubicacion: ${location}`}
-      >
-        {content}
-      </TouchableOpacity>
-    );
-  }
-
-  return content;
 }
 
 const styles = StyleSheet.create({

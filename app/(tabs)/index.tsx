@@ -99,7 +99,11 @@ export default function DiscoverScreen() {
 
   return (
     <View style={styles.container}>
-      <LocationHeader location={strings.discover.defaultLocation} paddingTop={insets.top} />
+      <LocationHeader
+        location={strings.discover.defaultLocation}
+        paddingTop={insets.top}
+        onPress={() => router.push('/change-location')}
+      />
 
       <ScrollView
         showsVerticalScrollIndicator={false}
