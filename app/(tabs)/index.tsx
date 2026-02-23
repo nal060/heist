@@ -15,12 +15,11 @@ import SectionHeader from '../../src/components/ui/SectionHeader';
 import BagCardHorizontal from '../../src/components/bags/BagCardHorizontal';
 import { colors, spacing } from '../../src/theme';
 import { strings } from '../../src/constants/strings';
-import { CATEGORIES } from '../../src/constants/categories';
-import { getNearbyBags } from '../../src/data';
+import { getNearbyBags, getCategories } from '../../src/data';
 import ErrorState from '../../src/components/ui/ErrorState';
 
 import { useFavorites } from '../../src/context/FavoritesContext';
-import type { BagWithBusiness } from '../../src/types';
+import type { BagWithBusiness, Category } from '../../src/types';
 
 export default function DiscoverScreen() {
   const router = useRouter();
@@ -29,14 +28,19 @@ export default function DiscoverScreen() {
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
   const [allBags, setAllBags] = useState<BagWithBusiness[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
 
   const loadBags = useCallback(async () => {
     try {
       setError(false);
-      const bags: BagWithBusiness[] = await getNearbyBags(strings.discover.latitude, strings.discover.longitude);
+      const [bags, cats] = await Promise.all([
+        getNearbyBags(strings.discover.latitude, strings.discover.longitude),
+        getCategories(),
+      ]);
       setAllBags(bags);
+      setCategories(cats);
     } catch {
       setError(true);
     } finally {
@@ -67,7 +71,7 @@ export default function DiscoverScreen() {
     router.push(`/bag/${bag.id}`);
   };
 
-  const allCategories = [{ id: null, name: strings.categories.all, icon: null, created_at: '' }, ...CATEGORIES];
+  const allCategories = [{ id: null, name: strings.categories.all, icon: null, created_at: '' }, ...categories];
 
   const renderBagCard = ({ item }: { item: BagWithBusiness }) => (
     <BagCardHorizontal

@@ -10,6 +10,55 @@
 
   const FIFTY_MILES_IN_METERS = 80467.2;
 
+/**
+ * Returns all categories from the database.
+ */
+export async function getCategories(): Promise<Category[]> {
+  const { data, error } = await supabase
+    .from('categories')
+    .select('*')
+    .order('name');
+
+  if (error) {
+    throw new Error('Failed to fetch categories: ' + error.message);
+  }
+
+  return data ?? [];
+}
+
+/**
+ * Returns all active surplus bags.
+ */
+export async function getAllActiveBags(): Promise<BagWithBusiness[]> {
+  const { data, error } = await supabase
+    .from('surplus_bags')
+    .select(`
+      *,
+      business:businesses(
+        *,
+        business_categories(
+          category:categories(*)
+        )
+      )
+    `)
+    .eq('status', 'active')
+    .order('created_at', { ascending: false });
+
+  if (error) {
+    throw new Error('Failed to fetch active bags: ' + error.message);
+  }
+
+  return (data ?? []).map((bag) => {
+    const biz = bag.business as Business & { business_categories: { category: Category }[] };
+    return {
+      ...bag,
+      business: biz,
+      category: biz?.business_categories?.[0]?.category ?? null,
+      isFavorite: false,
+    };
+  });
+}
+
   /**
    * Returns surplus bags from businesses within 50 miles of the given coordinates.
    */
@@ -108,7 +157,12 @@
       .from('surplus_bags')
       .select(`
         *,
-        business:businesses(*)
+        business:businesses(
+          *,
+          business_categories(
+            category:categories(*)
+          )
+        )
       `)
       .in('business_id', ids)
       .order('created_at', { ascending: false });
@@ -117,12 +171,15 @@
       throw new Error('Failed to fetch bags by category: ' + error.message);
     }
 
-    return (data ?? []).map((bag) => ({
-      ...bag,
-      business: bag.business as Business,
-      category: null,
-      isFavorite: false,
-    }));
+    return (data ?? []).map((bag) => {
+      const biz = bag.business as Business & { business_categories: { category: Category }[] };
+      return {
+        ...bag,
+        business: biz,
+        category: biz?.business_categories?.[0]?.category ?? null,
+        isFavorite: false,
+      };
+    });
   }
 
   /**
@@ -165,7 +222,12 @@
       .from('surplus_bags')
       .select(`
         *,
-        business:businesses(*)
+        business:businesses(
+          *,
+          business_categories(
+            category:categories(*)
+          )
+        )
       `)
       .or(`title.ilike.%${query}%,description.ilike.%${query}%`)
       .order('created_at', { ascending: false });
@@ -174,12 +236,15 @@
       throw new Error('Failed to search bags: ' + error.message);
     }
 
-    return (data ?? []).map((bag) => ({
-      ...bag,
-      business: bag.business as Business,
-      category: null,
-      isFavorite: false,
-    }));
+    return (data ?? []).map((bag) => {
+      const biz = bag.business as Business & { business_categories: { category: Category }[] };
+      return {
+        ...bag,
+        business: biz,
+        category: biz?.business_categories?.[0]?.category ?? null,
+        isFavorite: false,
+      };
+    });
   }
 
   /**

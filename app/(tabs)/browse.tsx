@@ -16,11 +16,10 @@ import BagCardVertical from '../../src/components/bags/BagCardVertical';
 import EmptyState from '../../src/components/ui/EmptyState';
 import { colors, spacing, typography } from '../../src/theme';
 import { strings } from '../../src/constants/strings';
-import { CATEGORIES } from '../../src/constants/categories';
-import { searchBags } from '../../src/data';
+import { getAllActiveBags, getBagsByCategory, searchBags, getCategories } from '../../src/data';
 import ErrorState from '../../src/components/ui/ErrorState';
 import { useFavorites } from '../../src/context/FavoritesContext';
-import type { BagWithBusiness } from '../../src/types';
+import type { BagWithBusiness, Category } from '../../src/types';
 
 type SortOption = 'relevance' | 'price' | 'rating';
 
@@ -39,19 +38,35 @@ export default function BrowseScreen() {
   const [sortBy, setSortBy] = useState<SortOption>('relevance');
   const [showSortOptions, setShowSortOptions] = useState(false);
   const [bags, setBags] = useState<BagWithBusiness[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
+
+  useEffect(() => {
+    getCategories().then(setCategories).catch(() => {});
+  }, []);
 
   const loadBags = useCallback(async () => {
     try {
       setLoading(true);
       setError(false);
-      let results = await searchBags(searchQuery);
-      results = results.filter((b) => b.status === 'active');
 
-      if (selectedCategory) {
+      let results: BagWithBusiness[];
+      const hasSearch = searchQuery.trim().length > 0;
+      const hasCategory = selectedCategory !== null;
+
+      if (hasSearch && hasCategory) {
+        results = await searchBags(searchQuery);
         results = results.filter((b) => b.category?.id === selectedCategory);
+      } else if (hasSearch) {
+        results = await searchBags(searchQuery);
+      } else if (hasCategory) {
+        results = await getBagsByCategory(selectedCategory);
+      } else {
+        results = await getAllActiveBags();
       }
+
+      results = results.filter((b) => b.status === 'active');
 
       switch (sortBy) {
         case 'price':
@@ -80,7 +95,7 @@ export default function BrowseScreen() {
     router.push(`/bag/${bag.id}`);
   };
 
-  const allCategories = [{ id: null, name: strings.categories.all, icon: null, created_at: '' }, ...CATEGORIES];
+  const allCategories = [{ id: null, name: strings.categories.all, icon: null, created_at: '' }, ...categories];
 
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
