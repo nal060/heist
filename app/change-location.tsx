@@ -1,4 +1,4 @@
-import React, { useState, useRef, useMemo } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   View,
   Text,
@@ -20,21 +20,41 @@ import { strings } from '../src/constants/strings';
 import { FIFTY_MILES_IN_METERS } from '../src/data';
 import { useLocation } from '../src/context/LocationContext';
 
-interface MockAddress {
+interface AddressResult {
   id: string;
   name: string;
   latitude: number;
   longitude: number;
 }
 
-const MOCK_ADDRESSES: MockAddress[] = [
-  { id: '1', name: 'Casco Viejo, Ciudad de Panama', latitude: 8.9519, longitude: -79.5346 },
-  { id: '2', name: 'Obarrio, Ciudad de Panama', latitude: 8.9833, longitude: -79.5258 },
-  { id: '3', name: 'Costa del Este, Ciudad de Panama', latitude: 9.0103, longitude: -79.4636 },
-  { id: '4', name: 'Clayton, Ciudad de Panama', latitude: 9.0083, longitude: -79.5667 },
-  { id: '5', name: 'San Francisco, Ciudad de Panama', latitude: 8.9936, longitude: -79.5050 },
-  { id: '6', name: 'Punta Pacifica, Ciudad de Panama', latitude: 8.9825, longitude: -79.5150 },
-];
+interface NominatimResult {
+  place_id: number;
+  display_name: string;
+  lat: string;
+  lon: string;
+}
+
+async function searchPanamaAddresses(query: string): Promise<AddressResult[]> {
+  const enrichedQuery = /panama/i.test(query) ? query : `${query}, Panama`;
+  const params = new URLSearchParams({
+    q: enrichedQuery,
+    countrycodes: 'pa',
+    format: 'json',
+    limit: '6',
+    addressdetails: '0',
+    'accept-language': 'es',
+  });
+  const response = await fetch(`https://nominatim.openstreetmap.org/search?${params}`, {
+    headers: { 'User-Agent': 'HeistApp/1.0' },
+  });
+  const data: NominatimResult[] = await response.json();
+  return data.map((r) => ({
+    id: String(r.place_id),
+    name: r.display_name,
+    latitude: parseFloat(r.lat),
+    longitude: parseFloat(r.lon),
+  }));
+}
 
 const DEFAULT_REGION = {
   latitude: strings.discover.latitude,
@@ -49,22 +69,41 @@ export default function ChangeLocationScreen() {
   const mapRef = useRef<MapView>(null);
 
   const [query, setQuery] = useState('');
-  const [selectedAddress, setSelectedAddress] = useState<MockAddress | null>(null);
+  const [selectedAddress, setSelectedAddress] = useState<AddressResult | null>(null);
   const [locating, setLocating] = useState(false);
+  const [suggestions, setSuggestions] = useState<AddressResult[]>([]);
+  const [searching, setSearching] = useState(false);
   const [mapCenter, setMapCenter] = useState<{ latitude: number; longitude: number }>({
     latitude: DEFAULT_REGION.latitude,
     longitude: DEFAULT_REGION.longitude,
   });
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const filteredAddresses = useMemo(() => {
-    if (!query.trim()) return [];
-    const lower = query.toLowerCase();
-    return MOCK_ADDRESSES.filter((a) => a.name.toLowerCase().includes(lower));
-  }, [query]);
+  useEffect(() => {
+    if (selectedAddress || !query.trim()) {
+      setSuggestions([]);
+      return;
+    }
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(async () => {
+      setSearching(true);
+      try {
+        const results = await searchPanamaAddresses(query.trim());
+        setSuggestions(results);
+      } catch {
+        setSuggestions([]);
+      } finally {
+        setSearching(false);
+      }
+    }, 400);
+    return () => {
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+    };
+  }, [query, selectedAddress]);
 
   const showSuggestions = query.trim().length > 0 && !selectedAddress;
 
-  function selectAddress(address: MockAddress) {
+  function selectAddress(address: AddressResult) {
     setSelectedAddress(address);
     setQuery(address.name);
     Keyboard.dismiss();
@@ -169,22 +208,28 @@ export default function ChangeLocationScreen() {
         {/* Autocomplete suggestions */}
         {showSuggestions && (
           <View style={styles.suggestionsContainer}>
-            <FlatList
-              data={filteredAddresses}
-              keyExtractor={(item) => item.id}
-              keyboardShouldPersistTaps="handled"
-              renderItem={({ item }) => (
-                <TouchableOpacity style={styles.suggestionItem} onPress={() => selectAddress(item)}>
-                  <Ionicons name="location-outline" size={18} color={colors.text.secondary} />
-                  <Text style={styles.suggestionText}>{item.name}</Text>
-                </TouchableOpacity>
-              )}
-              ListEmptyComponent={
-                <View style={styles.suggestionItem}>
-                  <Text style={styles.noResultsText}>No se encontraron resultados</Text>
-                </View>
-              }
-            />
+            {searching ? (
+              <View style={styles.suggestionItem}>
+                <ActivityIndicator size="small" color={colors.primary[500]} />
+              </View>
+            ) : (
+              <FlatList
+                data={suggestions}
+                keyExtractor={(item) => item.id}
+                keyboardShouldPersistTaps="handled"
+                renderItem={({ item }) => (
+                  <TouchableOpacity style={styles.suggestionItem} onPress={() => selectAddress(item)}>
+                    <Ionicons name="location-outline" size={18} color={colors.text.secondary} />
+                    <Text style={styles.suggestionText}>{item.name}</Text>
+                  </TouchableOpacity>
+                )}
+                ListEmptyComponent={
+                  <View style={styles.suggestionItem}>
+                    <Text style={styles.noResultsText}>No se encontraron resultados</Text>
+                  </View>
+                }
+              />
+            )}
           </View>
         )}
       </View>
