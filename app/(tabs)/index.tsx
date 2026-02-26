@@ -39,6 +39,7 @@ export default function DiscoverScreen() {
 
   const loadBags = useCallback(async () => {
     try {
+      setLoading(true);
       setError(false);
       const [bags, cats] = await Promise.all([
         getNearbyBags(lat, lon),
