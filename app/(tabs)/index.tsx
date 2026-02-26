@@ -26,7 +26,7 @@ export default function DiscoverScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { isFavorite, toggleFavorite } = useFavorites();
-  const { location } = useLocation();
+  const { location, isLoaded } = useLocation();
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
   const [allBags, setAllBags] = useState<BagWithBusiness[]>([]);
@@ -55,8 +55,9 @@ export default function DiscoverScreen() {
   }, [lat, lon]);
 
   useEffect(() => {
+    if (!isLoaded) return;
     loadBags();
-  }, [loadBags]);
+  }, [loadBags, isLoaded]);
 
   const activeBags = allBags.filter((b) => b.status === 'active');
 
