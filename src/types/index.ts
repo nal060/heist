@@ -1,6 +1,6 @@
 // Enums matching DB schema
 export type BagStatus = 'draft' | 'active' | 'sold_out' | 'expired' | 'cancelled';
-export type OrderStatus = 'pending' | 'confirmed' | 'ready' | 'picked_up' | 'cancelled' | 'no_show';
+export type OrderStatus = 'reserved' | 'collected' | 'cancelled';
 export type PaymentStatus = 'pending' | 'completed' | 'failed' | 'refunded';
 export type PaymentMethod = 'credit_card' | 'debit_card' | 'apple_pay' | 'cash';
 export type DiscountType = 'percentage' | 'fixed';

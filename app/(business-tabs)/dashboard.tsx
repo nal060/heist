@@ -29,7 +29,7 @@ const MOCK_RECENT_ORDERS = [
     quantity: 1,
     totalPrice: 9.99,
     pickupWindow: '5:00 PM – 6:00 PM',
-    status: 'pending' as const,
+    status: 'reserved' as const,
     reservedAt: '2 min ago',
   },
   {
@@ -39,7 +39,7 @@ const MOCK_RECENT_ORDERS = [
     quantity: 2,
     totalPrice: 25.98,
     pickupWindow: '6:00 PM – 7:00 PM',
-    status: 'confirmed' as const,
+    status: 'reserved' as const,
     reservedAt: '15 min ago',
   },
   {
@@ -49,7 +49,7 @@ const MOCK_RECENT_ORDERS = [
     quantity: 1,
     totalPrice: 7.99,
     pickupWindow: '5:00 PM – 6:00 PM',
-    status: 'ready' as const,
+    status: 'collected' as const,
     reservedAt: '34 min ago',
   },
   {
@@ -59,7 +59,7 @@ const MOCK_RECENT_ORDERS = [
     quantity: 1,
     totalPrice: 9.99,
     pickupWindow: '4:00 PM – 5:00 PM',
-    status: 'picked_up' as const,
+    status: 'collected' as const,
     reservedAt: '1 hr ago',
   },
 ];
@@ -72,13 +72,12 @@ const MOCK_ACTIVE_BAGS = [
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-type OrderStatus = 'pending' | 'confirmed' | 'ready' | 'picked_up';
+type OrderStatus = 'reserved' | 'collected' | 'cancelled';
 
 const STATUS_CONFIG: Record<OrderStatus, { label: string; bg: string; text: string }> = {
-  pending:   { label: 'Pending',   bg: '#FFF8E1', text: '#F57F17' },
-  confirmed: { label: 'Confirmed', bg: '#E3F2FD', text: '#1565C0' },
-  ready:     { label: 'Ready',     bg: '#E8F5E9', text: '#2E7D32' },
-  picked_up: { label: 'Picked Up', bg: '#F5F5F5', text: '#757575' },
+  reserved:  { label: 'Reserved',  bg: '#FFF8E1', text: '#F57F17' },
+  collected: { label: 'Collected', bg: '#E8F5E9', text: '#2E7D32' },
+  cancelled: { label: 'Cancelled', bg: '#F5F5F5', text: '#9E9E9E' },
 };
 
 function getGreeting() {
@@ -225,18 +224,18 @@ export default function DashboardScreen() {
           </TouchableOpacity>
         </View>
 
-        {/* Recent Orders */}
+        {/* Recent Pickups */}
         <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>Recent Orders</Text>
+          <Text style={styles.sectionTitle}>Recent Pickups</Text>
           <TouchableOpacity onPress={() => router.push('/(business-tabs)/orders')}>
             <Text style={styles.seeAll}>See all</Text>
           </TouchableOpacity>
         </View>
         <View style={[styles.card, shadows.sm]}>
-          {MOCK_RECENT_ORDERS.map((order, idx) => (
+          {MOCK_RECENT_ORDERS.filter((o) => o.status === 'collected').map((order, idx, arr) => (
             <React.Fragment key={order.id}>
               <OrderRow order={order} />
-              {idx < MOCK_RECENT_ORDERS.length - 1 && <View style={styles.divider} />}
+              {idx < arr.length - 1 && <View style={styles.divider} />}
             </React.Fragment>
           ))}
         </View>
