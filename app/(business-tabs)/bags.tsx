@@ -18,7 +18,6 @@ import type { BagStatus } from '../../src/types';
 type MockBag = {
   id: string;
   title: string;
-  category: string;
   originalPrice: number;
   discountedPrice: number;
   quantityTotal: number;
@@ -33,7 +32,6 @@ const MOCK_BAGS: MockBag[] = [
   {
     id: 'bag-001',
     title: 'Bakery Surprise Box',
-    category: 'Bakery',
     originalPrice: 18.0,
     discountedPrice: 9.99,
     quantityTotal: 5,
@@ -46,7 +44,6 @@ const MOCK_BAGS: MockBag[] = [
   {
     id: 'bag-002',
     title: 'Sushi Mystery Bag',
-    category: 'Japanese',
     originalPrice: 28.0,
     discountedPrice: 12.99,
     quantityTotal: 3,
@@ -59,7 +56,6 @@ const MOCK_BAGS: MockBag[] = [
   {
     id: 'bag-003',
     title: 'Pasta Special',
-    category: 'Italian',
     originalPrice: 15.0,
     discountedPrice: 7.99,
     quantityTotal: 4,
@@ -72,7 +68,6 @@ const MOCK_BAGS: MockBag[] = [
   {
     id: 'bag-004',
     title: 'Weekend Brunch Bag',
-    category: 'Brunch',
     originalPrice: 22.0,
     discountedPrice: 11.99,
     quantityTotal: 6,
@@ -85,7 +80,6 @@ const MOCK_BAGS: MockBag[] = [
   {
     id: 'bag-005',
     title: 'Sandwich Variety Pack',
-    category: 'Deli',
     originalPrice: 16.0,
     discountedPrice: 8.49,
     quantityTotal: 4,
@@ -98,7 +92,6 @@ const MOCK_BAGS: MockBag[] = [
   {
     id: 'bag-006',
     title: "Yesterday's Pastry Box",
-    category: 'Bakery',
     originalPrice: 14.0,
     discountedPrice: 6.99,
     quantityTotal: 3,
@@ -146,7 +139,6 @@ function BagCard({ bag, onEdit }: { bag: MockBag; onEdit: (id: string) => void }
       <View style={styles.cardTopRow}>
         <View style={styles.cardTitleWrap}>
           <Text style={styles.cardTitle} numberOfLines={1}>{bag.title}</Text>
-          <Text style={styles.cardCategory}>{bag.category}</Text>
         </View>
         <View style={[styles.statusBadge, { backgroundColor: cfg.bg }]}>
           <Text style={[styles.statusText, { color: cfg.text }]}>{cfg.label}</Text>
@@ -394,11 +386,6 @@ const styles = StyleSheet.create({
     fontSize: typography.fontSize.base,
     fontWeight: typography.fontWeight.bold,
     color: colors.text.primary,
-  },
-  cardCategory: {
-    fontSize: typography.fontSize.xs,
-    color: colors.text.secondary,
-    marginTop: 2,
   },
   statusBadge: {
     borderRadius: borderRadius.full,

@@ -29,6 +29,20 @@ export default function RootLayout() {
             }}
           />
           <Stack.Screen
+            name="bag/create"
+            options={{
+              presentation: 'card',
+              animation: 'slide_from_right',
+            }}
+          />
+          <Stack.Screen
+            name="bag/edit/[id]"
+            options={{
+              presentation: 'card',
+              animation: 'slide_from_right',
+            }}
+          />
+          <Stack.Screen
             name="checkout/[bagId]"
             options={{
               presentation: 'card',
