@@ -13,7 +13,7 @@ import { colors, spacing, typography, borderRadius, shadows } from '../../src/th
 
 // ─── Mock Data ────────────────────────────────────────────────────────────────
 
-const DEMO_BUSINESS_NAME = 'Demo Business';
+const DEMO_BUSINESS_NAME = 'Negocio Demo';
 
 const MOCK_STATS = {
   activeBags: 3,
@@ -25,49 +25,49 @@ const MOCK_RECENT_ORDERS = [
   {
     id: 'ord-001',
     pickupCode: 'A1B2',
-    bagTitle: 'Bakery Surprise Box',
+    bagTitle: 'Caja Sorpresa de Panadería',
     quantity: 1,
     totalPrice: 9.99,
     pickupWindow: '5:00 PM – 6:00 PM',
     status: 'reserved' as const,
-    reservedAt: '2 min ago',
+    reservedAt: 'hace 2 min',
   },
   {
     id: 'ord-002',
     pickupCode: 'C3D4',
-    bagTitle: 'Sushi Mystery Bag',
+    bagTitle: 'Bolsa Misteriosa de Sushi',
     quantity: 2,
     totalPrice: 25.98,
     pickupWindow: '6:00 PM – 7:00 PM',
     status: 'reserved' as const,
-    reservedAt: '15 min ago',
+    reservedAt: 'hace 15 min',
   },
   {
     id: 'ord-003',
     pickupCode: 'E5F6',
-    bagTitle: 'Pasta Special',
+    bagTitle: 'Especial de Pasta',
     quantity: 1,
     totalPrice: 7.99,
     pickupWindow: '5:00 PM – 6:00 PM',
     status: 'collected' as const,
-    reservedAt: '34 min ago',
+    reservedAt: 'hace 34 min',
   },
   {
     id: 'ord-004',
     pickupCode: 'G7H8',
-    bagTitle: 'Bakery Surprise Box',
+    bagTitle: 'Caja Sorpresa de Panadería',
     quantity: 1,
     totalPrice: 9.99,
     pickupWindow: '4:00 PM – 5:00 PM',
     status: 'collected' as const,
-    reservedAt: '1 hr ago',
+    reservedAt: 'hace 1 h',
   },
 ];
 
 const MOCK_ACTIVE_BAGS = [
-  { id: 'bag-001', title: 'Bakery Surprise Box', available: 2, total: 5, price: 9.99 },
-  { id: 'bag-002', title: 'Sushi Mystery Bag', available: 1, total: 3, price: 12.99 },
-  { id: 'bag-003', title: 'Pasta Special', available: 4, total: 4, price: 7.99 },
+  { id: 'bag-001', title: 'Caja Sorpresa de Panadería', available: 2, total: 5, price: 9.99 },
+  { id: 'bag-002', title: 'Bolsa Misteriosa de Sushi', available: 1, total: 3, price: 12.99 },
+  { id: 'bag-003', title: 'Especial de Pasta', available: 4, total: 4, price: 7.99 },
 ];
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -75,16 +75,16 @@ const MOCK_ACTIVE_BAGS = [
 type OrderStatus = 'reserved' | 'collected' | 'cancelled';
 
 const STATUS_CONFIG: Record<OrderStatus, { label: string; bg: string; text: string }> = {
-  reserved:  { label: 'Reserved',  bg: '#FFF8E1', text: '#F57F17' },
-  collected: { label: 'Collected', bg: '#E8F5E9', text: '#2E7D32' },
-  cancelled: { label: 'Cancelled', bg: '#F5F5F5', text: '#9E9E9E' },
+  reserved:  { label: 'Reservado',  bg: '#FFF8E1', text: '#F57F17' },
+  collected: { label: 'Recogido',   bg: '#E8F5E9', text: '#2E7D32' },
+  cancelled: { label: 'Cancelado',  bg: '#F5F5F5', text: '#9E9E9E' },
 };
 
 function getGreeting() {
   const hour = new Date().getHours();
-  if (hour < 12) return 'Good morning';
-  if (hour < 17) return 'Good afternoon';
-  return 'Good evening';
+  if (hour < 12) return 'Buenos días';
+  if (hour < 17) return 'Buenas tardes';
+  return 'Buenas noches';
 }
 
 // ─── Sub-components ───────────────────────────────────────────────────────────
@@ -184,24 +184,24 @@ export default function DashboardScreen() {
         </View>
 
         {/* Stats */}
-        <Text style={styles.sectionTitle}>Today's Summary</Text>
+        <Text style={styles.sectionTitle}>Resumen de hoy</Text>
         <View style={styles.statsRow}>
           <StatCard
             icon="bag-handle-outline"
             value={String(MOCK_STATS.activeBags)}
-            label="Active Bags"
+            label="Bolsas activas"
             color={colors.primary[500]}
           />
           <StatCard
             icon="receipt-outline"
             value={String(MOCK_STATS.ordersToday)}
-            label="Orders Today"
+            label="Pedidos hoy"
             color="#FF9800"
           />
           <StatCard
             icon="cash-outline"
             value={`$${MOCK_STATS.revenueToday.toFixed(0)}`}
-            label="Revenue"
+            label="Ingresos"
             color="#4CAF50"
           />
         </View>
@@ -213,15 +213,15 @@ export default function DashboardScreen() {
             onPress={() => router.push('/collect')}
           >
             <Ionicons name="bag-check-outline" size={18} color={colors.white} />
-            <Text style={styles.actionBtnPrimaryText}>Collect</Text>
+            <Text style={styles.actionBtnPrimaryText}>Recoger</Text>
           </TouchableOpacity>
         </View>
 
         {/* Recent Pickups */}
         <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>Recent Pickups</Text>
+          <Text style={styles.sectionTitle}>Recolecciones recientes</Text>
           <TouchableOpacity onPress={() => router.push('/(business-tabs)/orders')}>
-            <Text style={styles.seeAll}>See all</Text>
+            <Text style={styles.seeAll}>Ver todo</Text>
           </TouchableOpacity>
         </View>
         <View style={[styles.card, shadows.sm]}>
@@ -235,9 +235,9 @@ export default function DashboardScreen() {
 
         {/* Active Bags */}
         <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>Active Bags</Text>
+          <Text style={styles.sectionTitle}>Bolsas activas</Text>
           <TouchableOpacity onPress={() => router.push('/(business-tabs)/bags')}>
-            <Text style={styles.seeAll}>Manage</Text>
+            <Text style={styles.seeAll}>Gestionar</Text>
           </TouchableOpacity>
         </View>
         <View style={[styles.card, shadows.sm]}>

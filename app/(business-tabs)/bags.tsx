@@ -32,62 +32,62 @@ type MockBag = {
 const MOCK_BAGS: MockBag[] = [
   {
     id: 'bag-001',
-    title: 'Bakery Surprise Box',
+    title: 'Caja Sorpresa de Panadería',
     originalPrice: 18.0,
     discountedPrice: 9.99,
     quantityTotal: 5,
     quantityAvailable: 2,
     pickupStart: '5:00 PM',
     pickupEnd: '6:00 PM',
-    date: 'Today',
+    date: 'Hoy',
     status: 'active',
   },
   {
     id: 'bag-002',
-    title: 'Sushi Mystery Bag',
+    title: 'Bolsa Misteriosa de Sushi',
     originalPrice: 28.0,
     discountedPrice: 12.99,
     quantityTotal: 3,
     quantityAvailable: 1,
     pickupStart: '6:00 PM',
     pickupEnd: '7:00 PM',
-    date: 'Today',
+    date: 'Hoy',
     status: 'active',
   },
   {
     id: 'bag-003',
-    title: 'Pasta Special',
+    title: 'Especial de Pasta',
     originalPrice: 15.0,
     discountedPrice: 7.99,
     quantityTotal: 4,
     quantityAvailable: 0,
     pickupStart: '5:00 PM',
     pickupEnd: '6:00 PM',
-    date: 'Today',
+    date: 'Hoy',
     status: 'sold_out',
   },
   {
     id: 'bag-004',
-    title: "Yesterday's Pastry Box",
+    title: 'Caja de Repostería de Ayer',
     originalPrice: 14.0,
     discountedPrice: 6.99,
     quantityTotal: 3,
     quantityAvailable: 0,
     pickupStart: '4:00 PM',
     pickupEnd: '5:00 PM',
-    date: 'Yesterday',
+    date: 'Ayer',
     status: 'expired',
   },
-    {
+  {
     id: 'bag-005',
-    title: "Yesterday's Pastry Box",
+    title: 'Caja de Repostería de Ayer',
     originalPrice: 14.0,
     discountedPrice: 6.99,
     quantityTotal: 3,
     quantityAvailable: 0,
     pickupStart: '4:00 PM',
     pickupEnd: '5:00 PM',
-    date: 'Yesterday',
+    date: 'Ayer',
     status: 'cancelled',
   },
 ];
@@ -97,19 +97,19 @@ const MOCK_BAGS: MockBag[] = [
 type FilterKey = 'all' | 'active' | 'sold_out' | 'expired' | 'cancelled';
 
 const FILTERS: { key: FilterKey; label: string }[] = [
-  { key: 'all', label: 'All' },
-  { key: 'active', label: 'Active' },
-  { key: 'sold_out', label: 'Sold Out' },
-  { key: 'expired', label: 'Expired' },
-  { key: 'cancelled', label: 'Cancelled' },
+  { key: 'all',       label: 'Todos' },
+  { key: 'active',    label: 'Activos' },
+  { key: 'sold_out',  label: 'Agotados' },
+  { key: 'expired',   label: 'Expirados' },
+  { key: 'cancelled', label: 'Cancelados' },
 ];
 
 const STATUS_CONFIG: Record<BagStatus, { label: string; bg: string; text: string }> = {
-  active:    { label: 'Active',    bg: '#E8F5E9', text: '#2E7D32' },
-  draft:     { label: 'Draft',     bg: '#F5F5F5', text: '#757575' },
-  sold_out:  { label: 'Sold Out',  bg: '#FFF8E1', text: '#F57F17' },
-  expired:   { label: 'Expired',   bg: '#FFEBEE', text: '#C62828' },
-  cancelled: { label: 'Cancelled', bg: '#F5F5F5', text: '#9E9E9E' },
+  active:    { label: 'Activo',    bg: '#E8F5E9', text: '#2E7D32' },
+  draft:     { label: 'Borrador',  bg: '#F5F5F5', text: '#757575' },
+  sold_out:  { label: 'Agotado',   bg: '#FFF8E1', text: '#F57F17' },
+  expired:   { label: 'Expirado',  bg: '#FFEBEE', text: '#C62828' },
+  cancelled: { label: 'Cancelado', bg: '#F5F5F5', text: '#9E9E9E' },
 };
 
 // ─── Bag Card ─────────────────────────────────────────────────────────────────
@@ -138,7 +138,7 @@ function BagCard({
       }}
     >
       <Ionicons name="close-circle-outline" size={20} color={colors.white} />
-      <Text style={styles.cancelActionText}>Cancel</Text>
+      <Text style={styles.cancelActionText}>Cancelar</Text>
     </TouchableOpacity>
   );
 
@@ -151,7 +151,7 @@ function BagCard({
       }}
     >
       <Ionicons name="refresh-outline" size={20} color={colors.white} />
-      <Text style={styles.relistActionText}>Re-list</Text>
+      <Text style={styles.relistActionText}>Volver a publicar</Text>
     </TouchableOpacity>
   );
 
@@ -235,11 +235,11 @@ function BagCard({
 
 function EmptyState({ filter }: { filter: FilterKey }) {
   const messages: Record<FilterKey, string> = {
-    all:       "You haven't created any bags yet.",
-    active:    'No active bags right now.',
-    sold_out:  'No sold out bags.',
-    expired:   'No expired bags.',
-    cancelled: 'No cancelled bags.',
+    all:       "Aún no has creado ninguna bolsa.",
+    active:    'No hay bolsas activas en este momento.',
+    sold_out:  'No hay bolsas agotadas.',
+    expired:   'No hay bolsas vencidas.',
+    cancelled: 'No hay maletas canceladas.',
   };
   return (
     <View style={styles.emptyState}>
@@ -280,7 +280,7 @@ export default function BagsScreen() {
     <View style={[styles.container, { paddingTop: insets.top }]}>
       {/* Header */}
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>My Bags</Text>
+        <Text style={styles.headerTitle}>Mis Bolsos</Text>
         <TouchableOpacity style={styles.addBtn} onPress={handleCreate}>
           <Ionicons name="add" size={20} color={colors.white} />
         </TouchableOpacity>

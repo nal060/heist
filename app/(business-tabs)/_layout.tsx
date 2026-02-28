@@ -29,7 +29,7 @@ export default function BusinessTabLayout() {
       <Tabs.Screen
         name="dashboard"
         options={{
-          title: 'Dashboard',
+          title: 'Inicio',
           tabBarIcon: ({ color, size }: { color: string; size: number }) => (
             <Ionicons name={'grid-outline' as TabIconName} size={size} color={color} />
           ),
@@ -38,7 +38,7 @@ export default function BusinessTabLayout() {
       <Tabs.Screen
         name="bags"
         options={{
-          title: 'My Bags',
+          title: 'Mis Bolsas',
           tabBarIcon: ({ color, size }: { color: string; size: number }) => (
             <Ionicons name={'bag-outline' as TabIconName} size={size} color={color} />
           ),
@@ -47,7 +47,7 @@ export default function BusinessTabLayout() {
       <Tabs.Screen
         name="orders"
         options={{
-          title: 'Orders',
+          title: 'Pedidos',
           tabBarIcon: ({ color, size }: { color: string; size: number }) => (
             <Ionicons name={'receipt-outline' as TabIconName} size={size} color={color} />
           ),
@@ -56,7 +56,7 @@ export default function BusinessTabLayout() {
       <Tabs.Screen
         name="profile"
         options={{
-          title: 'Business',
+          title: 'Negocio',
           tabBarIcon: ({ color, size }: { color: string; size: number }) => (
             <Ionicons name={'storefront-outline' as TabIconName} size={size} color={color} />
           ),

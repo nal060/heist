@@ -92,12 +92,12 @@ export default function CollectScreen() {
           <TouchableOpacity style={styles.backBtn} onPress={() => router.back()}>
             <Ionicons name="arrow-back" size={24} color={colors.text.primary} />
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>Collect Order</Text>
+          <Text style={styles.headerTitle}>Coleccionar Pedido</Text>
           <View style={styles.backBtn} />
         </View>
 
         <View style={styles.body}>
-          <Text style={styles.label}>Enter pickup code</Text>
+          <Text style={styles.label}>Introduce el código de recogida</Text>
 
           {/* Slot display — tapping focuses the hidden input */}
           <Pressable style={styles.slotsRow} onPress={() => inputRef.current?.focus()}>
@@ -159,7 +159,7 @@ export default function CollectScreen() {
             <View style={[styles.notice, styles.noticeError]}>
               <Ionicons name="alert-circle-outline" size={16} color={colors.error} />
               <Text style={[styles.noticeText, { color: colors.error }]}>
-                No order found for this code.
+                No se encontró ningún pedido para este código.
               </Text>
             </View>
           )}
@@ -168,7 +168,7 @@ export default function CollectScreen() {
             <View style={[styles.notice, styles.noticeWarn]}>
               <Ionicons name="information-circle-outline" size={16} color="#F57F17" />
               <Text style={[styles.noticeText, { color: '#F57F17' }]}>
-                {previewOrder.bagTitle} has already been collected.
+                {previewOrder.bagTitle} ya ha sido recogido.
               </Text>
             </View>
           )}
@@ -177,7 +177,7 @@ export default function CollectScreen() {
             <View style={[styles.notice, styles.noticeSuccess]}>
               <Ionicons name="checkmark-circle-outline" size={16} color="#2E7D32" />
               <Text style={[styles.noticeText, { color: '#2E7D32' }]}>
-                Collected! Enter another code to continue.
+               ¡Listo! Introduce otro código para continuar.
               </Text>
             </View>
           )}
@@ -186,7 +186,7 @@ export default function CollectScreen() {
           <View style={styles.actions}>
             {(lookupState === 'found' || lookupState === 'not_found' || lookupState === 'already_collected') && (
               <TouchableOpacity style={styles.clearBtn} onPress={handleReset}>
-                <Text style={styles.clearBtnText}>Clear</Text>
+                <Text style={styles.clearBtnText}>Borrar</Text>
               </TouchableOpacity>
             )}
             <TouchableOpacity
@@ -195,7 +195,7 @@ export default function CollectScreen() {
               disabled={lookupState !== 'found'}
             >
               <Ionicons name="bag-check-outline" size={18} color={colors.white} />
-              <Text style={styles.collectBtnText}>Confirm Collection</Text>
+              <Text style={styles.collectBtnText}>Confirmar Colección</Text>
             </TouchableOpacity>
           </View>
         </View>

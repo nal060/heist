@@ -13,14 +13,14 @@ import { colors, spacing, typography, borderRadius, shadows } from '../../src/th
 // ─── Mock Data ────────────────────────────────────────────────────────────────
 
 const MOCK_BUSINESS = {
-  name: 'Demo Business',
-  description: 'Fresh, locally sourced baked goods and seasonal specials made daily.',
-  address: '123 Main St, San Francisco, CA 94105',
-  phone: '+1 (415) 555-0182',
+  name: 'Negocio Demo',
+  description: 'Comida Rica',
+  address: 'Camino de cruces, Panama',
+  phone: '6513413',
   rating: 4.7,
   totalReviews: 134,
   isActive: true,
-  memberSince: 'March 2024',
+  memberSince: 'Marzo 2024',
 };
 
 // ─── Sub-components ───────────────────────────────────────────────────────────
@@ -96,7 +96,7 @@ export default function BusinessProfileScreen() {
 
         {/* Header */}
         <View style={styles.header}>
-          <Text style={styles.screenTitle}>Profile</Text>
+          <Text style={styles.screenTitle}>Perfil</Text>
         </View>
 
         {/* Identity card */}
@@ -107,7 +107,7 @@ export default function BusinessProfileScreen() {
             <View style={styles.ratingRow}>
               <Ionicons name="star" size={14} color="#F9A825" />
               <Text style={styles.ratingText}>
-                {MOCK_BUSINESS.rating.toFixed(1)} · {MOCK_BUSINESS.totalReviews} reviews
+                {MOCK_BUSINESS.rating.toFixed(1)} · {MOCK_BUSINESS.totalReviews} reseñas
               </Text>
             </View>
             <View style={[styles.statusBadge, MOCK_BUSINESS.isActive ? styles.statusActive : styles.statusInactive]}>
@@ -123,31 +123,31 @@ export default function BusinessProfileScreen() {
         </View>
 
         {/* Business Info */}
-        <Text style={styles.sectionTitle}>Business Info</Text>
+        <Text style={styles.sectionTitle}>Información Comercial</Text>
         <View style={[styles.card, shadows.sm]}>
-          <InfoRow icon="document-text-outline" label="Description" value={MOCK_BUSINESS.description} />
+          <InfoRow icon="document-text-outline" label="Descripción" value={MOCK_BUSINESS.description} />
           <View style={styles.divider} />
-          <InfoRow icon="location-outline" label="Address" value={MOCK_BUSINESS.address} />
+          <InfoRow icon="location-outline" label="Dirección" value={MOCK_BUSINESS.address} />
           <View style={styles.divider} />
-          <InfoRow icon="call-outline" label="Phone" value={MOCK_BUSINESS.phone} />
+          <InfoRow icon="call-outline" label="Teléfono" value={MOCK_BUSINESS.phone} />
           <View style={styles.divider} />
-          <InfoRow icon="calendar-outline" label="Member since" value={MOCK_BUSINESS.memberSince} />
+          <InfoRow icon="calendar-outline" label="Miembro Desde" value={MOCK_BUSINESS.memberSince} />
         </View>
 
         {/* Settings */}
-        <Text style={styles.sectionTitle}>Settings</Text>
+        <Text style={styles.sectionTitle}>Ajustes</Text>
         <View style={[styles.card, shadows.sm]}>
-          <SettingRow icon="time-outline" label="Business Hours" onPress={() => {}} />
+          <SettingRow icon="time-outline" label="Horario Comercial" onPress={() => {}} />
           <View style={styles.divider} />
-          <SettingRow icon="notifications-outline" label="Notifications" onPress={() => {}} />
+          <SettingRow icon="notifications-outline" label="Notificaciones" onPress={() => {}} />
           <View style={styles.divider} />
-          <SettingRow icon="help-circle-outline" label="Help & Support" onPress={() => {}} />
+          <SettingRow icon="help-circle-outline" label="Ayuda y Apoyo" onPress={() => {}} />
         </View>
 
         {/* Account */}
-        <Text style={styles.sectionTitle}>Account</Text>
+        <Text style={styles.sectionTitle}>Cuenta</Text>
         <View style={[styles.card, shadows.sm]}>
-          <SettingRow icon="log-out-outline" label="Sign Out" onPress={() => {}} destructive />
+          <SettingRow icon="log-out-outline" label="Cerrar Sesión" onPress={() => {}} destructive />
         </View>
 
         <View style={{ height: spacing.xxxxl }} />

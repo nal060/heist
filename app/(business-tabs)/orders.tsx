@@ -84,16 +84,16 @@ const MOCK_ORDERS: MockOrder[] = [
 type FilterKey = 'all' | OrderStatus;
 
 const FILTERS: { key: FilterKey; label: string }[] = [
-  { key: 'all',       label: 'All' },
-  { key: 'reserved',  label: 'Reserved' },
-  { key: 'collected', label: 'Collected' },
-  { key: 'cancelled', label: 'Cancelled' },
+  { key: 'all',       label: 'Todo' },
+  { key: 'reserved',  label: 'Reservado' },
+  { key: 'collected', label: 'Coleccionado' },
+  { key: 'cancelled', label: 'Cancelado' },
 ];
 
 const STATUS_CONFIG: Record<OrderStatus, { label: string; bg: string; text: string }> = {
-  reserved:  { label: 'Reserved',  bg: '#FFF8E1', text: '#F57F17' },
-  collected: { label: 'Collected', bg: '#E8F5E9', text: '#2E7D32' },
-  cancelled: { label: 'Cancelled', bg: '#F5F5F5', text: '#9E9E9E' },
+  reserved:  { label: 'Reservado',  bg: '#FFF8E1', text: '#F57F17' },
+  collected: { label: 'Coleccionado', bg: '#E8F5E9', text: '#2E7D32' },
+  cancelled: { label: 'Cancelado', bg: '#F5F5F5', text: '#9E9E9E' },
 };
 
 // ─── Order Card ───────────────────────────────────────────────────────────────
@@ -119,7 +119,7 @@ function OrderCard({
       }}
     >
       <Ionicons name="close-circle-outline" size={20} color={colors.white} />
-      <Text style={styles.cancelActionText}>Cancel</Text>
+      <Text style={styles.cancelActionText}>Cancelar</Text>
     </TouchableOpacity>
   );
 
@@ -132,7 +132,7 @@ function OrderCard({
       }}
     >
       <Ionicons name="bag-check-outline" size={20} color={colors.white} />
-      <Text style={styles.collectActionText}>Collected</Text>
+      <Text style={styles.collectActionText}>Coleccionado</Text>
     </TouchableOpacity>
   );
 
@@ -141,7 +141,7 @@ function OrderCard({
       {/* Top row: code + status */}
       <View style={styles.cardTop}>
         <View style={styles.codeWrap}>
-          <Text style={styles.codeLabel}>CODE</Text>
+          <Text style={styles.codeLabel}>CÓDIGO</Text>
           <Text style={styles.codeValue}>{order.pickupCode}</Text>
         </View>
         <View style={[styles.statusBadge, { backgroundColor: cfg.bg }]}>
@@ -200,19 +200,19 @@ function SummaryBar({ orders }: { orders: MockOrder[] }) {
     <View style={styles.summaryBar}>
       <View style={styles.summaryItem}>
         <Text style={styles.summaryValue}>{reserved}</Text>
-        <Text style={styles.summaryLabel}>Reserved</Text>
+        <Text style={styles.summaryLabel}>Reservado</Text>
       </View>
       <View style={styles.summaryDivider} />
       <View style={styles.summaryItem}>
         <Text style={[styles.summaryValue, collected > 0 && styles.summaryValueGreen]}>
           {collected}
         </Text>
-        <Text style={styles.summaryLabel}>Collected</Text>
+        <Text style={styles.summaryLabel}>Coleccionado</Text>
       </View>
       <View style={styles.summaryDivider} />
       <View style={styles.summaryItem}>
         <Text style={styles.summaryValue}>${revenue.toFixed(2)}</Text>
-        <Text style={styles.summaryLabel}>Revenue Today</Text>
+        <Text style={styles.summaryLabel}>Ingresos</Text>
       </View>
     </View>
   );
@@ -222,10 +222,10 @@ function SummaryBar({ orders }: { orders: MockOrder[] }) {
 
 function EmptyState({ filter }: { filter: FilterKey }) {
   const messages: Record<FilterKey, string> = {
-    all:       'No orders yet today.',
-    reserved:  'No reserved orders right now.',
-    collected: 'No collected orders yet.',
-    cancelled: 'No cancelled orders.',
+    all:       'Aún no hay pedidos hoy.',
+    reserved:  'No hay pedidos reservados en este momento.',
+    collected: 'Aún no hay pedidos recogidos.',
+    cancelled: 'No hay pedidos cancelados.',
   };
   return (
     <View style={styles.emptyState}>
@@ -260,8 +260,8 @@ export default function OrdersScreen() {
     <View style={[styles.container, { paddingTop: insets.top }]}>
       {/* Header */}
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>Orders</Text>
-        <Text style={styles.headerDate}>Today</Text>
+        <Text style={styles.headerTitle}>Pedidos</Text>
+        <Text style={styles.headerDate}>Hoy</Text>
       </View>
 
       {/* Summary bar */}

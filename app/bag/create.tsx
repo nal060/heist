@@ -42,8 +42,8 @@ function getDateOptions() {
   tomorrow.setDate(today.getDate() + 1);
   const fmt = (d: Date) => d.toISOString().split('T')[0];
   return [
-    { label: 'Today', value: fmt(today) },
-    { label: 'Tomorrow', value: fmt(tomorrow) },
+{ label: 'Hoy', value: fmt(today) },
+{ label: 'Mañana', value: fmt(tomorrow) },
   ];
 }
 
@@ -101,7 +101,7 @@ function TimePicker({
             color={error ? colors.error : colors.text.secondary}
           />
           <Text style={[styles.timePickerText, !selected && styles.timePlaceholder]}>
-            {selected ? selected.label : 'Select time'}
+          {selected ? selected.label : 'Selecciona'}
           </Text>
           <Ionicons name="chevron-down" size={14} color={colors.text.tertiary} />
         </TouchableOpacity>
@@ -268,13 +268,13 @@ export default function CreateBagScreen() {
 
   const pricingError: string | null = hasBothPrices
     ? discNum >= origNum
-      ? 'Selling price must be lower than the original price.'
+      ? 'El precio de venta debe ser menor que el precio original.'
       : null
     : null;
 
   const timeError: string | null =
     form.pickupStart && form.pickupEnd && form.pickupEnd <= form.pickupStart
-      ? 'End time must be after the start time.'
+      ? 'La hora de finalización debe ser posterior a la hora de inicio.'
       : null;
 
   const discountPct =
@@ -318,7 +318,7 @@ export default function CreateBagScreen() {
         <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
           <Ionicons name="chevron-back" size={24} color={colors.text.primary} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>{isRelist ? 'Re-list Bag' : 'New Bag'}</Text>
+        <Text style={styles.headerTitle}>{isRelist ? 'Volver a publicar bolsa' : 'Nueva bolsa'}</Text>
         <View style={styles.headerRight} />
       </View>
 
@@ -333,21 +333,21 @@ export default function CreateBagScreen() {
           keyboardShouldPersistTaps="handled"
         >
           {/* Bag Details */}
-          <FormSection title="Bag Details">
-            <FormLabel>Bag Name *</FormLabel>
+          <FormSection title="Detalles de la bolsa">
+            <FormLabel>Nombre de la bolsa *</FormLabel>
             <TextInput
               style={styles.input}
-              placeholder="e.g. Bakery Surprise Box"
+              placeholder="e.g. Bolsa Sorpresa"
               placeholderTextColor={colors.text.tertiary}
               value={form.title}
               onChangeText={set('title')}
               returnKeyType="next"
             />
 
-            <FormLabel>Description</FormLabel>
+            <FormLabel>Descripción</FormLabel>
             <TextInput
               style={[styles.input, styles.inputMultiline]}
-              placeholder="Tell customers what's inside…"
+              placeholder="Cuéntale a los clientes qué hay dentro…"
               placeholderTextColor={colors.text.tertiary}
               value={form.description}
               onChangeText={set('description')}
@@ -358,10 +358,10 @@ export default function CreateBagScreen() {
           </FormSection>
 
           {/* Pricing */}
-          <FormSection title="Pricing">
+          <FormSection title="Precio">
             <View style={styles.priceRow}>
               <View style={styles.priceField}>
-                <FormLabel>Original Price *</FormLabel>
+                <FormLabel>Precio Original *</FormLabel>
                 <View style={styles.currencyInput}>
                   <Text style={styles.currencySymbol}>$</Text>
                   <TextInput
@@ -377,7 +377,7 @@ export default function CreateBagScreen() {
               </View>
 
               <View style={styles.priceField}>
-                <FormLabel>Selling Price *</FormLabel>
+                <FormLabel>Precio de Venta *</FormLabel>
                 <View style={[styles.currencyInput, pricingError ? styles.inputErrorBorder : null]}>
                   <Text style={[styles.currencySymbol, pricingError ? styles.errorText : null]}>$</Text>
                   <TextInput
@@ -399,15 +399,15 @@ export default function CreateBagScreen() {
               <View style={styles.savingsBanner}>
                 <Ionicons name="pricetag-outline" size={14} color="#2E7D32" />
                 <Text style={styles.savingsText}>
-                  Customers save {discountPct}% off the original price
+                  Clientes ahorran {discountPct}% de descuento sobre el precio original
                 </Text>
               </View>
             ) : null}
           </FormSection>
 
           {/* Pickup */}
-          <FormSection title="Pickup">
-            <FormLabel>Date *</FormLabel>
+          <FormSection title="Recolección">
+            <FormLabel>Fecha *</FormLabel>
             <View style={styles.dateRow}>
               {DATE_OPTIONS.map((opt) => (
                 <TouchableOpacity
@@ -430,7 +430,7 @@ export default function CreateBagScreen() {
             <View style={styles.timeRow}>
               <View style={styles.timeField}>
                 <TimePicker
-                  label="Start Time *"
+                  label="Hora de Inicio *"
                   value={form.pickupStart}
                   onChange={(v) => set('pickupStart')(v)}
                 />
@@ -440,7 +440,7 @@ export default function CreateBagScreen() {
               </View>
               <View style={styles.timeField}>
                 <TimePicker
-                  label="End Time *"
+                  label="Hora de Finalización *"
                   value={form.pickupEnd}
                   onChange={(v) => set('pickupEnd')(v)}
                   error={!!timeError}
@@ -452,8 +452,8 @@ export default function CreateBagScreen() {
           </FormSection>
 
           {/* Quantity */}
-          <FormSection title="Quantity">
-            <FormLabel>Number of Bags Available *</FormLabel>
+          <FormSection title="Cantidad">
+            <FormLabel>Numero de bolsas disponibles *</FormLabel>
             <QuantityStepper value={form.quantityTotal} onChange={(v) => set('quantityTotal')(v)} />
           </FormSection>
 
@@ -468,7 +468,7 @@ export default function CreateBagScreen() {
             disabled={!canPublish}
           >
             <Ionicons name="checkmark-circle-outline" size={18} color={colors.white} />
-            <Text style={styles.publishBtnText}>Publish</Text>
+            <Text style={styles.publishBtnText}>Publicar</Text>
           </TouchableOpacity>
         </View>
       </KeyboardAvoidingView>
