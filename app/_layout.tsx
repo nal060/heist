@@ -18,7 +18,9 @@ export default function RootLayout() {
             contentStyle: { backgroundColor: colors.background.primary },
           }}
         >
+          <Stack.Screen name="index" />
           <Stack.Screen name="(tabs)" />
+          <Stack.Screen name="(business-tabs)" />
           <Stack.Screen
             name="bag/[id]"
             options={{
