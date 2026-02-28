@@ -15,7 +15,6 @@ import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, spacing, typography, borderRadius, shadows } from '../../src/theme';
-import type { BagStatus } from '../../src/types';
 
 // ─── Time slots ───────────────────────────────────────────────────────────────
 
@@ -278,8 +277,8 @@ export default function CreateBagScreen() {
     form.pickupEnd !== '' &&
     timeError === null;
 
-  const handleSave = (status: BagStatus) => {
-    if (status === 'active' && !canPublish) return;
+  const handlePublish = () => {
+    if (!canPublish) return;
 
     const payload = {
       title: form.title.trim(),
@@ -291,7 +290,7 @@ export default function CreateBagScreen() {
       pickup_end_time: form.pickupEnd,
       quantity_total: form.quantityTotal,
       quantity_available: form.quantityTotal,
-      status,
+      status: 'active',
     };
     console.log('Save bag:', payload);
 
@@ -450,14 +449,8 @@ export default function CreateBagScreen() {
         {/* Footer actions */}
         <View style={[styles.footer, { paddingBottom: insets.bottom + spacing.md }]}>
           <TouchableOpacity
-            style={styles.draftBtn}
-            onPress={() => handleSave('draft')}
-          >
-            <Text style={styles.draftBtnText}>Save as Draft</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
             style={[styles.publishBtn, !canPublish && styles.publishBtnDisabled]}
-            onPress={() => handleSave('active')}
+            onPress={handlePublish}
             disabled={!canPublish}
           >
             <Ionicons name="checkmark-circle-outline" size={18} color={colors.white} />
@@ -773,20 +766,6 @@ const styles = StyleSheet.create({
     backgroundColor: colors.background.primary,
     borderTopWidth: 1,
     borderTopColor: colors.gray[200],
-  },
-  draftBtn: {
-    flex: 1,
-    paddingVertical: spacing.md,
-    borderRadius: borderRadius.md,
-    borderWidth: 1.5,
-    borderColor: colors.gray[300],
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  draftBtnText: {
-    fontSize: typography.fontSize.base,
-    fontWeight: typography.fontWeight.semibold,
-    color: colors.text.secondary,
   },
   publishBtn: {
     flex: 2,

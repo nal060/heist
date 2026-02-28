@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import {
   View,
   ScrollView,
@@ -7,6 +7,7 @@ import {
   TouchableOpacity,
   FlatList,
 } from 'react-native';
+import ReanimatedSwipeable, { type SwipeableMethods } from 'react-native-gesture-handler/ReanimatedSwipeable';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -67,30 +68,6 @@ const MOCK_BAGS: MockBag[] = [
   },
   {
     id: 'bag-004',
-    title: 'Weekend Brunch Bag',
-    originalPrice: 22.0,
-    discountedPrice: 11.99,
-    quantityTotal: 6,
-    quantityAvailable: 6,
-    pickupStart: '11:00 AM',
-    pickupEnd: '12:00 PM',
-    date: 'Tomorrow',
-    status: 'draft',
-  },
-  {
-    id: 'bag-005',
-    title: 'Sandwich Variety Pack',
-    originalPrice: 16.0,
-    discountedPrice: 8.49,
-    quantityTotal: 4,
-    quantityAvailable: 4,
-    pickupStart: '1:00 PM',
-    pickupEnd: '2:00 PM',
-    date: 'Tomorrow',
-    status: 'draft',
-  },
-  {
-    id: 'bag-006',
     title: "Yesterday's Pastry Box",
     originalPrice: 14.0,
     discountedPrice: 6.99,
@@ -105,13 +82,14 @@ const MOCK_BAGS: MockBag[] = [
 
 // ─── Filter config ────────────────────────────────────────────────────────────
 
-type FilterKey = 'all' | 'active' | 'draft' | 'sold_out';
+type FilterKey = 'all' | 'active' | 'sold_out' | 'expired' | 'cancelled';
 
 const FILTERS: { key: FilterKey; label: string }[] = [
   { key: 'all', label: 'All' },
   { key: 'active', label: 'Active' },
-  { key: 'draft', label: 'Draft' },
   { key: 'sold_out', label: 'Sold Out' },
+  { key: 'expired', label: 'Expired' },
+  { key: 'cancelled', label: 'Cancelled' },
 ];
 
 const STATUS_CONFIG: Record<BagStatus, { label: string; bg: string; text: string }> = {
@@ -124,17 +102,34 @@ const STATUS_CONFIG: Record<BagStatus, { label: string; bg: string; text: string
 
 // ─── Bag Card ─────────────────────────────────────────────────────────────────
 
-function BagCard({ bag, onEdit }: { bag: MockBag; onEdit: (id: string) => void }) {
+function BagCard({
+  bag,
+  onCancel,
+}: {
+  bag: MockBag;
+  onCancel: (id: string) => void;
+}) {
+  const swipeableRef = useRef<SwipeableMethods>(null);
   const cfg = STATUS_CONFIG[bag.status];
   const discountPct = Math.round((1 - bag.discountedPrice / bag.originalPrice) * 100);
   const isAvailable = bag.quantityAvailable > 0;
+  const isSwipeable = bag.status === 'active' || bag.status === 'sold_out';
 
-  return (
+  const renderLeftActions = () => (
     <TouchableOpacity
-      style={[styles.bagCard, shadows.sm]}
-      onPress={() => onEdit(bag.id)}
-      activeOpacity={0.85}
+      style={styles.cancelAction}
+      onPress={() => {
+        swipeableRef.current?.close();
+        onCancel(bag.id);
+      }}
     >
+      <Ionicons name="close-circle-outline" size={20} color={colors.white} />
+      <Text style={styles.cancelActionText}>Cancel</Text>
+    </TouchableOpacity>
+  );
+
+  const card = (
+    <View style={[styles.bagCard, shadows.sm]}>
       {/* Title + status */}
       <View style={styles.cardTopRow}>
         <View style={styles.cardTitleWrap}>
@@ -166,7 +161,7 @@ function BagCard({ bag, onEdit }: { bag: MockBag; onEdit: (id: string) => void }
         </View>
       </View>
 
-      {/* Pickup + edit */}
+      {/* Pickup */}
       <View style={styles.cardBottomRow}>
         <View style={styles.pickupInfo}>
           <Ionicons name="time-outline" size={13} color={colors.text.tertiary} />
@@ -174,16 +169,16 @@ function BagCard({ bag, onEdit }: { bag: MockBag; onEdit: (id: string) => void }
             {bag.date} · {bag.pickupStart}–{bag.pickupEnd}
           </Text>
         </View>
-        <TouchableOpacity
-          style={styles.editBtn}
-          onPress={() => onEdit(bag.id)}
-          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-        >
-          <Ionicons name="pencil-outline" size={14} color={colors.primary[500]} />
-          <Text style={styles.editBtnText}>Edit</Text>
-        </TouchableOpacity>
       </View>
-    </TouchableOpacity>
+    </View>
+  );
+
+  if (!isSwipeable) return card;
+
+  return (
+    <ReanimatedSwipeable ref={swipeableRef} renderLeftActions={renderLeftActions}>
+      {card}
+    </ReanimatedSwipeable>
   );
 }
 
@@ -191,10 +186,11 @@ function BagCard({ bag, onEdit }: { bag: MockBag; onEdit: (id: string) => void }
 
 function EmptyState({ filter }: { filter: FilterKey }) {
   const messages: Record<FilterKey, string> = {
-    all:      "You haven't created any bags yet.",
-    active:   'No active bags right now.',
-    draft:    'No drafts saved.',
-    sold_out: 'No sold out bags.',
+    all:       "You haven't created any bags yet.",
+    active:    'No active bags right now.',
+    sold_out:  'No sold out bags.',
+    expired:   'No expired bags.',
+    cancelled: 'No cancelled bags.',
   };
   return (
     <View style={styles.emptyState}>
@@ -210,13 +206,14 @@ export default function BagsScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const [activeFilter, setActiveFilter] = useState<FilterKey>('all');
+  const [bags, setBags] = useState(MOCK_BAGS);
 
-  const filtered = MOCK_BAGS.filter(
+  const filtered = bags.filter(
     (b) => activeFilter === 'all' || b.status === activeFilter
   );
 
-  const handleEdit = (id: string) => router.push(`/bag/edit/${id}` as any);
   const handleCreate = () => router.push('/bag/create' as any);
+  const handleCancel = (id: string) => setBags((prev) => prev.filter((b) => b.id !== id));
 
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
@@ -228,7 +225,7 @@ export default function BagsScreen() {
         </TouchableOpacity>
       </View>
 
-      {/* Filter bar — wrapper View holds the background/border, not the ScrollView content */}
+      {/* Filter bar */}
       <View style={styles.filterBar}>
         <ScrollView
           horizontal
@@ -238,8 +235,8 @@ export default function BagsScreen() {
           {FILTERS.map((f) => {
             const count =
               f.key === 'all'
-                ? MOCK_BAGS.length
-                : MOCK_BAGS.filter((b) => b.status === f.key).length;
+                ? bags.length
+                : bags.filter((b) => b.status === f.key).length;
             const isActive = activeFilter === f.key;
             return (
               <TouchableOpacity
@@ -265,7 +262,7 @@ export default function BagsScreen() {
         keyExtractor={(item) => item.id}
         contentContainerStyle={styles.listContent}
         showsVerticalScrollIndicator={false}
-        renderItem={({ item }) => <BagCard bag={item} onEdit={handleEdit} />}
+        renderItem={({ item }) => <BagCard bag={item} onCancel={handleCancel} />}
         ListEmptyComponent={<EmptyState filter={activeFilter} />}
         ItemSeparatorComponent={() => <View style={{ height: spacing.md }} />}
       />
@@ -448,7 +445,6 @@ const styles = StyleSheet.create({
   cardBottomRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
     paddingTop: spacing.sm,
     borderTopWidth: 1,
     borderTopColor: colors.gray[100],
@@ -457,25 +453,26 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
-    flex: 1,
   },
   pickupText: {
     fontSize: typography.fontSize.xs,
     color: colors.text.tertiary,
   },
-  editBtn: {
-    flexDirection: 'row',
+
+  // Cancel swipe action
+  cancelAction: {
+    backgroundColor: colors.error,
+    borderRadius: borderRadius.lg,
+    marginRight: spacing.sm,
     alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: spacing.lg,
     gap: 4,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: 4,
-    borderRadius: borderRadius.sm,
-    backgroundColor: colors.primary[50],
   },
-  editBtnText: {
+  cancelActionText: {
     fontSize: typography.fontSize.xs,
     fontWeight: typography.fontWeight.semibold,
-    color: colors.primary[500],
+    color: colors.white,
   },
 
   // Empty state
