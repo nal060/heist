@@ -442,9 +442,6 @@ export default function CreateBagScreen() {
           <FormSection title="Quantity">
             <FormLabel>Number of Bags Available *</FormLabel>
             <QuantityStepper value={form.quantityTotal} onChange={(v) => set('quantityTotal')(v)} />
-            <Text style={styles.quantityHint}>
-              Customers can reserve up to 5 bags per order.
-            </Text>
           </FormSection>
 
           <View style={{ height: spacing.xxxxl }} />
