@@ -210,17 +210,10 @@ export default function DashboardScreen() {
         <View style={styles.actionsRow}>
           <TouchableOpacity
             style={[styles.actionBtn, styles.actionBtnPrimary]}
-            onPress={() => router.push('/bag/create')}
+            onPress={() => router.push('/collect')}
           >
-            <Ionicons name="add-circle-outline" size={18} color={colors.white} />
-            <Text style={styles.actionBtnPrimaryText}>Add Bag</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.actionBtn, styles.actionBtnSecondary]}
-            onPress={() => router.push('/(business-tabs)/orders')}
-          >
-            <Ionicons name="list-outline" size={18} color={colors.primary[500]} />
-            <Text style={styles.actionBtnSecondaryText}>View Orders</Text>
+            <Ionicons name="bag-check-outline" size={18} color={colors.white} />
+            <Text style={styles.actionBtnPrimaryText}>Collect</Text>
           </TouchableOpacity>
         </View>
 
@@ -362,17 +355,6 @@ const styles = StyleSheet.create({
     fontWeight: typography.fontWeight.semibold,
     color: colors.white,
   },
-  actionBtnSecondary: {
-    backgroundColor: colors.background.primary,
-    borderWidth: 1.5,
-    borderColor: colors.primary[500],
-  },
-  actionBtnSecondaryText: {
-    fontSize: typography.fontSize.base,
-    fontWeight: typography.fontWeight.semibold,
-    color: colors.primary[500],
-  },
-
   // Section
   sectionHeader: {
     flexDirection: 'row',
