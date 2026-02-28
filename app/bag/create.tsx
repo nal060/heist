@@ -11,7 +11,7 @@ import {
   KeyboardAvoidingView,
   Platform,
 } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, spacing, typography, borderRadius, shadows } from '../../src/theme';
@@ -218,16 +218,30 @@ type FormState = {
 export default function CreateBagScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
+  const params = useLocalSearchParams<{
+    title?: string;
+    originalPrice?: string;
+    discountedPrice?: string;
+    quantityTotal?: string;
+    pickupStartLabel?: string;
+    pickupEndLabel?: string;
+  }>();
+
+  const isRelist = !!params.title;
 
   const [form, setForm] = useState<FormState>({
-    title: '',
+    title: params.title ?? '',
     description: '',
-    originalPrice: '',
-    discountedPrice: '',
+    originalPrice: params.originalPrice ?? '',
+    discountedPrice: params.discountedPrice ?? '',
     date: DATE_OPTIONS[0].value,
-    pickupStart: '',
-    pickupEnd: '',
-    quantityTotal: 5,
+    pickupStart: params.pickupStartLabel
+      ? TIME_SLOTS.find((s) => s.label === params.pickupStartLabel)?.value ?? ''
+      : '',
+    pickupEnd: params.pickupEndLabel
+      ? TIME_SLOTS.find((s) => s.label === params.pickupEndLabel)?.value ?? ''
+      : '',
+    quantityTotal: params.quantityTotal ? parseInt(params.quantityTotal, 10) : 5,
   });
 
   const set = (key: keyof FormState) => (val: string | number) =>
@@ -304,7 +318,7 @@ export default function CreateBagScreen() {
         <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
           <Ionicons name="chevron-back" size={24} color={colors.text.primary} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>New Bag</Text>
+        <Text style={styles.headerTitle}>{isRelist ? 'Re-list Bag' : 'New Bag'}</Text>
         <View style={styles.headerRight} />
       </View>
 

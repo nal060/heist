@@ -117,15 +117,17 @@ const STATUS_CONFIG: Record<BagStatus, { label: string; bg: string; text: string
 function BagCard({
   bag,
   onCancel,
+  onRelist,
 }: {
   bag: MockBag;
   onCancel: (id: string) => void;
+  onRelist: (bag: MockBag) => void;
 }) {
   const swipeableRef = useRef<SwipeableMethods>(null);
   const cfg = STATUS_CONFIG[bag.status];
   const discountPct = Math.round((1 - bag.discountedPrice / bag.originalPrice) * 100);
   const isAvailable = bag.quantityAvailable > 0;
-  const isSwipeable = bag.status === 'active' || bag.status === 'sold_out';
+  const isRelistable = bag.status === 'expired' || bag.status === 'cancelled' || bag.status === 'sold_out';
 
   const renderLeftActions = () => (
     <TouchableOpacity
@@ -137,6 +139,19 @@ function BagCard({
     >
       <Ionicons name="close-circle-outline" size={20} color={colors.white} />
       <Text style={styles.cancelActionText}>Cancel</Text>
+    </TouchableOpacity>
+  );
+
+  const renderRightActions = () => (
+    <TouchableOpacity
+      style={styles.relistAction}
+      onPress={() => {
+        swipeableRef.current?.close();
+        onRelist(bag);
+      }}
+    >
+      <Ionicons name="refresh-outline" size={20} color={colors.white} />
+      <Text style={styles.relistActionText}>Re-list</Text>
     </TouchableOpacity>
   );
 
@@ -185,13 +200,35 @@ function BagCard({
     </View>
   );
 
-  if (!isSwipeable) return card;
+  if (bag.status === 'active') {
+    return (
+      <ReanimatedSwipeable ref={swipeableRef} renderLeftActions={renderLeftActions}>
+        {card}
+      </ReanimatedSwipeable>
+    );
+  }
 
-  return (
-    <ReanimatedSwipeable ref={swipeableRef} renderLeftActions={renderLeftActions}>
-      {card}
-    </ReanimatedSwipeable>
-  );
+  if (bag.status === 'sold_out') {
+    return (
+      <ReanimatedSwipeable
+        ref={swipeableRef}
+        renderLeftActions={renderLeftActions}
+        renderRightActions={renderRightActions}
+      >
+        {card}
+      </ReanimatedSwipeable>
+    );
+  }
+
+  if (isRelistable) {
+    return (
+      <ReanimatedSwipeable ref={swipeableRef} renderRightActions={renderRightActions}>
+        {card}
+      </ReanimatedSwipeable>
+    );
+  }
+
+  return card;
 }
 
 // ─── Empty State ──────────────────────────────────────────────────────────────
@@ -226,6 +263,18 @@ export default function BagsScreen() {
 
   const handleCreate = () => router.push('/bag/create' as any);
   const handleCancel = (id: string) => setBags((prev) => prev.filter((b) => b.id !== id));
+  const handleRelist = (bag: MockBag) =>
+    router.push({
+      pathname: '/bag/create',
+      params: {
+        title: bag.title,
+        originalPrice: String(bag.originalPrice),
+        discountedPrice: String(bag.discountedPrice),
+        quantityTotal: String(bag.quantityTotal),
+        pickupStartLabel: bag.pickupStart,
+        pickupEndLabel: bag.pickupEnd,
+      },
+    } as any);
 
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
@@ -274,7 +323,7 @@ export default function BagsScreen() {
         keyExtractor={(item) => item.id}
         contentContainerStyle={styles.listContent}
         showsVerticalScrollIndicator={false}
-        renderItem={({ item }) => <BagCard bag={item} onCancel={handleCancel} />}
+        renderItem={({ item }) => <BagCard bag={item} onCancel={handleCancel} onRelist={handleRelist} />}
         ListEmptyComponent={<EmptyState filter={activeFilter} />}
         ItemSeparatorComponent={() => <View style={{ height: spacing.md }} />}
       />
@@ -469,6 +518,22 @@ const styles = StyleSheet.create({
   pickupText: {
     fontSize: typography.fontSize.xs,
     color: colors.text.tertiary,
+  },
+
+  // Re-list swipe action
+  relistAction: {
+    backgroundColor: colors.primary[500],
+    borderRadius: borderRadius.lg,
+    marginLeft: spacing.sm,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: spacing.lg,
+    gap: 4,
+  },
+  relistActionText: {
+    fontSize: typography.fontSize.xs,
+    fontWeight: typography.fontWeight.semibold,
+    color: colors.white,
   },
 
   // Cancel swipe action
