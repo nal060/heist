@@ -78,6 +78,18 @@ const MOCK_BAGS: MockBag[] = [
     date: 'Yesterday',
     status: 'expired',
   },
+    {
+    id: 'bag-005',
+    title: "Yesterday's Pastry Box",
+    originalPrice: 14.0,
+    discountedPrice: 6.99,
+    quantityTotal: 3,
+    quantityAvailable: 0,
+    pickupStart: '4:00 PM',
+    pickupEnd: '5:00 PM',
+    date: 'Yesterday',
+    status: 'cancelled',
+  },
 ];
 
 // ─── Filter config ────────────────────────────────────────────────────────────
