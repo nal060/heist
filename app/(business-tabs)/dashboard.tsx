@@ -211,7 +211,7 @@ export default function DashboardScreen() {
         <View style={styles.actionsRow}>
           <TouchableOpacity
             style={[styles.actionBtn, styles.actionBtnPrimary]}
-            onPress={() => router.push('/(business-tabs)/bags')}
+            onPress={() => router.push('/bag/create')}
           >
             <Ionicons name="add-circle-outline" size={18} color={colors.white} />
             <Text style={styles.actionBtnPrimaryText}>Add Bag</Text>
