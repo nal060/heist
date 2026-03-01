@@ -192,3 +192,22 @@ export async function getBusinessBags(
     status: b.status as BagStatus,
   }));
 }
+
+/**
+ * Cancels a surplus bag and all of its reserved orders in parallel.
+ */
+export async function cancelBag(bagId: string): Promise<void> {
+  const [bagRes, ordersRes] = await Promise.all([
+    supabase
+      .from('surplus_bags')
+      .update({ status: 'cancelled' })
+      .eq('id', bagId),
+    supabase
+      .from('orders')
+      .update({ status: 'cancelled' })
+      .eq('surplus_bag_id', bagId)
+      .eq('status', 'reserved'),
+  ]);
+  if (bagRes.error) throw new Error('No se pudo cancelar la bolsa: ' + bagRes.error.message);
+  if (ordersRes.error) throw new Error('No se pudieron cancelar los pedidos: ' + ordersRes.error.message);
+}

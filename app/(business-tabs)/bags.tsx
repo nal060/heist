@@ -17,6 +17,7 @@ import { colors, spacing, typography, borderRadius, shadows } from '../../src/th
 import type { BagStatus } from '../../src/types';
 import {
   getBusinessBags,
+  cancelBag,
   DEMO_BUSINESS_ID,
   type BusinessBag,
 } from '../../src/data/business';
@@ -213,7 +214,17 @@ export default function BagsScreen() {
   );
 
   const handleCreate = () => router.push('/bag/create' as any);
-  const handleCancel = (id: string) => setAllBags((prev) => prev.filter((b) => b.id !== id));
+  const handleCancel = async (id: string) => {
+    try {
+      await cancelBag(id);
+      setAllBags((prev) =>
+        prev.map((b) => (b.id === id ? { ...b, status: 'cancelled' as const } : b))
+      );
+    } catch (e) {
+      // TODO: surface error to user
+      console.error(e);
+    }
+  };
   const handleRelist = (bag: BusinessBag) =>
     router.push({
       pathname: '/bag/create',

@@ -35,14 +35,7 @@ export default function RootLayout() {
               animation: 'slide_from_right',
             }}
           />
-          <Stack.Screen
-            name="bag/edit/[id]"
-            options={{
-              presentation: 'card',
-              animation: 'slide_from_right',
-            }}
-          />
-          <Stack.Screen
+<Stack.Screen
             name="checkout/[bagId]"
             options={{
               presentation: 'card',
