@@ -10,11 +10,14 @@ import {
   FlatList,
   KeyboardAvoidingView,
   Platform,
+  ActivityIndicator,
+  Alert,
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, spacing, typography, borderRadius, shadows } from '../../src/theme';
+import { createBag, DEMO_BUSINESS_ID } from '../../src/data/business';
 
 // ─── Time slots ───────────────────────────────────────────────────────────────
 
@@ -229,6 +232,8 @@ export default function CreateBagScreen() {
 
   const isRelist = !!params.title;
 
+  const [submitting, setSubmitting] = useState(false);
+
   const [form, setForm] = useState<FormState>({
     title: params.title ?? '',
     description: '',
@@ -291,24 +296,26 @@ export default function CreateBagScreen() {
     form.pickupEnd !== '' &&
     timeError === null;
 
-  const handlePublish = () => {
-    if (!canPublish) return;
-
-    const payload = {
-      title: form.title.trim(),
-      description: form.description.trim() || null,
-      original_price: origNum,
-      discounted_price: discNum,
-      date: form.date,
-      pickup_start_time: form.pickupStart,
-      pickup_end_time: form.pickupEnd,
-      quantity_total: form.quantityTotal,
-      quantity_available: form.quantityTotal,
-      status: 'active',
-    };
-    console.log('Save bag:', payload);
-
-    router.back();
+  const handlePublish = async () => {
+    if (!canPublish || submitting) return;
+    setSubmitting(true);
+    try {
+      await createBag(DEMO_BUSINESS_ID, {
+        title: form.title.trim(),
+        description: form.description.trim() || null,
+        originalPrice: origNum,
+        discountedPrice: discNum,
+        date: form.date,
+        pickupStartTime: form.pickupStart,
+        pickupEndTime: form.pickupEnd,
+        quantityTotal: form.quantityTotal,
+      });
+      router.back();
+    } catch (e) {
+      Alert.alert('Error', (e as Error).message);
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
@@ -463,12 +470,18 @@ export default function CreateBagScreen() {
         {/* Footer actions */}
         <View style={[styles.footer, { paddingBottom: insets.bottom + spacing.md }]}>
           <TouchableOpacity
-            style={[styles.publishBtn, !canPublish && styles.publishBtnDisabled]}
+            style={[styles.publishBtn, (!canPublish || submitting) && styles.publishBtnDisabled]}
             onPress={handlePublish}
-            disabled={!canPublish}
+            disabled={!canPublish || submitting}
           >
-            <Ionicons name="checkmark-circle-outline" size={18} color={colors.white} />
-            <Text style={styles.publishBtnText}>Publicar</Text>
+            {submitting ? (
+              <ActivityIndicator size="small" color={colors.white} />
+            ) : (
+              <Ionicons name="checkmark-circle-outline" size={18} color={colors.white} />
+            )}
+            <Text style={styles.publishBtnText}>
+              {submitting ? 'Publicando…' : 'Publicar'}
+            </Text>
           </TouchableOpacity>
         </View>
       </KeyboardAvoidingView>

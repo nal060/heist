@@ -193,6 +193,50 @@ export async function getBusinessBags(
   }));
 }
 
+// ─── Create bag ───────────────────────────────────────────────────────────────
+
+export interface CreateBagPayload {
+  title: string;
+  description: string | null;
+  originalPrice: number;
+  discountedPrice: number;
+  date: string;
+  pickupStartTime: string;
+  pickupEndTime: string;
+  quantityTotal: number;
+}
+
+/**
+ * Inserts a new active surplus bag for the given business.
+ * Returns the created bag's id.
+ */
+export async function createBag(
+  businessId: string,
+  payload: CreateBagPayload
+): Promise<string> {
+  const { data, error } = await supabase
+    .from('surplus_bags')
+    .insert({
+      business_id: businessId,
+      title: payload.title,
+      description: payload.description,
+      original_price: payload.originalPrice,
+      discounted_price: payload.discountedPrice,
+      date: payload.date,
+      pickup_start_time: payload.pickupStartTime,
+      pickup_end_time: payload.pickupEndTime,
+      quantity_total: payload.quantityTotal,
+      quantity_available: payload.quantityTotal,
+      status: 'active',
+    })
+    .select('id')
+    .single();
+  if (error) throw new Error('No se pudo crear la bolsa: ' + error.message);
+  return data.id;
+}
+
+// ─── Cancel bag ───────────────────────────────────────────────────────────────
+
 /**
  * Cancels a surplus bag and all of its reserved orders in parallel.
  */
