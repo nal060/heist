@@ -8,7 +8,7 @@
     SurplusBag,
   } from '../types';
 
-  const FIFTY_MILES_IN_METERS = 80467.2;
+  export const FIFTY_MILES_IN_METERS = 80467.2;
 
 /**
  * Returns all categories from the database.

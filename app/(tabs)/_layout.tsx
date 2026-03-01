@@ -1,12 +1,23 @@
-import { Tabs } from 'expo-router';
+import { useEffect } from 'react';
+import { Tabs, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../../src/theme';
 import { strings } from '../../src/constants/strings';
 import { Platform } from 'react-native';
+import { useLocation } from '../../src/context/LocationContext';
 
 type TabIconName = React.ComponentProps<typeof Ionicons>['name'];
 
 export default function TabLayout() {
+  const { location, isLoaded } = useLocation();
+  const router = useRouter();
+
+  useEffect(() => {
+    if (isLoaded && !location) {
+      router.replace('/change-location');
+    }
+  }, [isLoaded, location, router]);
+
   return (
     <Tabs
       screenOptions={{
