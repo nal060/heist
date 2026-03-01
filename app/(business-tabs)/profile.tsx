@@ -6,6 +6,7 @@ import {
   TouchableOpacity,
   StyleSheet,
 } from 'react-native';
+import { Image } from 'expo-image';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, spacing, typography, borderRadius, shadows } from '../../src/theme';
@@ -17,27 +18,12 @@ const MOCK_BUSINESS = {
   description: 'Comida Rica',
   address: 'Camino de cruces, Panama',
   phone: '6513413',
+  photo_url: null as string | null,
   rating: 4.7,
   totalReviews: 134,
   isActive: true,
   memberSince: 'Marzo 2024',
 };
-
-// ─── Sub-components ───────────────────────────────────────────────────────────
-
-function AvatarPlaceholder({ name }: { name: string }) {
-  const initials = name
-    .split(' ')
-    .slice(0, 2)
-    .map((w) => w[0])
-    .join('')
-    .toUpperCase();
-  return (
-    <View style={styles.avatar}>
-      <Text style={styles.avatarText}>{initials}</Text>
-    </View>
-  );
-}
 
 function InfoRow({
   icon,
@@ -100,8 +86,27 @@ export default function BusinessProfileScreen() {
         </View>
 
         {/* Identity card */}
-        <View style={[styles.card, styles.identityCard, shadows.sm]}>
-          <AvatarPlaceholder name={MOCK_BUSINESS.name} />
+        <View style={[styles.card, shadows.sm, styles.identityCard]}>
+          {/* Cover photo */}
+          <View style={styles.coverWrap}>
+            {MOCK_BUSINESS.photo_url ? (
+              <Image
+                source={{ uri: MOCK_BUSINESS.photo_url }}
+                style={styles.coverImage}
+                contentFit="cover"
+                transition={300}
+              />
+            ) : (
+              <View style={[styles.coverImage, styles.coverPlaceholder]}>
+                <Ionicons name="storefront-outline" size={40} color={colors.gray[300]} />
+              </View>
+            )}
+            <TouchableOpacity style={styles.editBtn}>
+              <Ionicons name="pencil-outline" size={16} color={colors.white} />
+            </TouchableOpacity>
+          </View>
+
+          {/* Info below cover */}
           <View style={styles.identityInfo}>
             <Text style={styles.businessName}>{MOCK_BUSINESS.name}</Text>
             <View style={styles.ratingRow}>
@@ -113,13 +118,10 @@ export default function BusinessProfileScreen() {
             <View style={[styles.statusBadge, MOCK_BUSINESS.isActive ? styles.statusActive : styles.statusInactive]}>
               <View style={[styles.statusDot, { backgroundColor: MOCK_BUSINESS.isActive ? '#4CAF50' : colors.text.tertiary }]} />
               <Text style={[styles.statusText, { color: MOCK_BUSINESS.isActive ? '#2E7D32' : colors.text.tertiary }]}>
-                {MOCK_BUSINESS.isActive ? 'Active' : 'Inactive'}
+                {MOCK_BUSINESS.isActive ? 'Activo' : 'Inactivo'}
               </Text>
             </View>
           </View>
-          <TouchableOpacity style={styles.editBtn}>
-            <Ionicons name="pencil-outline" size={18} color={colors.primary[500]} />
-          </TouchableOpacity>
         </View>
 
         {/* Business Info */}
@@ -205,27 +207,33 @@ const styles = StyleSheet.create({
 
   // Identity card
   identityCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: spacing.lg,
     marginTop: spacing.lg,
-    gap: spacing.md,
   },
-  avatar: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    backgroundColor: colors.primary[100],
+  coverWrap: {
+    position: 'relative',
+  },
+  coverImage: {
+    width: '100%',
+    height: 180,
+  },
+  coverPlaceholder: {
+    backgroundColor: colors.gray[100],
     alignItems: 'center',
     justifyContent: 'center',
   },
-  avatarText: {
-    fontSize: typography.fontSize.xl,
-    fontWeight: typography.fontWeight.bold,
-    color: colors.primary[600],
+  editBtn: {
+    position: 'absolute',
+    top: spacing.sm,
+    right: spacing.sm,
+    width: 32,
+    height: 32,
+    borderRadius: borderRadius.full,
+    backgroundColor: 'rgba(0,0,0,0.45)',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   identityInfo: {
-    flex: 1,
+    padding: spacing.lg,
     gap: 4,
   },
   businessName: {
@@ -266,14 +274,6 @@ const styles = StyleSheet.create({
   statusText: {
     fontSize: typography.fontSize.xs,
     fontWeight: typography.fontWeight.semibold,
-  },
-  editBtn: {
-    width: 36,
-    height: 36,
-    borderRadius: borderRadius.full,
-    backgroundColor: colors.primary[50],
-    alignItems: 'center',
-    justifyContent: 'center',
   },
 
   // Info rows
