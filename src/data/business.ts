@@ -14,6 +14,7 @@ export interface DashboardOrder {
   bagTitle: string;
   quantity: number;
   totalPrice: number;
+  pickupDate?: string;
   pickupWindow: string;
   status: OrderStatus;
   reservedAt: string;
@@ -53,9 +54,6 @@ function relativeTime(isoString: string): string {
 
 /**
  * Fetches all dashboard data for a business in two parallel round-trips.
- *
- * Round-trip 1: business name + active bags (filtered by status, uses index)
- * Round-trip 2: today's order stats + recent orders (joined through surplus_bags)
  */
 export async function getBusinessDashboard(businessId: string): Promise<BusinessDashboard> {
   const today = new Date().toISOString().split('T')[0];
@@ -74,29 +72,20 @@ export async function getBusinessDashboard(businessId: string): Promise<Business
   if (bizError) throw new Error('No se pudo cargar el negocio: ' + bizError.message);
   if (bagsError) throw new Error('No se pudieron cargar las bolsas: ' + bagsError.message);
 
-  // Round-trip 2: today's stats + recent orders, filtered via join (no bag ID pre-fetch)
-  const [todayRes, recentRes] = await Promise.all([
+  // Round-trip 2: today's stats + recent orders (reuses getBusinessOrders for consistent bag title logic)
+  const [todayRes, recentOrders] = await Promise.all([
     supabase
       .from('orders')
       .select('total_price, status, surplus_bags!inner(business_id)')
       .eq('surplus_bags.business_id', businessId)
       .eq('pickup_date', today)
       .neq('status', 'cancelled'),
-    supabase
-      .from('orders')
-      .select(
-        'id, pickup_code, quantity, total_price, pickup_start_time, pickup_end_time, status, reserved_at, surplus_bags!inner(title, business_id)'
-      )
-      .eq('surplus_bags.business_id', businessId)
-      .order('reserved_at', { ascending: false })
-      .limit(10),
+    getBusinessOrders(businessId, 'all'),
   ]);
 
   if (todayRes.error) throw new Error('No se pudieron cargar los pedidos: ' + todayRes.error.message);
-  if (recentRes.error) throw new Error('No se pudieron cargar los pedidos recientes: ' + recentRes.error.message);
 
   const todayOrders = todayRes.data ?? [];
-  const recentOrdersRaw = recentRes.data ?? [];
 
   return {
     businessName: business?.name ?? 'Mi Negocio',
@@ -107,16 +96,7 @@ export async function getBusinessDashboard(businessId: string): Promise<Business
         .filter((o) => o.status === 'collected')
         .reduce((sum, o) => sum + Number(o.total_price), 0),
     },
-    recentOrders: recentOrdersRaw.map((o) => ({
-      id: o.id,
-      pickupCode: o.pickup_code,
-      bagTitle: (o.surplus_bags as unknown as { title: string; business_id: string }[] | null)?.[0]?.title ?? '—',
-      quantity: o.quantity,
-      totalPrice: Number(o.total_price),
-      pickupWindow: formatPickupWindow(o.pickup_start_time, o.pickup_end_time),
-      status: o.status as OrderStatus,
-      reservedAt: relativeTime(o.reserved_at),
-    })),
+    recentOrders: recentOrders.slice(0, 10),
     activeBags: (activeBagsData ?? []).map((b) => ({
       id: b.id,
       title: b.title,
@@ -233,6 +213,61 @@ export async function createBag(
     .single();
   if (error) throw new Error('No se pudo crear la bolsa: ' + error.message);
   return data.id;
+}
+
+// ─── Orders tab ───────────────────────────────────────────────────────────────
+
+/**
+ * Fetches orders for a business, ordered by reserved_at DESC.
+ * Pass dateFilter='today' to scope to today only, 'all' for all orders.
+ */
+export async function getBusinessOrders(
+  businessId: string,
+  dateFilter: 'today' | 'all' = 'today'
+): Promise<DashboardOrder[]> {
+  let query = supabase
+    .from('orders')
+    .select(
+      'id, pickup_code, quantity, total_price, pickup_date, pickup_start_time, pickup_end_time, status, reserved_at, surplus_bags!inner(title, business_id)'
+    )
+    .eq('surplus_bags.business_id', businessId)
+    .order('reserved_at', { ascending: false });
+
+  if (dateFilter === 'today') {
+    const today = new Date().toISOString().split('T')[0];
+    query = query.eq('pickup_date', today);
+  }
+
+  const { data, error } = await query;
+  if (error) throw new Error('No se pudieron cargar los pedidos: ' + error.message);
+
+  return (data ?? []).map((o) => ({
+    id: o.id,
+    pickupCode: o.pickup_code,
+    bagTitle: (o.surplus_bags as unknown as { title: string } | null)?.title ?? '—',
+    quantity: o.quantity,
+    totalPrice: Number(o.total_price),
+    pickupDate: formatBagDate(o.pickup_date ?? ''),
+    pickupWindow: formatPickupWindow(o.pickup_start_time, o.pickup_end_time),
+    status: o.status as OrderStatus,
+    reservedAt: relativeTime(o.reserved_at),
+  }));
+}
+
+export async function cancelOrder(orderId: string): Promise<void> {
+  const { error } = await supabase
+    .from('orders')
+    .update({ status: 'cancelled' })
+    .eq('id', orderId);
+  if (error) throw new Error('No se pudo cancelar el pedido: ' + error.message);
+}
+
+export async function collectOrder(orderId: string): Promise<void> {
+  const { error } = await supabase
+    .from('orders')
+    .update({ status: 'collected' })
+    .eq('id', orderId);
+  if (error) throw new Error('No se pudo marcar el pedido como recogido: ' + error.message);
 }
 
 // ─── Cancel bag ───────────────────────────────────────────────────────────────

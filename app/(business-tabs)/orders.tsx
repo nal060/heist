@@ -1,4 +1,4 @@
-import React, { useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   View,
   ScrollView,
@@ -6,78 +6,23 @@ import {
   Text,
   TouchableOpacity,
   FlatList,
+  ActivityIndicator,
+  RefreshControl,
 } from 'react-native';
 import ReanimatedSwipeable, { type SwipeableMethods } from 'react-native-gesture-handler/ReanimatedSwipeable';
+import { useFocusEffect } from 'expo-router';
+import { useNavigation } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, spacing, typography, borderRadius, shadows } from '../../src/theme';
 import type { OrderStatus } from '../../src/types';
-
-// ─── Mock Data ────────────────────────────────────────────────────────────────
-
-type MockOrder = {
-  id: string;
-  pickupCode: string;
-  bagTitle: string;
-  quantity: number;
-  totalPrice: number;
-  pickupWindow: string;
-  status: OrderStatus;
-  reservedAt: string;
-};
-
-const MOCK_ORDERS: MockOrder[] = [
-  {
-    id: 'ord-001',
-    pickupCode: 'A1B2',
-    bagTitle: 'Bakery Surprise Box',
-    quantity: 1,
-    totalPrice: 9.99,
-    pickupWindow: '5:00–6:00 PM',
-    status: 'reserved',
-    reservedAt: '2 min ago',
-  },
-  {
-    id: 'ord-002',
-    pickupCode: 'C3D4',
-    bagTitle: 'Sushi Mystery Bag',
-    quantity: 2,
-    totalPrice: 25.98,
-    pickupWindow: '6:00–7:00 PM',
-    status: 'reserved',
-    reservedAt: '15 min ago',
-  },
-  {
-    id: 'ord-003',
-    pickupCode: 'E5F6',
-    bagTitle: 'Pasta Special',
-    quantity: 1,
-    totalPrice: 7.99,
-    pickupWindow: '5:00–6:00 PM',
-    status: 'collected',
-    reservedAt: '1 hr ago',
-  },
-  {
-    id: 'ord-004',
-    pickupCode: 'G7H8',
-    bagTitle: 'Bakery Surprise Box',
-    quantity: 1,
-    totalPrice: 9.99,
-    pickupWindow: '5:00–6:00 PM',
-    status: 'collected',
-    reservedAt: '2 hr ago',
-  },
-  {
-    id: 'ord-005',
-    pickupCode: 'I9J0',
-    bagTitle: 'Sushi Mystery Bag',
-    quantity: 1,
-    totalPrice: 12.99,
-    pickupWindow: '6:00–7:00 PM',
-    status: 'cancelled',
-    reservedAt: '3 hr ago',
-  },
-];
+import {
+  getBusinessOrders,
+  cancelOrder,
+  collectOrder,
+  DEMO_BUSINESS_ID,
+  type DashboardOrder,
+} from '../../src/data/business';
 
 // ─── Filter config ────────────────────────────────────────────────────────────
 
@@ -86,14 +31,14 @@ type FilterKey = 'all' | OrderStatus;
 const FILTERS: { key: FilterKey; label: string }[] = [
   { key: 'all',       label: 'Todo' },
   { key: 'reserved',  label: 'Reservado' },
-  { key: 'collected', label: 'Coleccionado' },
+  { key: 'collected', label: 'Recogido' },
   { key: 'cancelled', label: 'Cancelado' },
 ];
 
 const STATUS_CONFIG: Record<OrderStatus, { label: string; bg: string; text: string }> = {
   reserved:  { label: 'Reservado',  bg: '#FFF8E1', text: '#F57F17' },
-  collected: { label: 'Coleccionado', bg: '#E8F5E9', text: '#2E7D32' },
-  cancelled: { label: 'Cancelado', bg: '#F5F5F5', text: '#9E9E9E' },
+  collected: { label: 'Recogido',   bg: '#E8F5E9', text: '#2E7D32' },
+  cancelled: { label: 'Cancelado',  bg: '#F5F5F5', text: '#9E9E9E' },
 };
 
 // ─── Order Card ───────────────────────────────────────────────────────────────
@@ -103,7 +48,7 @@ function OrderCard({
   onCancel,
   onCollect,
 }: {
-  order: MockOrder;
+  order: DashboardOrder;
   onCancel: (id: string) => void;
   onCollect: (id: string) => void;
 }) {
@@ -132,7 +77,7 @@ function OrderCard({
       }}
     >
       <Ionicons name="bag-check-outline" size={20} color={colors.white} />
-      <Text style={styles.collectActionText}>Coleccionado</Text>
+      <Text style={styles.collectActionText}>Recogido</Text>
     </TouchableOpacity>
   );
 
@@ -163,11 +108,14 @@ function OrderCard({
         </View>
         <View style={styles.metaDot} />
         <View style={styles.metaItem}>
+          <Ionicons name="calendar-outline" size={13} color={colors.text.tertiary} />
+          <Text style={styles.metaText}>{order.pickupDate}</Text>
+        </View>
+        <View style={styles.metaDot} />
+        <View style={styles.metaItem}>
           <Ionicons name="time-outline" size={13} color={colors.text.tertiary} />
           <Text style={styles.metaText}>{order.pickupWindow}</Text>
         </View>
-        <View style={styles.metaDot} />
-        <Text style={styles.metaText}>{order.reservedAt}</Text>
       </View>
     </View>
   );
@@ -189,7 +137,7 @@ function OrderCard({
 
 // ─── Summary Bar ──────────────────────────────────────────────────────────────
 
-function SummaryBar({ orders }: { orders: MockOrder[] }) {
+function SummaryBar({ orders }: { orders: DashboardOrder[] }) {
   const reserved = orders.filter((o) => o.status === 'reserved').length;
   const collected = orders.filter((o) => o.status === 'collected').length;
   const revenue = orders
@@ -207,7 +155,7 @@ function SummaryBar({ orders }: { orders: MockOrder[] }) {
         <Text style={[styles.summaryValue, collected > 0 && styles.summaryValueGreen]}>
           {collected}
         </Text>
-        <Text style={styles.summaryLabel}>Coleccionado</Text>
+        <Text style={styles.summaryLabel}>Recogido</Text>
       </View>
       <View style={styles.summaryDivider} />
       <View style={styles.summaryItem}>
@@ -239,33 +187,112 @@ function EmptyState({ filter }: { filter: FilterKey }) {
 
 export default function OrdersScreen() {
   const insets = useSafeAreaInsets();
+  const navigation = useNavigation();
   const [activeFilter, setActiveFilter] = useState<FilterKey>('all');
-  const [orders, setOrders] = useState(MOCK_ORDERS);
+  const [dateFilter, setDateFilter] = useState<'today' | 'all'>('today');
+  const dateFilterRef = useRef<'today' | 'all'>('today');
+  const [allOrders, setAllOrders] = useState<DashboardOrder[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const filtered = orders.filter(
+  const filtered = allOrders.filter(
     (o) => activeFilter === 'all' || o.status === activeFilter
   );
 
-  const handleCancel = (id: string) =>
-    setOrders((prev) =>
-      prev.map((o) => (o.id === id ? { ...o, status: 'cancelled' as OrderStatus } : o))
-    );
+  const load = useCallback(async (isRefresh = false) => {
+    isRefresh ? setRefreshing(true) : setLoading(true);
+    setError(null);
+    try {
+      const data = await getBusinessOrders(DEMO_BUSINESS_ID, dateFilterRef.current);
+      setAllOrders(data);
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      isRefresh ? setRefreshing(false) : setLoading(false);
+    }
+  }, []);
 
-  const handleCollect = (id: string) =>
-    setOrders((prev) =>
-      prev.map((o) => (o.id === id ? { ...o, status: 'collected' as OrderStatus } : o))
+  const handleDateFilter = (f: 'today' | 'all') => {
+    dateFilterRef.current = f;
+    setDateFilter(f);
+    load();
+  };
+
+  // Reload when navigating to this tab
+  useFocusEffect(useCallback(() => { load(); }, [load]));
+
+  // Reload when tapping the already-active tab
+  useEffect(() => {
+    return navigation.addListener('tabPress' as any, () => {
+      if (navigation.isFocused()) load(true);
+    });
+  }, [navigation, load]);
+
+  const handleCancel = async (id: string) => {
+    try {
+      await cancelOrder(id);
+      setAllOrders((prev) =>
+        prev.map((o) => (o.id === id ? { ...o, status: 'cancelled' as OrderStatus } : o))
+      );
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  const handleCollect = async (id: string) => {
+    try {
+      await collectOrder(id);
+      setAllOrders((prev) =>
+        prev.map((o) => (o.id === id ? { ...o, status: 'collected' as OrderStatus } : o))
+      );
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  if (loading) {
+    return (
+      <View style={[styles.centered, { paddingTop: insets.top }]}>
+        <ActivityIndicator size="large" color={colors.primary[500]} />
+      </View>
     );
+  }
+
+  if (error) {
+    return (
+      <View style={[styles.centered, { paddingTop: insets.top }]}>
+        <Ionicons name="alert-circle-outline" size={40} color={colors.error} />
+        <Text style={styles.errorText}>{error}</Text>
+        <TouchableOpacity style={styles.retryBtn} onPress={() => load()}>
+          <Text style={styles.retryText}>Reintentar</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
 
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
       {/* Header */}
       <View style={styles.header}>
         <Text style={styles.headerTitle}>Pedidos</Text>
-        <Text style={styles.headerDate}>Hoy</Text>
+        <View style={styles.dateToggle}>
+          {(['today', 'all'] as const).map((f) => (
+            <TouchableOpacity
+              key={f}
+              style={[styles.dateToggleBtn, dateFilter === f && styles.dateToggleBtnActive]}
+              onPress={() => handleDateFilter(f)}
+            >
+              <Text style={[styles.dateToggleText, dateFilter === f && styles.dateToggleTextActive]}>
+                {f === 'today' ? 'Hoy' : 'Total'}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </View>
       </View>
 
       {/* Summary bar */}
-      <SummaryBar orders={orders} />
+      <SummaryBar orders={allOrders} />
 
       {/* Filter bar */}
       <View style={styles.filterBar}>
@@ -277,8 +304,8 @@ export default function OrdersScreen() {
           {FILTERS.map((f) => {
             const count =
               f.key === 'all'
-                ? orders.length
-                : orders.filter((o) => o.status === f.key).length;
+                ? allOrders.length
+                : allOrders.filter((o) => o.status === f.key).length;
             const isActive = activeFilter === f.key;
             return (
               <TouchableOpacity
@@ -309,6 +336,13 @@ export default function OrdersScreen() {
         )}
         ListEmptyComponent={<EmptyState filter={activeFilter} />}
         ItemSeparatorComponent={() => <View style={{ height: spacing.md }} />}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={() => load(true)}
+            tintColor={colors.primary[500]}
+          />
+        }
       />
     </View>
   );
@@ -320,6 +354,31 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.background.secondary,
+  },
+
+  centered: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.md,
+    backgroundColor: colors.background.secondary,
+  },
+  errorText: {
+    fontSize: typography.fontSize.sm,
+    color: colors.text.secondary,
+    textAlign: 'center',
+    paddingHorizontal: spacing.xl,
+  },
+  retryBtn: {
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.sm,
+    backgroundColor: colors.primary[500],
+    borderRadius: borderRadius.full,
+  },
+  retryText: {
+    fontSize: typography.fontSize.sm,
+    fontWeight: typography.fontWeight.semibold,
+    color: colors.white,
   },
 
   // Header
@@ -337,10 +396,29 @@ const styles = StyleSheet.create({
     fontWeight: typography.fontWeight.bold,
     color: colors.text.primary,
   },
-  headerDate: {
+  dateToggle: {
+    flexDirection: 'row',
+    backgroundColor: colors.background.tertiary,
+    borderRadius: borderRadius.full,
+    borderWidth: 1,
+    borderColor: colors.gray[200],
+    overflow: 'hidden',
+  },
+  dateToggleBtn: {
+    paddingHorizontal: spacing.md,
+    paddingVertical: 6,
+  },
+  dateToggleBtnActive: {
+    backgroundColor: colors.primary[500],
+  },
+  dateToggleText: {
     fontSize: typography.fontSize.sm,
     fontWeight: typography.fontWeight.medium,
-    color: colors.text.tertiary,
+    color: colors.text.secondary,
+  },
+  dateToggleTextActive: {
+    color: colors.white,
+    fontWeight: typography.fontWeight.semibold,
   },
 
   // Summary bar
