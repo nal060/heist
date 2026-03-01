@@ -1,78 +1,26 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   View,
   ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
+  ActivityIndicator,
+  RefreshControl,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, spacing, typography, borderRadius, shadows } from '../../src/theme';
-
-// ─── Mock Data ────────────────────────────────────────────────────────────────
-
-const DEMO_BUSINESS_NAME = 'Negocio Demo';
-
-const MOCK_STATS = {
-  activeBags: 3,
-  ordersToday: 7,
-  revenueToday: 84.5,
-};
-
-const MOCK_RECENT_ORDERS = [
-  {
-    id: 'ord-001',
-    pickupCode: 'A1B2',
-    bagTitle: 'Caja Sorpresa de Panadería',
-    quantity: 1,
-    totalPrice: 9.99,
-    pickupWindow: '5:00 PM – 6:00 PM',
-    status: 'reserved' as const,
-    reservedAt: 'hace 2 min',
-  },
-  {
-    id: 'ord-002',
-    pickupCode: 'C3D4',
-    bagTitle: 'Bolsa Misteriosa de Sushi',
-    quantity: 2,
-    totalPrice: 25.98,
-    pickupWindow: '6:00 PM – 7:00 PM',
-    status: 'reserved' as const,
-    reservedAt: 'hace 15 min',
-  },
-  {
-    id: 'ord-003',
-    pickupCode: 'E5F6',
-    bagTitle: 'Especial de Pasta',
-    quantity: 1,
-    totalPrice: 7.99,
-    pickupWindow: '5:00 PM – 6:00 PM',
-    status: 'collected' as const,
-    reservedAt: 'hace 34 min',
-  },
-  {
-    id: 'ord-004',
-    pickupCode: 'G7H8',
-    bagTitle: 'Caja Sorpresa de Panadería',
-    quantity: 1,
-    totalPrice: 9.99,
-    pickupWindow: '4:00 PM – 5:00 PM',
-    status: 'collected' as const,
-    reservedAt: 'hace 1 h',
-  },
-];
-
-const MOCK_ACTIVE_BAGS = [
-  { id: 'bag-001', title: 'Caja Sorpresa de Panadería', available: 2, total: 5, price: 9.99 },
-  { id: 'bag-002', title: 'Bolsa Misteriosa de Sushi', available: 1, total: 3, price: 12.99 },
-  { id: 'bag-003', title: 'Especial de Pasta', available: 4, total: 4, price: 7.99 },
-];
+import {
+  getBusinessDashboard,
+  DEMO_BUSINESS_ID,
+  type DashboardOrder,
+  type DashboardBag,
+} from '../../src/data/business';
+import type { OrderStatus } from '../../src/types';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
-
-type OrderStatus = 'reserved' | 'collected' | 'cancelled';
 
 const STATUS_CONFIG: Record<OrderStatus, { label: string; bg: string; text: string }> = {
   reserved:  { label: 'Reservado',  bg: '#FFF8E1', text: '#F57F17' },
@@ -111,7 +59,7 @@ function StatCard({
   );
 }
 
-function OrderRow({ order }: { order: (typeof MOCK_RECENT_ORDERS)[0] }) {
+function OrderRow({ order }: { order: DashboardOrder }) {
   const cfg = STATUS_CONFIG[order.status];
   return (
     <View style={styles.orderRow}>
@@ -138,7 +86,7 @@ function OrderRow({ order }: { order: (typeof MOCK_RECENT_ORDERS)[0] }) {
   );
 }
 
-function ActiveBagRow({ bag }: { bag: (typeof MOCK_ACTIVE_BAGS)[0] }) {
+function ActiveBagRow({ bag }: { bag: DashboardBag }) {
   const pctLeft = bag.available / bag.total;
   const barColor =
     pctLeft > 0.5 ? '#4CAF50' : pctLeft > 0.2 ? '#FF9800' : colors.error;
@@ -170,16 +118,67 @@ function ActiveBagRow({ bag }: { bag: (typeof MOCK_ACTIVE_BAGS)[0] }) {
 export default function DashboardScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
+  const [data, setData] = useState<Awaited<ReturnType<typeof getBusinessDashboard>> | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const load = (isRefresh = false) => {
+    if (isRefresh) setRefreshing(true);
+    else setLoading(true);
+    setError(null);
+    getBusinessDashboard(DEMO_BUSINESS_ID)
+      .then(setData)
+      .catch((e: Error) => setError(e.message))
+      .finally(() => {
+        setLoading(false);
+        setRefreshing(false);
+      });
+  };
+
+  useEffect(() => { load(); }, []);
+
+  if (loading) {
+    return (
+      <View style={[styles.container, styles.centered, { paddingTop: insets.top }]}>
+        <ActivityIndicator size="large" color={colors.primary[500]} />
+      </View>
+    );
+  }
+
+  if (error || !data) {
+    return (
+      <View style={[styles.container, styles.centered, { paddingTop: insets.top }]}>
+        <Ionicons name="cloud-offline-outline" size={40} color={colors.text.tertiary} />
+        <Text style={styles.errorText}>No se pudo cargar el panel</Text>
+        <TouchableOpacity style={styles.retryBtn} onPress={() => load()}>
+          <Text style={styles.retryText}>Reintentar</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
+
+  const collectedOrders = data.recentOrders.filter((o) => o.status === 'collected');
 
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scroll}>
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={styles.scroll}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={() => load(true)}
+            tintColor={colors.primary[500]}
+          />
+        }
+      >
 
         {/* Header */}
         <View style={styles.header}>
           <View>
             <Text style={styles.greeting}>{getGreeting()},</Text>
-            <Text style={styles.businessName}>{DEMO_BUSINESS_NAME}</Text>
+            <Text style={styles.businessName}>{data.businessName}</Text>
           </View>
         </View>
 
@@ -188,19 +187,19 @@ export default function DashboardScreen() {
         <View style={styles.statsRow}>
           <StatCard
             icon="bag-handle-outline"
-            value={String(MOCK_STATS.activeBags)}
+            value={String(data.stats.activeBags)}
             label="Bolsas activas"
             color={colors.primary[500]}
           />
           <StatCard
             icon="receipt-outline"
-            value={String(MOCK_STATS.ordersToday)}
+            value={String(data.stats.ordersToday)}
             label="Pedidos hoy"
             color="#FF9800"
           />
           <StatCard
             icon="cash-outline"
-            value={`$${MOCK_STATS.revenueToday.toFixed(0)}`}
+            value={`$${data.stats.revenueToday.toFixed(0)}`}
             label="Ingresos"
             color="#4CAF50"
           />
@@ -225,12 +224,16 @@ export default function DashboardScreen() {
           </TouchableOpacity>
         </View>
         <View style={[styles.card, shadows.sm]}>
-          {MOCK_RECENT_ORDERS.filter((o) => o.status === 'collected').map((order, idx, arr) => (
-            <React.Fragment key={order.id}>
-              <OrderRow order={order} />
-              {idx < arr.length - 1 && <View style={styles.divider} />}
-            </React.Fragment>
-          ))}
+          {collectedOrders.length === 0 ? (
+            <Text style={styles.emptyText}>Sin recolecciones aún</Text>
+          ) : (
+            collectedOrders.map((order, idx, arr) => (
+              <React.Fragment key={order.id}>
+                <OrderRow order={order} />
+                {idx < arr.length - 1 && <View style={styles.divider} />}
+              </React.Fragment>
+            ))
+          )}
         </View>
 
         {/* Active Bags */}
@@ -241,12 +244,16 @@ export default function DashboardScreen() {
           </TouchableOpacity>
         </View>
         <View style={[styles.card, shadows.sm]}>
-          {MOCK_ACTIVE_BAGS.map((bag, idx) => (
-            <React.Fragment key={bag.id}>
-              <ActiveBagRow bag={bag} />
-              {idx < MOCK_ACTIVE_BAGS.length - 1 && <View style={styles.divider} />}
-            </React.Fragment>
-          ))}
+          {data.activeBags.length === 0 ? (
+            <Text style={styles.emptyText}>No hay bolsas activas</Text>
+          ) : (
+            data.activeBags.map((bag, idx) => (
+              <React.Fragment key={bag.id}>
+                <ActiveBagRow bag={bag} />
+                {idx < data.activeBags.length - 1 && <View style={styles.divider} />}
+              </React.Fragment>
+            ))
+          )}
         </View>
 
         <View style={{ height: spacing.xxxxl }} />
@@ -264,6 +271,34 @@ const styles = StyleSheet.create({
   },
   scroll: {
     paddingBottom: spacing.xxxxl,
+  },
+
+  centered: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.md,
+  },
+  errorText: {
+    fontSize: typography.fontSize.base,
+    color: colors.text.secondary,
+    textAlign: 'center',
+  },
+  retryBtn: {
+    paddingHorizontal: spacing.xl,
+    paddingVertical: spacing.sm,
+    borderRadius: borderRadius.md,
+    backgroundColor: colors.primary[500],
+  },
+  retryText: {
+    fontSize: typography.fontSize.base,
+    fontWeight: typography.fontWeight.semibold,
+    color: colors.white,
+  },
+  emptyText: {
+    fontSize: typography.fontSize.sm,
+    color: colors.text.tertiary,
+    textAlign: 'center',
+    paddingVertical: spacing.lg,
   },
 
   // Header
