@@ -1,6 +1,6 @@
 import { supabase } from '../lib/supabase';
-import { formatPickupWindow } from '../utils/formatTime';
-import type { OrderStatus } from '../types';
+import { formatPickupWindow, formatTime } from '../utils/formatTime';
+import type { OrderStatus, BagStatus } from '../types';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -125,4 +125,70 @@ export async function getBusinessDashboard(businessId: string): Promise<Business
       price: Number(b.discounted_price),
     })),
   };
+}
+
+// ─── Bags tab ─────────────────────────────────────────────────────────────────
+
+export interface BusinessBag {
+  id: string;
+  title: string;
+  originalPrice: number;
+  discountedPrice: number;
+  quantityTotal: number;
+  quantityAvailable: number;
+  pickupStart: string;
+  pickupEnd: string;
+  date: string;
+  status: BagStatus;
+}
+
+function formatBagDate(dateStr: string): string {
+  const today = new Date();
+  const yesterday = new Date(today);
+  yesterday.setDate(today.getDate() - 1);
+  const tomorrow = new Date(today);
+  tomorrow.setDate(today.getDate() + 1);
+  if (dateStr === today.toISOString().split('T')[0]) return 'Hoy';
+  if (dateStr === yesterday.toISOString().split('T')[0]) return 'Ayer';
+  if (dateStr === tomorrow.toISOString().split('T')[0]) return 'Mañana';
+  return dateStr;
+}
+
+/**
+ * Fetches bags for a business, ordered by date DESC.
+ * Pass a status to query server-side using the (date, status) index.
+ * Pass nothing to retrieve all bags.
+ */
+export async function getBusinessBags(
+  businessId: string,
+  status?: BagStatus
+): Promise<BusinessBag[]> {
+  let query = supabase
+    .from('surplus_bags')
+    .select(
+      'id, title, original_price, discounted_price, quantity_total, quantity_available, pickup_start_time, pickup_end_time, date, status'
+    )
+    .eq('business_id', businessId)
+    .order('date', { ascending: false })
+    .order('created_at', { ascending: false });
+
+  if (status) {
+    query = query.eq('status', status);
+  }
+
+  const { data, error } = await query;
+  if (error) throw new Error('No se pudieron cargar las bolsas: ' + error.message);
+
+  return (data ?? []).map((b) => ({
+    id: b.id,
+    title: b.title,
+    originalPrice: Number(b.original_price),
+    discountedPrice: Number(b.discounted_price),
+    quantityTotal: b.quantity_total,
+    quantityAvailable: b.quantity_available,
+    pickupStart: formatTime(b.pickup_start_time),
+    pickupEnd: formatTime(b.pickup_end_time),
+    date: formatBagDate(b.date),
+    status: b.status as BagStatus,
+  }));
 }

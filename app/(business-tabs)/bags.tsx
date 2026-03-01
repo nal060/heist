@@ -1,4 +1,4 @@
-import React, { useRef, useState } from 'react';
+import React, { useCallback, useRef, useState } from 'react';
 import {
   View,
   ScrollView,
@@ -6,91 +6,20 @@ import {
   Text,
   TouchableOpacity,
   FlatList,
+  ActivityIndicator,
+  RefreshControl,
 } from 'react-native';
 import ReanimatedSwipeable, { type SwipeableMethods } from 'react-native-gesture-handler/ReanimatedSwipeable';
-import { useRouter } from 'expo-router';
+import { useRouter, useFocusEffect } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, spacing, typography, borderRadius, shadows } from '../../src/theme';
 import type { BagStatus } from '../../src/types';
-
-// ─── Mock Data ────────────────────────────────────────────────────────────────
-
-type MockBag = {
-  id: string;
-  title: string;
-  originalPrice: number;
-  discountedPrice: number;
-  quantityTotal: number;
-  quantityAvailable: number;
-  pickupStart: string;
-  pickupEnd: string;
-  date: string;
-  status: BagStatus;
-};
-
-const MOCK_BAGS: MockBag[] = [
-  {
-    id: 'bag-001',
-    title: 'Caja Sorpresa de Panadería',
-    originalPrice: 18.0,
-    discountedPrice: 9.99,
-    quantityTotal: 5,
-    quantityAvailable: 2,
-    pickupStart: '5:00 PM',
-    pickupEnd: '6:00 PM',
-    date: 'Hoy',
-    status: 'active',
-  },
-  {
-    id: 'bag-002',
-    title: 'Bolsa Misteriosa de Sushi',
-    originalPrice: 28.0,
-    discountedPrice: 12.99,
-    quantityTotal: 3,
-    quantityAvailable: 1,
-    pickupStart: '6:00 PM',
-    pickupEnd: '7:00 PM',
-    date: 'Hoy',
-    status: 'active',
-  },
-  {
-    id: 'bag-003',
-    title: 'Especial de Pasta',
-    originalPrice: 15.0,
-    discountedPrice: 7.99,
-    quantityTotal: 4,
-    quantityAvailable: 0,
-    pickupStart: '5:00 PM',
-    pickupEnd: '6:00 PM',
-    date: 'Hoy',
-    status: 'sold_out',
-  },
-  {
-    id: 'bag-004',
-    title: 'Caja de Repostería de Ayer',
-    originalPrice: 14.0,
-    discountedPrice: 6.99,
-    quantityTotal: 3,
-    quantityAvailable: 0,
-    pickupStart: '4:00 PM',
-    pickupEnd: '5:00 PM',
-    date: 'Ayer',
-    status: 'expired',
-  },
-  {
-    id: 'bag-005',
-    title: 'Caja de Repostería de Ayer',
-    originalPrice: 14.0,
-    discountedPrice: 6.99,
-    quantityTotal: 3,
-    quantityAvailable: 0,
-    pickupStart: '4:00 PM',
-    pickupEnd: '5:00 PM',
-    date: 'Ayer',
-    status: 'cancelled',
-  },
-];
+import {
+  getBusinessBags,
+  DEMO_BUSINESS_ID,
+  type BusinessBag,
+} from '../../src/data/business';
 
 // ─── Filter config ────────────────────────────────────────────────────────────
 
@@ -119,9 +48,9 @@ function BagCard({
   onCancel,
   onRelist,
 }: {
-  bag: MockBag;
+  bag: BusinessBag;
   onCancel: (id: string) => void;
-  onRelist: (bag: MockBag) => void;
+  onRelist: (bag: BusinessBag) => void;
 }) {
   const swipeableRef = useRef<SwipeableMethods>(null);
   const cfg = STATUS_CONFIG[bag.status];
@@ -239,7 +168,7 @@ function EmptyState({ filter }: { filter: FilterKey }) {
     active:    'No hay bolsas activas en este momento.',
     sold_out:  'No hay bolsas agotadas.',
     expired:   'No hay bolsas vencidas.',
-    cancelled: 'No hay maletas canceladas.',
+    cancelled: 'No hay bolsas canceladas.',
   };
   return (
     <View style={styles.emptyState}>
@@ -255,15 +184,37 @@ export default function BagsScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const [activeFilter, setActiveFilter] = useState<FilterKey>('all');
-  const [bags, setBags] = useState(MOCK_BAGS);
+  const [allBags, setAllBags] = useState<BusinessBag[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const filtered = bags.filter(
+  // Derived — filter switching is instant, no extra network requests
+  const filtered = allBags.filter(
     (b) => activeFilter === 'all' || b.status === activeFilter
   );
 
+  const load = useCallback(async (isRefresh = false) => {
+    isRefresh ? setRefreshing(true) : setLoading(true);
+    setError(null);
+    try {
+      const data = await getBusinessBags(DEMO_BUSINESS_ID);
+      setAllBags(data);
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      isRefresh ? setRefreshing(false) : setLoading(false);
+    }
+  }, []);
+
+  // Reload each time the tab comes into focus
+  useFocusEffect(
+    useCallback(() => { load(); }, [load])
+  );
+
   const handleCreate = () => router.push('/bag/create' as any);
-  const handleCancel = (id: string) => setBags((prev) => prev.filter((b) => b.id !== id));
-  const handleRelist = (bag: MockBag) =>
+  const handleCancel = (id: string) => setAllBags((prev) => prev.filter((b) => b.id !== id));
+  const handleRelist = (bag: BusinessBag) =>
     router.push({
       pathname: '/bag/create',
       params: {
@@ -275,6 +226,26 @@ export default function BagsScreen() {
         pickupEndLabel: bag.pickupEnd,
       },
     } as any);
+
+  if (loading) {
+    return (
+      <View style={[styles.centered, { paddingTop: insets.top }]}>
+        <ActivityIndicator size="large" color={colors.primary[500]} />
+      </View>
+    );
+  }
+
+  if (error) {
+    return (
+      <View style={[styles.centered, { paddingTop: insets.top }]}>
+        <Ionicons name="alert-circle-outline" size={40} color={colors.error} />
+        <Text style={styles.errorText}>{error}</Text>
+        <TouchableOpacity style={styles.retryBtn} onPress={() => load()}>
+          <Text style={styles.retryText}>Reintentar</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
 
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
@@ -296,8 +267,8 @@ export default function BagsScreen() {
           {FILTERS.map((f) => {
             const count =
               f.key === 'all'
-                ? bags.length
-                : bags.filter((b) => b.status === f.key).length;
+                ? allBags.length
+                : allBags.filter((b) => b.status === f.key).length;
             const isActive = activeFilter === f.key;
             return (
               <TouchableOpacity
@@ -326,6 +297,13 @@ export default function BagsScreen() {
         renderItem={({ item }) => <BagCard bag={item} onCancel={handleCancel} onRelist={handleRelist} />}
         ListEmptyComponent={<EmptyState filter={activeFilter} />}
         ItemSeparatorComponent={() => <View style={{ height: spacing.md }} />}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={() => load(true)}
+            tintColor={colors.primary[500]}
+          />
+        }
       />
     </View>
   );
@@ -337,6 +315,31 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.background.secondary,
+  },
+
+  centered: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.md,
+    backgroundColor: colors.background.secondary,
+  },
+  errorText: {
+    fontSize: typography.fontSize.sm,
+    color: colors.text.secondary,
+    textAlign: 'center',
+    paddingHorizontal: spacing.xl,
+  },
+  retryBtn: {
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.sm,
+    backgroundColor: colors.primary[500],
+    borderRadius: borderRadius.full,
+  },
+  retryText: {
+    fontSize: typography.fontSize.sm,
+    fontWeight: typography.fontWeight.semibold,
+    color: colors.white,
   },
 
   // Header
