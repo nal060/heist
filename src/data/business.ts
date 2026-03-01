@@ -18,6 +18,7 @@ export interface DashboardOrder {
   pickupWindow: string;
   status: OrderStatus;
   reservedAt: string;
+  isOutsideWindow?: boolean;
 }
 
 export interface DashboardBag {
@@ -40,6 +41,13 @@ export interface BusinessDashboard {
 }
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
+
+function outsidePickupWindow(pickupDate: string, startTime: string, endTime: string): boolean {
+  const now = new Date();
+  const start = new Date(`${pickupDate}T${startTime}`);
+  const end = new Date(`${pickupDate}T${endTime}`);
+  return now < start || now > end;
+}
 
 function relativeTime(isoString: string): string {
   const diffMin = Math.floor((Date.now() - new Date(isoString).getTime()) / 60000);
@@ -218,6 +226,41 @@ export async function createBag(
 // ─── Orders tab ───────────────────────────────────────────────────────────────
 
 /**
+ * Looks up a single order by pickup code for a given business.
+ * Returns null if the code doesn't exist for this business.
+ */
+export async function getOrderByCode(
+  businessId: string,
+  pickupCode: string
+): Promise<DashboardOrder | null> {
+  const { data, error } = await supabase
+    .from('orders')
+    .select(
+      'id, pickup_code, quantity, total_price, pickup_date, pickup_start_time, pickup_end_time, status, reserved_at, surplus_bags!inner(title, business_id)'
+    )
+    .eq('surplus_bags.business_id', businessId)
+    .eq('pickup_code', pickupCode)
+    .maybeSingle();
+
+  if (error) throw new Error('Error al buscar el pedido: ' + error.message);
+  if (!data) return null;
+
+  const pickupDate = (data as any).pickup_date ?? '';
+  return {
+    id: data.id,
+    pickupCode: data.pickup_code,
+    bagTitle: (data.surplus_bags as unknown as { title: string } | null)?.title ?? '—',
+    quantity: data.quantity,
+    totalPrice: Number(data.total_price),
+    pickupDate: formatBagDate(pickupDate),
+    pickupWindow: formatPickupWindow(data.pickup_start_time, data.pickup_end_time),
+    status: data.status as OrderStatus,
+    reservedAt: relativeTime(data.reserved_at),
+    isOutsideWindow: outsidePickupWindow(pickupDate, data.pickup_start_time, data.pickup_end_time),
+  };
+}
+
+/**
  * Fetches orders for a business, ordered by reserved_at DESC.
  * Pass dateFilter='today' to scope to today only, 'all' for all orders.
  */
@@ -265,7 +308,7 @@ export async function cancelOrder(orderId: string): Promise<void> {
 export async function collectOrder(orderId: string): Promise<void> {
   const { error } = await supabase
     .from('orders')
-    .update({ status: 'collected' })
+    .update({ status: 'collected', collected_at: new Date().toISOString().split('T')[0] })
     .eq('id', orderId);
   if (error) throw new Error('No se pudo marcar el pedido como recogido: ' + error.message);
 }

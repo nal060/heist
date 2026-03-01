@@ -8,21 +8,20 @@ import {
   KeyboardAvoidingView,
   Platform,
   Pressable,
+  ActivityIndicator,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, spacing, typography, borderRadius, shadows } from '../src/theme';
+import {
+  getOrderByCode,
+  collectOrder,
+  DEMO_BUSINESS_ID,
+  type DashboardOrder,
+} from '../src/data/business';
 
-// ─── Mock orders ──────────────────────────────────────────────────────────────
-
-const MOCK_ORDERS = [
-  { id: 'ord-001', pickupCode: 'A1B2', bagTitle: 'Bakery Surprise Box', quantity: 1, totalPrice: 9.99,  pickupWindow: '5:00–6:00 PM', status: 'reserved' },
-  { id: 'ord-002', pickupCode: 'C3D4', bagTitle: 'Sushi Mystery Bag',   quantity: 2, totalPrice: 25.98, pickupWindow: '6:00–7:00 PM', status: 'reserved' },
-  { id: 'ord-003', pickupCode: 'E5F6', bagTitle: 'Pasta Special',       quantity: 1, totalPrice: 7.99,  pickupWindow: '5:00–6:00 PM', status: 'collected' },
-];
-
-type LookupState = 'idle' | 'found' | 'not_found' | 'already_collected' | 'success';
+type LookupState = 'idle' | 'loading' | 'found' | 'not_found' | 'already_collected' | 'success' | 'error';
 
 const CODE_LENGTH = 4;
 
@@ -30,6 +29,7 @@ function slotColor(state: LookupState): { border: string; bg: string; text: stri
   if (state === 'found')             return { border: '#2E7D32', bg: '#F1F8E9', text: '#2E7D32' };
   if (state === 'not_found')         return { border: colors.error, bg: '#FFEBEE', text: colors.error };
   if (state === 'already_collected') return { border: '#F57F17', bg: '#FFF8E1', text: '#F57F17' };
+  if (state === 'error')             return { border: colors.error, bg: '#FFEBEE', text: colors.error };
   return { border: colors.gray[300], bg: colors.background.primary, text: colors.text.primary };
 }
 
@@ -39,9 +39,11 @@ export default function CollectScreen() {
   const inputRef = useRef<TextInput>(null);
   const [code, setCode] = useState('');
   const [lookupState, setLookupState] = useState<LookupState>('idle');
-  const [previewOrder, setPreviewOrder] = useState<(typeof MOCK_ORDERS)[0] | null>(null);
+  const [previewOrder, setPreviewOrder] = useState<DashboardOrder | null>(null);
+  const [errorMsg, setErrorMsg] = useState('');
+  const [collecting, setCollecting] = useState(false);
 
-  const handleChange = (text: string) => {
+  const handleChange = async (text: string) => {
     const upper = text.toUpperCase().replace(/[^A-Z0-9]/g, '');
     setCode(upper);
 
@@ -51,31 +53,46 @@ export default function CollectScreen() {
       return;
     }
 
-    const order = MOCK_ORDERS.find((o) => o.pickupCode === upper);
-    if (!order) {
-      setLookupState('not_found');
-      setPreviewOrder(null);
-    } else if (order.status !== 'reserved') {
-      setLookupState('already_collected');
-      setPreviewOrder(order);
-    } else {
-      setLookupState('found');
-      setPreviewOrder(order);
+    setLookupState('loading');
+    setPreviewOrder(null);
+    try {
+      const order = await getOrderByCode(DEMO_BUSINESS_ID, upper);
+      if (!order) {
+        setLookupState('not_found');
+      } else if (order.status !== 'reserved') {
+        setLookupState('already_collected');
+        setPreviewOrder(order);
+      } else {
+        setLookupState('found');
+        setPreviewOrder(order);
+      }
+    } catch (e) {
+      setErrorMsg((e as Error).message);
+      setLookupState('error');
     }
   };
 
-  const handleCollect = () => {
+  const handleCollect = async () => {
     if (!previewOrder || lookupState !== 'found') return;
-    previewOrder.status = 'collected';
-    setLookupState('success');
-    setCode('');
-    setPreviewOrder(null);
+    setCollecting(true);
+    try {
+      await collectOrder(previewOrder.id);
+      setLookupState('success');
+      setCode('');
+      setPreviewOrder(null);
+    } catch (e) {
+      setErrorMsg((e as Error).message);
+      setLookupState('error');
+    } finally {
+      setCollecting(false);
+    }
   };
 
   const handleReset = () => {
     setCode('');
     setLookupState('idle');
     setPreviewOrder(null);
+    setErrorMsg('');
     inputRef.current?.focus();
   };
 
@@ -92,7 +109,7 @@ export default function CollectScreen() {
           <TouchableOpacity style={styles.backBtn} onPress={() => router.back()}>
             <Ionicons name="arrow-back" size={24} color={colors.text.primary} />
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>Coleccionar Pedido</Text>
+          <Text style={styles.headerTitle}>Recoger Pedido</Text>
           <View style={styles.backBtn} />
         </View>
 
@@ -135,6 +152,11 @@ export default function CollectScreen() {
             autoFocus
           />
 
+          {/* Loading */}
+          {lookupState === 'loading' && (
+            <ActivityIndicator color={colors.primary[500]} />
+          )}
+
           {/* Order preview */}
           {lookupState === 'found' && previewOrder && (
             <View style={[styles.previewCard, shadows.sm]}>
@@ -148,9 +170,22 @@ export default function CollectScreen() {
                 <Ionicons name="people-outline" size={13} color={colors.text.tertiary} />
                 <Text style={styles.previewMetaText}>× {previewOrder.quantity}</Text>
                 <View style={styles.metaDot} />
+                <Ionicons name="calendar-outline" size={13} color={colors.text.tertiary} />
+                <Text style={styles.previewMetaText}>{previewOrder.pickupDate}</Text>
+                <View style={styles.metaDot} />
                 <Ionicons name="time-outline" size={13} color={colors.text.tertiary} />
                 <Text style={styles.previewMetaText}>{previewOrder.pickupWindow}</Text>
               </View>
+            </View>
+          )}
+
+          {/* Outside pickup window warning */}
+          {lookupState === 'found' && previewOrder?.isOutsideWindow && (
+            <View style={[styles.notice, styles.noticeWarn]}>
+              <Ionicons name="warning-outline" size={16} color="#F57F17" />
+              <Text style={[styles.noticeText, { color: '#F57F17' }]}>
+                Este pedido está fuera de la ventana de recogida ({previewOrder.pickupDate}, {previewOrder.pickupWindow}).
+              </Text>
             </View>
           )}
 
@@ -177,25 +212,35 @@ export default function CollectScreen() {
             <View style={[styles.notice, styles.noticeSuccess]}>
               <Ionicons name="checkmark-circle-outline" size={16} color="#2E7D32" />
               <Text style={[styles.noticeText, { color: '#2E7D32' }]}>
-               ¡Listo! Introduce otro código para continuar.
+                ¡Listo! Introduce otro código para continuar.
               </Text>
+            </View>
+          )}
+
+          {lookupState === 'error' && (
+            <View style={[styles.notice, styles.noticeError]}>
+              <Ionicons name="alert-circle-outline" size={16} color={colors.error} />
+              <Text style={[styles.noticeText, { color: colors.error }]}>{errorMsg}</Text>
             </View>
           )}
 
           {/* Actions */}
           <View style={styles.actions}>
-            {(lookupState === 'found' || lookupState === 'not_found' || lookupState === 'already_collected') && (
+            {(lookupState === 'found' || lookupState === 'not_found' || lookupState === 'already_collected' || lookupState === 'error') && (
               <TouchableOpacity style={styles.clearBtn} onPress={handleReset}>
                 <Text style={styles.clearBtnText}>Borrar</Text>
               </TouchableOpacity>
             )}
             <TouchableOpacity
-              style={[styles.collectBtn, lookupState !== 'found' && styles.collectBtnDisabled]}
+              style={[styles.collectBtn, (lookupState !== 'found' || collecting) && styles.collectBtnDisabled]}
               onPress={handleCollect}
-              disabled={lookupState !== 'found'}
+              disabled={lookupState !== 'found' || collecting}
             >
-              <Ionicons name="bag-check-outline" size={18} color={colors.white} />
-              <Text style={styles.collectBtnText}>Confirmar Colección</Text>
+              {collecting
+                ? <ActivityIndicator size="small" color={colors.white} />
+                : <Ionicons name="bag-check-outline" size={18} color={colors.white} />
+              }
+              <Text style={styles.collectBtnText}>Confirmar Recogida</Text>
             </TouchableOpacity>
           </View>
         </View>
