@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import {
   View,
   ScrollView,
@@ -8,7 +8,8 @@ import {
   ActivityIndicator,
   RefreshControl,
 } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useRouter, useFocusEffect } from 'expo-router';
+import { useNavigation } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, spacing, typography, borderRadius, shadows } from '../../src/theme';
@@ -123,7 +124,9 @@ export default function DashboardScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const load = (isRefresh = false) => {
+  const navigation = useNavigation();
+
+  const load = useCallback((isRefresh = false) => {
     if (isRefresh) setRefreshing(true);
     else setLoading(true);
     setError(null);
@@ -134,9 +137,17 @@ export default function DashboardScreen() {
         setLoading(false);
         setRefreshing(false);
       });
-  };
+  }, []);
 
-  useEffect(() => { load(); }, []);
+  // Reload when navigating to this tab
+  useFocusEffect(useCallback(() => { load(true); }, [load]));
+
+  // Reload when tapping the already-active tab
+  useEffect(() => {
+    return navigation.addListener('tabPress' as any, () => {
+      if (navigation.isFocused()) load(true);
+    });
+  }, [navigation, load]);
 
   if (loading) {
     return (
