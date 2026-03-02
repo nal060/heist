@@ -10,3 +10,6 @@ export { default as IconButton } from './IconButton';
 export { default as Divider } from './Divider';
 export { default as EmptyState } from './EmptyState';
 export { default as ErrorState } from './ErrorState';
+export { default as ProgressBar } from './ProgressBar';
+export { default as RecommendationBox } from './RecommendationBox';
+export { default as HelpSection } from './HelpSection';

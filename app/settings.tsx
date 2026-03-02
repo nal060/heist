@@ -1,10 +1,11 @@
 import React from 'react';
-import { View, ScrollView, StyleSheet, Text, TouchableOpacity } from 'react-native';
+import { View, ScrollView, StyleSheet, Text, TouchableOpacity, Alert } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, spacing, typography } from '../src/theme';
 import { strings } from '../src/constants/strings';
+import { useAuth } from '../src/context/AuthContext';
 import Divider from '../src/components/ui/Divider';
 
 type IoniconsName = React.ComponentProps<typeof Ionicons>['name'];
@@ -26,6 +27,18 @@ const SETTINGS_ITEMS: SettingsItem[] = [
 export default function SettingsScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const { signOut } = useAuth();
+
+  const handleLogout = () => {
+    Alert.alert(
+      strings.settings.logout,
+      '',
+      [
+        { text: strings.common.cancel, style: 'cancel' },
+        { text: strings.common.confirm, style: 'destructive', onPress: signOut },
+      ],
+    );
+  };
 
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
@@ -57,7 +70,7 @@ export default function SettingsScreen() {
 
         {/* Logout */}
         <View style={styles.section}>
-          <TouchableOpacity style={styles.settingsRow}>
+          <TouchableOpacity style={styles.settingsRow} onPress={handleLogout}>
             <View style={styles.settingsLeft}>
               <Ionicons name="log-out-outline" size={22} color={colors.error} />
               <Text style={[styles.settingsLabel, styles.dangerText]}>
