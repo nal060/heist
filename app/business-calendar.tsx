@@ -1,31 +1,18 @@
 import { useState, useEffect, useCallback } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  ScrollView,
-  TouchableOpacity,
-  ActivityIndicator,
-  TextInput,
-} from 'react-native';
-import { useRouter } from 'expo-router';
+import { View, Text, StyleSheet, ActivityIndicator } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Ionicons } from '@expo/vector-icons';
-import { colors, typography, spacing, borderRadius } from '../src/theme';
+import { useRouter } from 'expo-router';
+import { colors, typography, spacing } from '../src/theme';
 import { strings } from '../src/constants/strings';
 import { useAuth } from '../src/context/AuthContext';
 import { supabase } from '../src/lib/supabase';
 import { saveBagSchedule, getBagSchedule } from '../src/data/auth';
 import { DAYS_OF_WEEK } from '../src/constants/app';
 import type { BagPickupSchedule } from '../src/types';
+import ScreenShell from '../src/components/ui/ScreenShell';
+import DayScheduleEditor, { type DaySchedule } from '../src/components/ui/DayScheduleEditor';
 import Button from '../src/components/ui/Button';
 import ErrorState from '../src/components/ui/ErrorState';
-
-interface DaySchedule {
-  active: boolean;
-  startTime: string;
-  endTime: string;
-}
 
 const DEFAULT_START = '17:00';
 const DEFAULT_END = '18:00';
@@ -50,7 +37,6 @@ export default function BusinessCalendarScreen() {
   const loadSchedule = useCallback(async () => {
     if (!user) return;
     setError(null);
-
     try {
       const { data: business } = await supabase
         .from('businesses')
@@ -60,7 +46,6 @@ export default function BusinessCalendarScreen() {
 
       if (!business) throw new Error(strings.common.error);
 
-      // Get the first bag for this business
       const { data: bags } = await supabase
         .from('surplus_bags')
         .select('id')
@@ -100,9 +85,7 @@ export default function BusinessCalendarScreen() {
     }
   }, [user]);
 
-  useEffect(() => {
-    loadSchedule();
-  }, [loadSchedule]);
+  useEffect(() => { loadSchedule(); }, [loadSchedule]);
 
   const toggleDay = (key: string) => {
     setSchedule((prev) => ({
@@ -122,7 +105,6 @@ export default function BusinessCalendarScreen() {
     if (!bagId) return;
     setSaving(true);
     setError(null);
-
     try {
       const scheduleData = DAYS_OF_WEEK
         .filter((d) => schedule[d.key].active)
@@ -145,7 +127,7 @@ export default function BusinessCalendarScreen() {
 
   if (loading) {
     return (
-      <View style={[styles.container, styles.center, { paddingTop: insets.top }]}>
+      <View style={[styles.loadingContainer, { paddingTop: insets.top }]}>
         <ActivityIndicator size="large" color={colors.primary[500]} />
       </View>
     );
@@ -153,93 +135,17 @@ export default function BusinessCalendarScreen() {
 
   if (error && !bagId) {
     return (
-      <View style={[styles.container, styles.center, { paddingTop: insets.top }]}>
+      <View style={[styles.loadingContainer, { paddingTop: insets.top }]}>
         <ErrorState message={error} onRetry={loadSchedule} />
       </View>
     );
   }
 
   return (
-    <View style={[styles.container, { paddingTop: insets.top + spacing.lg }]}>
-      <TouchableOpacity
-        style={styles.backButton}
-        onPress={() => router.back()}
-        hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
-      >
-        <Ionicons name="arrow-back" size={24} color={colors.text.primary} />
-      </TouchableOpacity>
-
-      <ScrollView style={styles.scroll} showsVerticalScrollIndicator={false}>
-        <Text style={styles.title}>{strings.businessCalendar.title}</Text>
-        <Text style={styles.description}>{strings.businessCalendar.calendarDescription}</Text>
-
-        {/* Legend */}
-        <View style={styles.legend}>
-          <View style={styles.legendItem}>
-            <View style={[styles.legendDot, { backgroundColor: colors.primary[500] }]} />
-            <Text style={styles.legendText}>{strings.businessCalendar.pickup}</Text>
-          </View>
-          <View style={styles.legendItem}>
-            <View style={[styles.legendDot, { backgroundColor: colors.gray[300] }]} />
-            <Text style={styles.legendText}>{strings.businessCalendar.noPickup}</Text>
-          </View>
-        </View>
-
-        {/* Day rows */}
-        <View style={styles.daysList}>
-          {DAYS_OF_WEEK.map((day) => {
-            const dayData = schedule[day.key];
-            return (
-              <View key={day.key} style={styles.dayRow}>
-                <TouchableOpacity
-                  style={[styles.checkbox, dayData.active && styles.checkboxChecked]}
-                  onPress={() => toggleDay(day.key)}
-                >
-                  {dayData.active && (
-                    <Ionicons name="checkmark" size={16} color={colors.white} />
-                  )}
-                </TouchableOpacity>
-                <Text style={[styles.dayLabel, !dayData.active && styles.dayLabelInactive]}>
-                  {day.label}
-                </Text>
-                {dayData.active ? (
-                  <View style={styles.timeRow}>
-                    <TextInput
-                      style={styles.timeInput}
-                      value={dayData.startTime}
-                      onChangeText={(t) => updateTime(day.key, 'startTime', t)}
-                      placeholder="17:00"
-                      placeholderTextColor={colors.gray[400]}
-                    />
-                    <Text style={styles.timeDash}>-</Text>
-                    <TextInput
-                      style={styles.timeInput}
-                      value={dayData.endTime}
-                      onChangeText={(t) => updateTime(day.key, 'endTime', t)}
-                      placeholder="18:00"
-                      placeholderTextColor={colors.gray[400]}
-                    />
-                  </View>
-                ) : (
-                  <View style={styles.timeRow}>
-                    <Text style={styles.inactiveTime}>--:--</Text>
-                    <Text style={styles.timeDash}>-</Text>
-                    <Text style={styles.inactiveTime}>--:--</Text>
-                  </View>
-                )}
-              </View>
-            );
-          })}
-        </View>
-
-        <Text style={styles.hint}>{strings.businessCalendar.tapToEdit}</Text>
-
-        {error ? <Text style={styles.errorText}>{error}</Text> : null}
-
-        <View style={{ height: spacing.xxl }} />
-      </ScrollView>
-
-      <View style={[styles.footer, { paddingBottom: insets.bottom + spacing.xxl }]}>
+    <ScreenShell
+      title={strings.businessCalendar.title}
+      subtitle={strings.businessCalendar.calendarDescription}
+      footer={
         <Button
           label={strings.businessProfileEdit.save}
           onPress={handleSave}
@@ -248,42 +154,38 @@ export default function BusinessCalendarScreen() {
           loading={saving}
           disabled={!bagId}
         />
+      }
+    >
+      <View style={styles.legend}>
+        <View style={styles.legendItem}>
+          <View style={[styles.legendDot, { backgroundColor: colors.primary[500] }]} />
+          <Text style={styles.legendText}>{strings.businessCalendar.pickup}</Text>
+        </View>
+        <View style={styles.legendItem}>
+          <View style={[styles.legendDot, { backgroundColor: colors.gray[300] }]} />
+          <Text style={styles.legendText}>{strings.businessCalendar.noPickup}</Text>
+        </View>
       </View>
-    </View>
+
+      <DayScheduleEditor
+        schedule={schedule}
+        onToggleDay={toggleDay}
+        onUpdateTime={updateTime}
+      />
+
+      <Text style={styles.hint}>{strings.businessCalendar.tapToEdit}</Text>
+
+      {error ? <Text style={styles.errorText}>{error}</Text> : null}
+    </ScreenShell>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
+  loadingContainer: {
     flex: 1,
     backgroundColor: colors.background.primary,
-    paddingHorizontal: spacing.xxl,
-  },
-  center: {
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  backButton: {
-    width: 40,
-    height: 40,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: spacing.lg,
-  },
-  scroll: {
-    flex: 1,
-  },
-  title: {
-    fontSize: typography.fontSize.xl,
-    fontWeight: typography.fontWeight.bold,
-    color: colors.text.primary,
-    marginBottom: spacing.xs,
-  },
-  description: {
-    fontSize: typography.fontSize.sm,
-    color: colors.text.secondary,
-    marginBottom: spacing.xl,
-    lineHeight: typography.fontSize.sm * typography.lineHeight.relaxed,
   },
   legend: {
     flexDirection: 'row',
@@ -304,64 +206,6 @@ const styles = StyleSheet.create({
     fontSize: typography.fontSize.sm,
     color: colors.text.secondary,
   },
-  daysList: {
-    gap: spacing.md,
-  },
-  dayRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  checkbox: {
-    width: 28,
-    height: 28,
-    borderRadius: 6,
-    borderWidth: 2,
-    borderColor: colors.gray[300],
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: spacing.md,
-  },
-  checkboxChecked: {
-    backgroundColor: colors.primary[500],
-    borderColor: colors.primary[500],
-  },
-  dayLabel: {
-    width: 40,
-    fontSize: typography.fontSize.base,
-    fontWeight: typography.fontWeight.medium,
-    color: colors.text.primary,
-  },
-  dayLabelInactive: {
-    color: colors.text.tertiary,
-  },
-  timeRow: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'flex-end',
-    gap: spacing.sm,
-  },
-  timeInput: {
-    borderWidth: 1,
-    borderColor: colors.gray[300],
-    borderRadius: borderRadius.sm,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-    fontSize: typography.fontSize.sm,
-    color: colors.text.primary,
-    textAlign: 'center',
-    minWidth: 80,
-  },
-  timeDash: {
-    fontSize: typography.fontSize.base,
-    color: colors.text.tertiary,
-  },
-  inactiveTime: {
-    fontSize: typography.fontSize.sm,
-    color: colors.text.tertiary,
-    textAlign: 'center',
-    minWidth: 80,
-  },
   hint: {
     fontSize: typography.fontSize.sm,
     color: colors.text.tertiary,
@@ -373,8 +217,5 @@ const styles = StyleSheet.create({
     color: colors.error,
     textAlign: 'center',
     marginTop: spacing.md,
-  },
-  footer: {
-    paddingTop: spacing.lg,
   },
 });

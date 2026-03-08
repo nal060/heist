@@ -1,22 +1,18 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import {
   View,
   Text,
   StyleSheet,
   TouchableOpacity,
   ActivityIndicator,
-  Animated,
-  ScrollView,
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Ionicons } from '@expo/vector-icons';
-import { colors, typography, spacing } from '../../src/theme';
-import { borderRadius } from '../../src/theme';
+import { colors, typography, spacing, borderRadius } from '../../src/theme';
 import { strings } from '../../src/constants/strings';
 import { getAllCategories } from '../../src/data/auth';
 import type { Category } from '../../src/types';
-import ProgressBar from '../../src/components/ui/ProgressBar';
+import ScreenShell from '../../src/components/ui/ScreenShell';
 import Button from '../../src/components/ui/Button';
 
 const CATEGORY_COLORS: Record<string, { bg: string; icon: string }> = {
@@ -47,87 +43,35 @@ export default function BusinessCategoryScreen() {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
-  const fadeIn = useRef(new Animated.Value(0)).current;
-
   useEffect(() => {
     getAllCategories()
       .then(setCategories)
       .catch(() => {})
-      .finally(() => {
-        setLoading(false);
-        Animated.timing(fadeIn, {
-          toValue: 1,
-          duration: 300,
-          useNativeDriver: true,
-        }).start();
-      });
-  }, [fadeIn]);
+      .finally(() => setLoading(false));
+  }, []);
 
   const handleContinue = () => {
     if (!selectedId) return;
     router.push({
       pathname: '/(auth)/bag-name',
-      params: {
-        ...params,
-        categoryId: selectedId,
-      },
+      params: { ...params, categoryId: selectedId },
     });
   };
 
   if (loading) {
     return (
-      <View style={[styles.container, styles.center, { paddingTop: insets.top }]}>
+      <View style={[styles.loadingContainer, { paddingTop: insets.top }]}>
         <ActivityIndicator size="large" color={colors.primary[500]} />
       </View>
     );
   }
 
   return (
-    <Animated.View
-      style={[styles.container, { paddingTop: insets.top + spacing.lg, opacity: fadeIn }]}
-    >
-      <TouchableOpacity
-        style={styles.backButton}
-        onPress={() => router.back()}
-        hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
-      >
-        <Ionicons name="arrow-back" size={24} color={colors.text.primary} />
-      </TouchableOpacity>
-
-      <Text style={styles.title}>{strings.businessCategory.title}</Text>
-      <Text style={styles.subtitle}>{strings.businessCategory.subtitle}</Text>
-
-      <ScrollView style={styles.scroll} showsVerticalScrollIndicator={false}>
-        <View style={styles.optionsList}>
-          {categories.map((cat) => {
-            const isSelected = selectedId === cat.id;
-            const catColors = CATEGORY_COLORS[cat.name] || CATEGORY_COLORS['Otros'];
-
-            return (
-              <TouchableOpacity
-                key={cat.id}
-                style={[
-                  styles.optionRow,
-                  isSelected && { borderColor: catColors.icon, backgroundColor: catColors.bg },
-                ]}
-                onPress={() => setSelectedId(cat.id)}
-                activeOpacity={0.7}
-              >
-                <View style={styles.radioOuter}>
-                  {isSelected && <View style={[styles.radioInner, { backgroundColor: catColors.icon }]} />}
-                </View>
-                <Text style={[styles.optionText, isSelected && { fontWeight: typography.fontWeight.semibold }]}>
-                  {cat.name}
-                </Text>
-              </TouchableOpacity>
-            );
-          })}
-        </View>
-      </ScrollView>
-
-      <ProgressBar current={2} total={6} />
-
-      <View style={[styles.footer, { paddingBottom: insets.bottom + spacing.xxl }]}>
+    <ScreenShell
+      title={strings.businessCategory.title}
+      subtitle={strings.businessCategory.subtitle}
+      progress={{ current: 2, total: 6 }}
+      footer={
         <Button
           label={strings.businessCategory.continue}
           onPress={handleContinue}
@@ -135,42 +79,43 @@ export default function BusinessCategoryScreen() {
           fullWidth
           disabled={!selectedId}
         />
+      }
+    >
+      <View style={styles.optionsList}>
+        {categories.map((cat) => {
+          const isSelected = selectedId === cat.id;
+          const catColors = CATEGORY_COLORS[cat.name] || CATEGORY_COLORS['Otros'];
+
+          return (
+            <TouchableOpacity
+              key={cat.id}
+              style={[
+                styles.optionRow,
+                isSelected && { borderColor: catColors.icon, backgroundColor: catColors.bg },
+              ]}
+              onPress={() => setSelectedId(cat.id)}
+              activeOpacity={0.7}
+            >
+              <View style={styles.radioOuter}>
+                {isSelected && <View style={[styles.radioInner, { backgroundColor: catColors.icon }]} />}
+              </View>
+              <Text style={[styles.optionText, isSelected && { fontWeight: typography.fontWeight.semibold }]}>
+                {cat.name}
+              </Text>
+            </TouchableOpacity>
+          );
+        })}
       </View>
-    </Animated.View>
+    </ScreenShell>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
+  loadingContainer: {
     flex: 1,
     backgroundColor: colors.background.primary,
-    paddingHorizontal: spacing.xxl,
-  },
-  center: {
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  backButton: {
-    width: 40,
-    height: 40,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: spacing.xxl,
-  },
-  title: {
-    fontSize: typography.fontSize.xl,
-    fontWeight: typography.fontWeight.bold,
-    color: colors.text.primary,
-    marginBottom: spacing.xs,
-  },
-  subtitle: {
-    fontSize: typography.fontSize.sm,
-    color: colors.text.secondary,
-    marginBottom: spacing.xxl,
-    lineHeight: typography.fontSize.sm * typography.lineHeight.relaxed,
-  },
-  scroll: {
-    flex: 1,
   },
   optionsList: {
     gap: spacing.sm,
@@ -202,8 +147,5 @@ const styles = StyleSheet.create({
   optionText: {
     fontSize: typography.fontSize.base,
     color: colors.text.primary,
-  },
-  footer: {
-    paddingTop: spacing.lg,
   },
 });

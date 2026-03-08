@@ -5,16 +5,14 @@ import {
   StyleSheet,
   TouchableOpacity,
   ActivityIndicator,
-  ScrollView,
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { colors, typography, spacing } from '../../src/theme';
-import { borderRadius, shadows } from '../../src/theme';
+import { colors, typography, spacing, borderRadius, shadows } from '../../src/theme';
 import { strings } from '../../src/constants/strings';
 import { getPlaceDetails } from '../../src/lib/googlePlaces';
-import ProgressBar from '../../src/components/ui/ProgressBar';
+import ScreenShell from '../../src/components/ui/ScreenShell';
 import Button from '../../src/components/ui/Button';
 
 export default function BusinessReviewScreen() {
@@ -44,34 +42,19 @@ export default function BusinessReviewScreen() {
       return;
     }
 
+    const fallback = {
+      name: placeName || '',
+      address: placeAddress || '',
+      phone: null,
+      latitude: 8.953,
+      longitude: -79.534,
+      rating: null,
+      photoReferences: [],
+    };
+
     getPlaceDetails(placeId)
-      .then((data) => {
-        if (data) {
-          setDetails(data);
-        } else {
-          // Fallback to params
-          setDetails({
-            name: placeName || '',
-            address: placeAddress || '',
-            phone: null,
-            latitude: 8.953,
-            longitude: -79.534,
-            rating: null,
-            photoReferences: [],
-          });
-        }
-      })
-      .catch(() => {
-        setDetails({
-          name: placeName || '',
-          address: placeAddress || '',
-          phone: null,
-          latitude: 8.953,
-          longitude: -79.534,
-          rating: null,
-          photoReferences: [],
-        });
-      })
+      .then((data) => setDetails(data || fallback))
+      .catch(() => setDetails(fallback))
       .finally(() => setLoading(false));
   }, [placeId, placeName, placeAddress]);
 
@@ -110,101 +93,63 @@ export default function BusinessReviewScreen() {
 
   if (loading) {
     return (
-      <View style={[styles.container, styles.center, { paddingTop: insets.top }]}>
+      <View style={[styles.loadingContainer, { paddingTop: insets.top }]}>
         <ActivityIndicator size="large" color={colors.primary[500]} />
       </View>
     );
   }
 
   return (
-    <View style={[styles.container, { paddingTop: insets.top + spacing.lg }]}>
-      <TouchableOpacity
-        style={styles.backButton}
-        onPress={() => router.back()}
-        hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
-      >
-        <Ionicons name="arrow-back" size={24} color={colors.text.primary} />
-      </TouchableOpacity>
-
-      <ScrollView style={styles.scroll} showsVerticalScrollIndicator={false}>
-        <Text style={styles.title}>{strings.businessSearch.reviewTitle}</Text>
-        <Text style={styles.subtitle}>{strings.businessSearch.reviewSubtitle}</Text>
-
-        {details && (
-          <View style={styles.card}>
-            {/* Map placeholder */}
-            <View style={styles.mapPlaceholder}>
-              <Ionicons name="map" size={40} color={colors.primary[500]} />
-              <TouchableOpacity style={styles.editBadge} onPress={handleEdit}>
-                <Ionicons name="pencil" size={14} color={colors.white} />
-                <Text style={styles.editBadgeText}>{strings.common.edit}</Text>
-              </TouchableOpacity>
-            </View>
-
-            <View style={styles.cardBody}>
-              <View style={styles.nameRow}>
-                <Text style={styles.businessName}>{details.name}</Text>
-                {details.rating && (
-                  <View style={styles.ratingBadge}>
-                    <Ionicons name="star" size={12} color="#F57C00" />
-                    <Text style={styles.ratingText}>{details.rating}</Text>
-                  </View>
-                )}
-              </View>
-              <Text style={styles.businessAddress}>{details.address}</Text>
-              {details.phone && (
-                <Text style={styles.businessPhone}>{details.phone}</Text>
-              )}
-            </View>
-          </View>
-        )}
-      </ScrollView>
-
-      <ProgressBar current={1} total={6} />
-
-      <View style={[styles.footer, { paddingBottom: insets.bottom + spacing.xxl }]}>
+    <ScreenShell
+      title={strings.businessSearch.reviewTitle}
+      subtitle={strings.businessSearch.reviewSubtitle}
+      progress={{ current: 1, total: 6 }}
+      footer={
         <Button
           label={strings.common.continue}
           onPress={handleContinue}
           size="lg"
           fullWidth
         />
-      </View>
-    </View>
+      }
+    >
+      {details && (
+        <View style={styles.card}>
+          <View style={styles.mapPlaceholder}>
+            <Ionicons name="map" size={40} color={colors.primary[500]} />
+            <TouchableOpacity style={styles.editBadge} onPress={handleEdit}>
+              <Ionicons name="pencil" size={14} color={colors.white} />
+              <Text style={styles.editBadgeText}>{strings.common.edit}</Text>
+            </TouchableOpacity>
+          </View>
+
+          <View style={styles.cardBody}>
+            <View style={styles.nameRow}>
+              <Text style={styles.businessName}>{details.name}</Text>
+              {details.rating && (
+                <View style={styles.ratingBadge}>
+                  <Ionicons name="star" size={12} color="#F57C00" />
+                  <Text style={styles.ratingText}>{details.rating}</Text>
+                </View>
+              )}
+            </View>
+            <Text style={styles.businessAddress}>{details.address}</Text>
+            {details.phone && (
+              <Text style={styles.businessPhone}>{details.phone}</Text>
+            )}
+          </View>
+        </View>
+      )}
+    </ScreenShell>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
+  loadingContainer: {
     flex: 1,
     backgroundColor: colors.background.primary,
-    paddingHorizontal: spacing.xxl,
-  },
-  center: {
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  backButton: {
-    width: 40,
-    height: 40,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: spacing.lg,
-  },
-  scroll: {
-    flex: 1,
-  },
-  title: {
-    fontSize: typography.fontSize.xl,
-    fontWeight: typography.fontWeight.bold,
-    color: colors.text.primary,
-    marginBottom: spacing.xs,
-  },
-  subtitle: {
-    fontSize: typography.fontSize.sm,
-    color: colors.text.secondary,
-    lineHeight: typography.fontSize.sm * typography.lineHeight.relaxed,
-    marginBottom: spacing.xxl,
   },
   card: {
     borderRadius: borderRadius.lg,
@@ -274,8 +219,5 @@ const styles = StyleSheet.create({
   businessPhone: {
     fontSize: typography.fontSize.sm,
     color: colors.primary[500],
-  },
-  footer: {
-    paddingTop: spacing.lg,
   },
 });

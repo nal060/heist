@@ -4,25 +4,21 @@ import {
   Text,
   TextInput,
   StyleSheet,
-  KeyboardAvoidingView,
-  Platform,
-  Animated,
   TouchableOpacity,
+  Animated,
 } from 'react-native';
-import { useRouter, useLocalSearchParams } from 'expo-router';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Ionicons } from '@expo/vector-icons';
-import { colors, typography, spacing } from '../../src/theme';
-import { borderRadius } from '../../src/theme';
+import { useLocalSearchParams } from 'expo-router';
+import { useRouter } from 'expo-router';
+import { colors, typography, spacing, borderRadius } from '../../src/theme';
 import { strings } from '../../src/constants/strings';
 import { useAuth } from '../../src/context/AuthContext';
+import ScreenShell from '../../src/components/ui/ScreenShell';
 
 const CODE_LENGTH = 6;
 const RESEND_COOLDOWN = 60;
 
 export default function VerifyScreen() {
   const router = useRouter();
-  const insets = useSafeAreaInsets();
   const { email, role } = useLocalSearchParams<{ email: string; role?: string }>();
   const { verifyOtp, signInWithOtp } = useAuth();
 
@@ -34,7 +30,6 @@ export default function VerifyScreen() {
   const inputRef = useRef<TextInput>(null);
   const shakeAnim = useRef(new Animated.Value(0)).current;
 
-  // Cooldown timer for resend
   useEffect(() => {
     if (cooldown <= 0) return;
     const timer = setTimeout(() => setCooldown((c) => c - 1), 1000);
@@ -59,7 +54,6 @@ export default function VerifyScreen() {
       setLoading(true);
       try {
         await verifyOtp(email!, cleaned);
-        // Navigate to country selection instead of letting root layout auto-route
         router.replace({
           pathname: '/(auth)/country-select',
           params: { role: role || '' },
@@ -90,7 +84,6 @@ export default function VerifyScreen() {
     }
   };
 
-  // Render individual code boxes
   const renderCodeBoxes = () => {
     const boxes = [];
     for (let i = 0; i < CODE_LENGTH; i++) {
@@ -113,108 +106,66 @@ export default function VerifyScreen() {
   };
 
   return (
-    <KeyboardAvoidingView
-      style={styles.flex}
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+    <ScreenShell
+      title={strings.verify.title}
+      keyboardAvoiding
+      scrollable={false}
     >
-      <View
-        style={[styles.container, { paddingTop: insets.top + spacing.lg }]}
+      <Text style={styles.subtitle}>
+        {strings.verify.subtitle}{' '}
+        <Text style={styles.emailHighlight}>{email}</Text>
+      </Text>
+
+      <Animated.View
+        style={[styles.codeContainer, { transform: [{ translateX: shakeAnim }] }]}
       >
         <TouchableOpacity
-          style={styles.backButton}
-          onPress={() => router.back()}
-          hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+          activeOpacity={1}
+          onPress={() => inputRef.current?.focus()}
+          style={styles.codeBoxes}
         >
-          <Ionicons name="arrow-back" size={24} color={colors.text.primary} />
+          {renderCodeBoxes()}
         </TouchableOpacity>
 
-        <View style={styles.content}>
-          <Text style={styles.title}>{strings.verify.title}</Text>
-          <Text style={styles.subtitle}>
-            {strings.verify.subtitle}{' '}
-            <Text style={styles.emailHighlight}>{email}</Text>
-          </Text>
+        <TextInput
+          ref={inputRef}
+          style={styles.hiddenInput}
+          value={code}
+          onChangeText={handleCodeChange}
+          keyboardType="number-pad"
+          textContentType="oneTimeCode"
+          autoComplete="one-time-code"
+          maxLength={CODE_LENGTH}
+          autoFocus
+        />
+      </Animated.View>
 
-          <Animated.View
-            style={[styles.codeContainer, { transform: [{ translateX: shakeAnim }] }]}
-          >
-            <TouchableOpacity
-              activeOpacity={1}
-              onPress={() => inputRef.current?.focus()}
-              style={styles.codeBoxes}
-            >
-              {renderCodeBoxes()}
-            </TouchableOpacity>
+      {error ? <Text style={styles.errorText}>{error}</Text> : null}
 
-            {/* Hidden input that captures keyboard */}
-            <TextInput
-              ref={inputRef}
-              style={styles.hiddenInput}
-              value={code}
-              onChangeText={handleCodeChange}
-              keyboardType="number-pad"
-              textContentType="oneTimeCode"
-              autoComplete="one-time-code"
-              maxLength={CODE_LENGTH}
-              autoFocus
-            />
-          </Animated.View>
+      {loading ? (
+        <Text style={styles.verifyingText}>{strings.common.loading}</Text>
+      ) : (
+        <Text style={styles.expiryHint}>{strings.verify.expiresIn}</Text>
+      )}
 
-          {error ? <Text style={styles.errorText}>{error}</Text> : null}
-
-          {loading ? (
-            <Text style={styles.verifyingText}>{strings.common.loading}</Text>
-          ) : (
-            <Text style={styles.expiryHint}>{strings.verify.expiresIn}</Text>
-          )}
-
-          <TouchableOpacity
-            onPress={handleResend}
-            disabled={cooldown > 0}
-            style={styles.resendButton}
-          >
-            <Text
-              style={[
-                styles.resendText,
-                cooldown > 0 && styles.resendTextDisabled,
-              ]}
-            >
-              {cooldown > 0
-                ? `${strings.verify.resendIn} ${cooldown}s`
-                : strings.verify.resend}
-            </Text>
-          </TouchableOpacity>
-        </View>
-      </View>
-    </KeyboardAvoidingView>
+      <TouchableOpacity
+        onPress={handleResend}
+        disabled={cooldown > 0}
+        style={styles.resendButton}
+      >
+        <Text
+          style={[styles.resendText, cooldown > 0 && styles.resendTextDisabled]}
+        >
+          {cooldown > 0
+            ? `${strings.verify.resendIn} ${cooldown}s`
+            : strings.verify.resend}
+        </Text>
+      </TouchableOpacity>
+    </ScreenShell>
   );
 }
 
 const styles = StyleSheet.create({
-  flex: {
-    flex: 1,
-    backgroundColor: colors.background.primary,
-  },
-  container: {
-    flex: 1,
-    paddingHorizontal: spacing.xxl,
-  },
-  backButton: {
-    width: 40,
-    height: 40,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: spacing.xxl,
-  },
-  content: {
-    flex: 1,
-  },
-  title: {
-    fontSize: typography.fontSize.xl,
-    fontWeight: typography.fontWeight.bold,
-    color: colors.text.primary,
-    marginBottom: spacing.sm,
-  },
   subtitle: {
     fontSize: typography.fontSize.base,
     color: colors.text.secondary,

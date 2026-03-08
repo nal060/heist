@@ -12,8 +12,8 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { colors, typography, spacing } from '../../src/theme';
-import { borderRadius } from '../../src/theme';
+import { colors, typography, spacing, borderRadius } from '../../src/theme';
+import { sharedStyles } from '../../src/styles/shared';
 import { strings } from '../../src/constants/strings';
 import { useAuth } from '../../src/context/AuthContext';
 import { getBusinessForUser, getBusinessPhotos } from '../../src/data/auth';
@@ -176,14 +176,8 @@ export default function BusinessProfileScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: colors.background.primary,
-  },
-  center: {
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
+  container: sharedStyles.containerNoPadding,
+  center: sharedStyles.center,
   scrollContent: {
     paddingHorizontal: spacing.xxl,
     paddingBottom: spacing.xxxxl,

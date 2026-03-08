@@ -9,13 +9,13 @@ import {
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { colors, typography, spacing } from '../../src/theme';
-import { borderRadius } from '../../src/theme';
+import { colors, typography, spacing, borderRadius } from '../../src/theme';
 import { strings } from '../../src/constants/strings';
 import { getActiveCountries } from '../../src/data/auth';
 import { useAuth } from '../../src/context/AuthContext';
-import Button from '../../src/components/ui/Button';
 import type { Country } from '../../src/types';
+import ScreenShell from '../../src/components/ui/ScreenShell';
+import Button from '../../src/components/ui/Button';
 
 export default function CountrySelectScreen() {
   const router = useRouter();
@@ -41,7 +41,6 @@ export default function CountrySelectScreen() {
   const handleContinue = () => {
     if (!selectedCountry || !termsAccepted) return;
 
-    // Store the role in auth context
     if (role === 'business') {
       setUserRole('business');
       router.push({
@@ -59,24 +58,27 @@ export default function CountrySelectScreen() {
 
   if (loading) {
     return (
-      <View style={[styles.container, styles.center, { paddingTop: insets.top }]}>
+      <View style={[styles.loadingContainer, { paddingTop: insets.top }]}>
         <ActivityIndicator size="large" color={colors.primary[500]} />
       </View>
     );
   }
 
   return (
-    <View style={[styles.container, { paddingTop: insets.top + spacing.lg }]}>
-      <TouchableOpacity
-        style={styles.backButton}
-        onPress={() => router.back()}
-        hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
-      >
-        <Ionicons name="arrow-back" size={24} color={colors.text.primary} />
-      </TouchableOpacity>
-
-      <Text style={styles.title}>{strings.countrySelect.title}</Text>
-
+    <ScreenShell
+      scrollable={false}
+      titleStyle={styles.titleStyle}
+      title={strings.countrySelect.title}
+      footer={
+        <Button
+          label={strings.countrySelect.signMeUp}
+          onPress={handleContinue}
+          size="lg"
+          fullWidth
+          disabled={!selectedCountry || !termsAccepted}
+        />
+      }
+    >
       <Text style={styles.label}>{strings.countrySelect.chooseCountry}</Text>
 
       {countries.length === 0 ? (
@@ -122,43 +124,18 @@ export default function CountrySelectScreen() {
           <Text style={styles.termsLink}>{strings.countrySelect.privacyLink}</Text>
         </Text>
       </View>
-
-      <View style={{ flex: 1 }} />
-
-      <View style={[styles.footer, { paddingBottom: insets.bottom + spacing.xxl }]}>
-        <Button
-          label={strings.countrySelect.signMeUp}
-          onPress={handleContinue}
-          size="lg"
-          fullWidth
-          disabled={!selectedCountry || !termsAccepted}
-        />
-      </View>
-    </View>
+    </ScreenShell>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
+  loadingContainer: {
     flex: 1,
     backgroundColor: colors.background.primary,
-    paddingHorizontal: spacing.xxl,
-  },
-  center: {
     alignItems: 'center',
     justifyContent: 'center',
   },
-  backButton: {
-    width: 40,
-    height: 40,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: spacing.xxl,
-  },
-  title: {
-    fontSize: typography.fontSize.xl,
-    fontWeight: typography.fontWeight.bold,
-    color: colors.text.primary,
+  titleStyle: {
     textAlign: 'center',
     marginBottom: spacing.xxxl,
   },
@@ -228,8 +205,5 @@ const styles = StyleSheet.create({
   termsLink: {
     color: colors.primary[500],
     fontWeight: typography.fontWeight.medium,
-  },
-  footer: {
-    paddingTop: spacing.lg,
   },
 });

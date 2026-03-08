@@ -23,6 +23,7 @@ export async function searchPlaces(
   countryCode: string = 'pa',
 ): Promise<PlacePrediction[]> {
   if (!API_KEY) {
+    // eslint-disable-next-line no-console
     console.warn('[GooglePlaces] No API key found. Check EXPO_PUBLIC_GOOGLE_PLACES_API_KEY in .env');
     return [];
   }
@@ -34,6 +35,7 @@ export async function searchPlaces(
   const data = await res.json();
 
   if (data.status !== 'OK') {
+    // eslint-disable-next-line no-console
     console.warn('[GooglePlaces] Autocomplete error:', data.status, data.error_message);
     return [];
   }
@@ -47,6 +49,7 @@ export async function searchPlaces(
 
 export async function getPlaceDetails(placeId: string): Promise<PlaceDetails | null> {
   if (!API_KEY) {
+    // eslint-disable-next-line no-console
     console.warn('[GooglePlaces] No API key found. Check EXPO_PUBLIC_GOOGLE_PLACES_API_KEY in .env');
     return null;
   }
@@ -58,6 +61,7 @@ export async function getPlaceDetails(placeId: string): Promise<PlaceDetails | n
   const data = await res.json();
 
   if (data.status !== 'OK' || !data.result) {
+    // eslint-disable-next-line no-console
     console.warn('[GooglePlaces] Details error:', data.status, data.error_message);
     return null;
   }

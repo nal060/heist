@@ -1,16 +1,8 @@
 import { useState } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  ScrollView,
-  TouchableOpacity,
-} from 'react-native';
+import { View, Text, StyleSheet } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { colors, typography, spacing } from '../../src/theme';
-import { borderRadius } from '../../src/theme';
+import { colors, typography, spacing, borderRadius } from '../../src/theme';
 import { strings } from '../../src/constants/strings';
 import { useAuth } from '../../src/context/AuthContext';
 import {
@@ -22,12 +14,12 @@ import {
 } from '../../src/data/auth';
 import { getPhotoUrl } from '../../src/lib/googlePlaces';
 import type { BagSizeType } from '../../src/types';
-import ProgressBar from '../../src/components/ui/ProgressBar';
+import ScreenShell from '../../src/components/ui/ScreenShell';
+import BagSummaryCard from '../../src/components/ui/BagSummaryCard';
 import Button from '../../src/components/ui/Button';
 
 export default function BagReviewScreen() {
   const router = useRouter();
-  const insets = useSafeAreaInsets();
   const { user, setOnboarded } = useAuth();
   const params = useLocalSearchParams<{
     name: string;
@@ -54,8 +46,7 @@ export default function BagReviewScreen() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
-  const startDate = new Date();
-  const startDateFormatted = startDate.toLocaleDateString('es-PA', {
+  const startDateFormatted = new Date().toLocaleDateString('es-PA', {
     year: 'numeric',
     month: 'long',
     day: 'numeric',
@@ -67,7 +58,6 @@ export default function BagReviewScreen() {
     setError('');
 
     try {
-      // 1. Create business
       const business = await createBusiness({
         userId: user.id,
         name: params.name!,
@@ -80,10 +70,8 @@ export default function BagReviewScreen() {
         googlePlaceId: params.googlePlaceId || undefined,
       });
 
-      // 2. Set category
       await setBusinessCategory(business.id, params.categoryId!);
 
-      // 3. Save Google Maps photos if available
       const photoRefs = JSON.parse(params.photoRefs || '[]') as string[];
       if (photoRefs.length > 0) {
         const photos = photoRefs.map((ref, i) => ({
@@ -95,7 +83,6 @@ export default function BagReviewScreen() {
         await saveBusinessPhotos(business.id, photos);
       }
 
-      // 4. Create the bag
       const schedule = JSON.parse(params.scheduleJson || '[]');
       const firstScheduleEntry = schedule[0];
 
@@ -113,12 +100,10 @@ export default function BagReviewScreen() {
         status,
       });
 
-      // 5. Save schedule
       if (schedule.length > 0) {
         await saveBagSchedule(bag.id, schedule);
       }
 
-      // 6. Complete onboarding
       setOnboarded();
 
       if (status === 'active') {
@@ -143,111 +128,66 @@ export default function BagReviewScreen() {
   };
 
   return (
-    <View style={[styles.container, { paddingTop: insets.top + spacing.lg }]}>
-      <TouchableOpacity
-        style={styles.backButton}
-        onPress={() => router.back()}
-        hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
-      >
-        <Ionicons name="arrow-back" size={24} color={colors.text.primary} />
-      </TouchableOpacity>
-
-      <ScrollView style={styles.scroll} showsVerticalScrollIndicator={false}>
-        <Text style={styles.title}>{strings.bagReviewSetup.title}</Text>
-        <Text style={styles.subtitle}>{strings.bagReviewSetup.subtitle}</Text>
-
-        {/* Start date */}
-        <View style={styles.section}>
-          <Ionicons name="rocket-outline" size={28} color={colors.primary[500]} />
-          <Text style={styles.sectionTitle}>{strings.bagReviewSetup.startDate}</Text>
-          <View style={styles.dateBadge}>
-            <Text style={styles.dateText}>{startDateFormatted}</Text>
-          </View>
-          <Text style={styles.sectionDescription}>
-            {strings.bagReviewSetup.startDateDescription}
-          </Text>
+    <ScreenShell
+      title={strings.bagReviewSetup.title}
+      subtitle={strings.bagReviewSetup.subtitle}
+      progress={{ current: 6, total: 6 }}
+      footer={
+        <>
+          <Button
+            label={strings.bagReviewSetup.confirmAndSell}
+            onPress={() => handleConfirm('active')}
+            size="lg"
+            fullWidth
+            loading={loading}
+          />
+          <Button
+            label={strings.bagReviewSetup.maybeLater}
+            onPress={() => handleConfirm('draft')}
+            variant="ghost"
+            size="lg"
+            fullWidth
+            loading={loading}
+          />
+        </>
+      }
+    >
+      {/* Start date */}
+      <View style={styles.section}>
+        <Ionicons name="rocket-outline" size={28} color={colors.primary[500]} />
+        <Text style={styles.sectionTitle}>{strings.bagReviewSetup.startDate}</Text>
+        <View style={styles.dateBadge}>
+          <Text style={styles.dateText}>{startDateFormatted}</Text>
         </View>
-
-        <View style={styles.divider} />
-
-        {/* Summary card */}
-        <View style={styles.summaryCard}>
-          <Text style={styles.summaryTitle}>{params.bagTitle}</Text>
-          <Text style={styles.summaryDetail}>
-            {params.bagQuantity} {strings.bagWhatsNext.perDay}
-          </Text>
-          <View style={styles.priceRow}>
-            <Text style={styles.summaryPrice}>USD {params.bagPrice}</Text>
-            <Text style={styles.summaryOriginal}>USD {params.bagValue}</Text>
-          </View>
-          <Text style={styles.summaryDetail}>
-            {params.activeDays} dias/semana
-          </Text>
-        </View>
-
-        {/* Earnings */}
-        <View style={styles.section}>
-          <Ionicons name="cash-outline" size={28} color={colors.primary[500]} />
-          <Text style={styles.sectionTitle}>{strings.bagReviewSetup.earningsAndFees}</Text>
-          <Text style={styles.earningsValue}>~USD {params.earningsPerWeek}/semana</Text>
-        </View>
-
-        {error ? <Text style={styles.errorText}>{error}</Text> : null}
-
-        <View style={{ height: spacing.xxl }} />
-      </ScrollView>
-
-      <ProgressBar current={6} total={6} />
-
-      <View style={[styles.footer, { paddingBottom: insets.bottom + spacing.xxl }]}>
-        <Button
-          label={strings.bagReviewSetup.confirmAndSell}
-          onPress={() => handleConfirm('active')}
-          size="lg"
-          fullWidth
-          loading={loading}
-        />
-        <Button
-          label={strings.bagReviewSetup.maybeLater}
-          onPress={() => handleConfirm('draft')}
-          variant="ghost"
-          size="lg"
-          fullWidth
-          loading={loading}
-        />
+        <Text style={styles.sectionDescription}>
+          {strings.bagReviewSetup.startDateDescription}
+        </Text>
       </View>
-    </View>
+
+      <View style={styles.divider} />
+
+      <BagSummaryCard
+        title={params.bagTitle || ''}
+        quantity={params.bagQuantity}
+        quantityLabel={strings.bagWhatsNext.perDay}
+        price={params.bagPrice || ''}
+        originalPrice={params.bagValue || ''}
+        extraDetail={`${params.activeDays} dias/semana`}
+      />
+
+      {/* Earnings */}
+      <View style={styles.section}>
+        <Ionicons name="cash-outline" size={28} color={colors.primary[500]} />
+        <Text style={styles.sectionTitle}>{strings.bagReviewSetup.earningsAndFees}</Text>
+        <Text style={styles.earningsValue}>~USD {params.earningsPerWeek}/semana</Text>
+      </View>
+
+      {error ? <Text style={styles.errorText}>{error}</Text> : null}
+    </ScreenShell>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: colors.background.primary,
-    paddingHorizontal: spacing.xxl,
-  },
-  backButton: {
-    width: 40,
-    height: 40,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: spacing.lg,
-  },
-  scroll: {
-    flex: 1,
-  },
-  title: {
-    fontSize: typography.fontSize.xl,
-    fontWeight: typography.fontWeight.bold,
-    color: colors.text.primary,
-    marginBottom: spacing.xs,
-  },
-  subtitle: {
-    fontSize: typography.fontSize.sm,
-    color: colors.text.secondary,
-    marginBottom: spacing.xxl,
-    lineHeight: typography.fontSize.sm * typography.lineHeight.relaxed,
-  },
   section: {
     paddingVertical: spacing.lg,
   },
@@ -280,41 +220,6 @@ const styles = StyleSheet.create({
     height: 1,
     backgroundColor: colors.gray[200],
   },
-  summaryCard: {
-    backgroundColor: colors.background.secondary,
-    borderRadius: borderRadius.md,
-    padding: spacing.lg,
-    marginVertical: spacing.lg,
-    borderWidth: 1,
-    borderColor: colors.gray[200],
-  },
-  summaryTitle: {
-    fontSize: typography.fontSize.base,
-    fontWeight: typography.fontWeight.semibold,
-    color: colors.text.primary,
-    marginBottom: spacing.xs,
-  },
-  summaryDetail: {
-    fontSize: typography.fontSize.sm,
-    color: colors.text.secondary,
-    marginBottom: spacing.xs,
-  },
-  priceRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-    marginBottom: spacing.xs,
-  },
-  summaryPrice: {
-    fontSize: typography.fontSize.md,
-    fontWeight: typography.fontWeight.bold,
-    color: colors.text.primary,
-  },
-  summaryOriginal: {
-    fontSize: typography.fontSize.sm,
-    color: colors.text.tertiary,
-    textDecorationLine: 'line-through',
-  },
   earningsValue: {
     fontSize: typography.fontSize.md,
     fontWeight: typography.fontWeight.bold,
@@ -325,9 +230,5 @@ const styles = StyleSheet.create({
     color: colors.error,
     textAlign: 'center',
     marginTop: spacing.md,
-  },
-  footer: {
-    paddingTop: spacing.lg,
-    gap: spacing.xs,
   },
 });

@@ -14,6 +14,7 @@ import { strings } from '../../src/constants/strings';
 import { useAuth } from '../../src/context/AuthContext';
 import { useLocation } from '../../src/context/LocationContext';
 import { createConsumerProfile } from '../../src/data/auth';
+import { sharedStyles } from '../../src/styles/shared';
 import Button from '../../src/components/ui/Button';
 
 export default function UserLocationScreen() {
@@ -30,14 +31,9 @@ export default function UserLocationScreen() {
     if (!user) return;
 
     try {
-      // Create consumer profile
       const emailName = user.email?.split('@')[0] || 'Usuario';
       await createConsumerProfile(user.id, emailName, countryId);
-
-      // Save location
       await setLocation({ name: strings.discover.defaultLocation, latitude: lat, longitude: lon });
-
-      // Mark onboarded and navigate to consumer tabs
       setOnboarded();
       router.replace('/(tabs)');
     } catch (err: unknown) {
@@ -61,30 +57,21 @@ export default function UserLocationScreen() {
       const location = await Location.getCurrentPositionAsync({});
       await finishOnboarding(location.coords.latitude, location.coords.longitude);
     } catch {
-      // Fallback to Panama City default
-      await finishOnboarding(
-        strings.discover.latitude,
-        strings.discover.longitude,
-      );
+      await finishOnboarding(strings.discover.latitude, strings.discover.longitude);
     } finally {
       setLoading(false);
     }
   };
 
   const handleSelectLocation = async () => {
-    // Use default Panama City coordinates and let user change later
     setLoading(true);
-    await finishOnboarding(
-      strings.discover.latitude,
-      strings.discover.longitude,
-    );
+    await finishOnboarding(strings.discover.latitude, strings.discover.longitude);
     setLoading(false);
   };
 
   return (
     <View style={[styles.container, { paddingTop: insets.top, paddingBottom: insets.bottom + spacing.xxl }]}>
       <View style={styles.content}>
-        {/* Location icon */}
         <View style={styles.iconContainer}>
           <View style={styles.iconBg}>
             <Ionicons name="location" size={56} color={colors.primary[600]} />
@@ -100,7 +87,6 @@ export default function UserLocationScreen() {
         <ActivityIndicator size="large" color={colors.primary[500]} style={styles.loader} />
       ) : (
         <View style={styles.footer}>
-          {/* Page indicator */}
           <View style={styles.dotsRow}>
             <View style={styles.dot} />
             <View style={styles.dot} />
@@ -164,21 +150,9 @@ const styles = StyleSheet.create({
   loader: {
     marginBottom: spacing.xxl,
   },
-  dotsRow: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    gap: spacing.sm,
-    paddingVertical: spacing.md,
-  },
-  dot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: colors.gray[300],
-  },
-  dotActive: {
-    backgroundColor: colors.primary[500],
-  },
+  dotsRow: sharedStyles.dotsRow,
+  dot: sharedStyles.dot,
+  dotActive: sharedStyles.dotActive,
   footer: {
     gap: spacing.sm,
   },

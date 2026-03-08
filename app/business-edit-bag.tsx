@@ -4,21 +4,19 @@ import {
   Text,
   TextInput,
   StyleSheet,
-  ScrollView,
   TouchableOpacity,
   ActivityIndicator,
-  KeyboardAvoidingView,
-  Platform,
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Ionicons } from '@expo/vector-icons';
 import { colors, typography, spacing, borderRadius } from '../src/theme';
 import { strings } from '../src/constants/strings';
 import { updateSurplusBag } from '../src/data/auth';
 import { supabase } from '../src/lib/supabase';
 import { type BagSize } from '../src/constants/app';
 import type { SurplusBag, BagSizeType } from '../src/types';
+import ScreenShell from '../src/components/ui/ScreenShell';
+import FormField from '../src/components/ui/FormField';
 import Button from '../src/components/ui/Button';
 import ErrorState from '../src/components/ui/ErrorState';
 
@@ -48,16 +46,10 @@ export default function BusinessEditBagScreen() {
   const loadBag = useCallback(async () => {
     if (!bagId) return;
     setError(null);
-
     try {
       const { data, error: fetchError } = await supabase
-        .from('surplus_bags')
-        .select('*')
-        .eq('id', bagId)
-        .single();
-
+        .from('surplus_bags').select('*').eq('id', bagId).single();
       if (fetchError) throw new Error(fetchError.message);
-
       setBag(data);
       setTitle(data.title);
       setDescription(data.description || '');
@@ -73,15 +65,12 @@ export default function BusinessEditBagScreen() {
     }
   }, [bagId]);
 
-  useEffect(() => {
-    loadBag();
-  }, [loadBag]);
+  useEffect(() => { loadBag(); }, [loadBag]);
 
   const handleSave = async () => {
     if (!bag || !title.trim()) return;
     setSaving(true);
     setError(null);
-
     try {
       await updateSurplusBag(bag.id, {
         title: title.trim(),
@@ -105,7 +94,6 @@ export default function BusinessEditBagScreen() {
     if (!bag) return;
     setSaving(true);
     setError(null);
-
     try {
       const newStatus = bag.status === 'active' ? 'draft' : 'active';
       const updated = await updateSurplusBag(bag.id, { status: newStatus });
@@ -120,7 +108,7 @@ export default function BusinessEditBagScreen() {
 
   if (loading) {
     return (
-      <View style={[styles.container, styles.center, { paddingTop: insets.top }]}>
+      <View style={[styles.loadingContainer, { paddingTop: insets.top }]}>
         <ActivityIndicator size="large" color={colors.primary[500]} />
       </View>
     );
@@ -128,182 +116,93 @@ export default function BusinessEditBagScreen() {
 
   if (error && !bag) {
     return (
-      <View style={[styles.container, styles.center, { paddingTop: insets.top }]}>
+      <View style={[styles.loadingContainer, { paddingTop: insets.top }]}>
         <ErrorState message={error} onRetry={loadBag} />
       </View>
     );
   }
 
   return (
-    <KeyboardAvoidingView
-      style={styles.flex}
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+    <ScreenShell
+      keyboardAvoiding
+      footer={
+        <Button
+          label={strings.businessProfileEdit.save}
+          onPress={handleSave}
+          size="lg"
+          fullWidth
+          loading={saving}
+          disabled={!title.trim()}
+        />
+      }
     >
-      <View style={[styles.container, { paddingTop: insets.top + spacing.lg }]}>
-        <TouchableOpacity
-          style={styles.backButton}
-          onPress={() => router.back()}
-          hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
-        >
-          <Ionicons name="arrow-back" size={24} color={colors.text.primary} />
-        </TouchableOpacity>
+      {/* Header with status toggle */}
+      <View style={styles.headerRow}>
+        <Text style={styles.screenTitle}>{strings.bagNameSetup.title}</Text>
+        {bag && (
+          <TouchableOpacity
+            style={[styles.statusBadge, bag.status === 'active' ? styles.statusActive : styles.statusDraft]}
+            onPress={handleToggleStatus}
+          >
+            <Text style={[styles.statusText, bag.status === 'active' ? styles.statusTextActive : styles.statusTextDraft]}>
+              {strings.businessBags.status[bag.status] || bag.status}
+            </Text>
+          </TouchableOpacity>
+        )}
+      </View>
 
-        <ScrollView
-          style={styles.scroll}
-          contentContainerStyle={styles.scrollContent}
-          keyboardShouldPersistTaps="handled"
-          showsVerticalScrollIndicator={false}
-        >
-          <View style={styles.headerRow}>
-            <Text style={styles.title}>{strings.bagNameSetup.title}</Text>
-            {bag && (
-              <TouchableOpacity
-                style={[
-                  styles.statusBadge,
-                  bag.status === 'active' ? styles.statusActive : styles.statusDraft,
-                ]}
-                onPress={handleToggleStatus}
-              >
-                <Text
-                  style={[
-                    styles.statusText,
-                    bag.status === 'active' ? styles.statusTextActive : styles.statusTextDraft,
-                  ]}
-                >
-                  {strings.businessBags.status[bag.status] || bag.status}
-                </Text>
-              </TouchableOpacity>
-            )}
-          </View>
+      <FormField label={strings.bagNameSetup.nameLabel} value={title} onChangeText={setTitle} />
+      <FormField label={strings.bagNameSetup.descriptionLabel} value={description} onChangeText={setDescription} multiline />
 
-          <View style={styles.fieldGroup}>
-            <Text style={styles.label}>{strings.bagNameSetup.nameLabel}</Text>
-            <TextInput
-              style={styles.input}
-              value={title}
-              onChangeText={setTitle}
-            />
-          </View>
-
-          <View style={styles.fieldGroup}>
-            <Text style={styles.label}>{strings.bagNameSetup.descriptionLabel}</Text>
-            <TextInput
-              style={[styles.input, styles.inputMultiline]}
-              value={description}
-              onChangeText={setDescription}
-              multiline
-              textAlignVertical="top"
-            />
-          </View>
-
-          {/* Size selector */}
-          <View style={styles.fieldGroup}>
-            <Text style={styles.label}>{strings.bagSizeSetup.title}</Text>
-            <View style={styles.sizeRow}>
-              {SIZES.map((size) => (
-                <TouchableOpacity
-                  key={size.key}
-                  style={[
-                    styles.sizeChip,
-                    selectedSize === size.key && styles.sizeChipSelected,
-                  ]}
-                  onPress={() => setSelectedSize(size.key)}
-                >
-                  <Text
-                    style={[
-                      styles.sizeChipText,
-                      selectedSize === size.key && styles.sizeChipTextSelected,
-                    ]}
-                  >
-                    {size.label}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-          </View>
-
-          {/* Value and Price */}
-          <View style={styles.rowFields}>
-            <View style={[styles.fieldGroup, styles.halfField]}>
-              <Text style={styles.label}>{strings.bagSizeSetup.minValue}</Text>
-              <View style={styles.currencyInput}>
-                <Text style={styles.currencyPrefix}>USD</Text>
-                <TextInput
-                  style={styles.currencyField}
-                  value={value}
-                  onChangeText={setValue}
-                  keyboardType="decimal-pad"
-                />
-              </View>
-            </View>
-            <View style={[styles.fieldGroup, styles.halfField]}>
-              <Text style={styles.label}>{strings.bagSizeSetup.priceInApp}</Text>
-              <View style={styles.currencyInput}>
-                <Text style={styles.currencyPrefix}>USD</Text>
-                <TextInput
-                  style={styles.currencyField}
-                  value={price}
-                  onChangeText={setPrice}
-                  keyboardType="decimal-pad"
-                />
-              </View>
-            </View>
-          </View>
-
-          {/* Quantity */}
-          <View style={styles.fieldGroup}>
-            <Text style={styles.label}>{strings.bagQuantitySetup.title}</Text>
-            <TextInput
-              style={styles.input}
-              value={quantity}
-              onChangeText={setQuantity}
-              keyboardType="number-pad"
-            />
-          </View>
-
-          {error ? <Text style={styles.errorText}>{error}</Text> : null}
-        </ScrollView>
-
-        <View style={[styles.footer, { paddingBottom: insets.bottom + spacing.xxl }]}>
-          <Button
-            label={strings.businessProfileEdit.save}
-            onPress={handleSave}
-            size="lg"
-            fullWidth
-            loading={saving}
-            disabled={!title.trim()}
-          />
+      {/* Size selector */}
+      <View style={styles.fieldGroup}>
+        <Text style={styles.label}>{strings.bagSizeSetup.title}</Text>
+        <View style={styles.sizeRow}>
+          {SIZES.map((size) => (
+            <TouchableOpacity
+              key={size.key}
+              style={[styles.sizeChip, selectedSize === size.key && styles.sizeChipSelected]}
+              onPress={() => setSelectedSize(size.key)}
+            >
+              <Text style={[styles.sizeChipText, selectedSize === size.key && styles.sizeChipTextSelected]}>
+                {size.label}
+              </Text>
+            </TouchableOpacity>
+          ))}
         </View>
       </View>
-    </KeyboardAvoidingView>
+
+      {/* Value and Price */}
+      <View style={styles.rowFields}>
+        <View style={styles.halfField}>
+          <Text style={styles.label}>{strings.bagSizeSetup.minValue}</Text>
+          <View style={styles.currencyInput}>
+            <Text style={styles.currencyPrefix}>USD</Text>
+            <TextInput style={styles.currencyField} value={value} onChangeText={setValue} keyboardType="decimal-pad" />
+          </View>
+        </View>
+        <View style={styles.halfField}>
+          <Text style={styles.label}>{strings.bagSizeSetup.priceInApp}</Text>
+          <View style={styles.currencyInput}>
+            <Text style={styles.currencyPrefix}>USD</Text>
+            <TextInput style={styles.currencyField} value={price} onChangeText={setPrice} keyboardType="decimal-pad" />
+          </View>
+        </View>
+      </View>
+
+      <FormField label={strings.bagQuantitySetup.title} value={quantity} onChangeText={setQuantity} keyboardType="number-pad" />
+
+      {error ? <Text style={styles.errorText}>{error}</Text> : null}
+    </ScreenShell>
   );
 }
 
 const styles = StyleSheet.create({
-  flex: {
+  loadingContainer: {
     flex: 1,
     backgroundColor: colors.background.primary,
-  },
-  container: {
-    flex: 1,
-    paddingHorizontal: spacing.xxl,
-  },
-  center: {
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  backButton: {
-    width: 40,
-    height: 40,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: spacing.lg,
-  },
-  scroll: {
-    flex: 1,
-  },
-  scrollContent: {
-    paddingBottom: spacing.xxl,
   },
   headerRow: {
     flexDirection: 'row',
@@ -311,7 +210,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: spacing.xxl,
   },
-  title: {
+  screenTitle: {
     fontSize: typography.fontSize.xl,
     fontWeight: typography.fontWeight.bold,
     color: colors.text.primary,
@@ -321,50 +220,19 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.xs,
     borderRadius: borderRadius.sm,
   },
-  statusActive: {
-    backgroundColor: colors.primary[50],
-  },
-  statusDraft: {
-    backgroundColor: colors.gray[100],
-  },
-  statusText: {
-    fontSize: typography.fontSize.xs,
-    fontWeight: typography.fontWeight.bold,
-  },
-  statusTextActive: {
-    color: colors.primary[600],
-  },
-  statusTextDraft: {
-    color: colors.text.tertiary,
-  },
-  fieldGroup: {
-    marginBottom: spacing.xl,
-  },
+  statusActive: { backgroundColor: colors.primary[50] },
+  statusDraft: { backgroundColor: colors.gray[100] },
+  statusText: { fontSize: typography.fontSize.xs, fontWeight: typography.fontWeight.bold },
+  statusTextActive: { color: colors.primary[600] },
+  statusTextDraft: { color: colors.text.tertiary },
+  fieldGroup: { marginBottom: spacing.xl },
   label: {
     fontSize: typography.fontSize.sm,
     fontWeight: typography.fontWeight.medium,
     color: colors.text.secondary,
     marginBottom: spacing.sm,
   },
-  input: {
-    borderWidth: 1.5,
-    borderColor: colors.gray[300],
-    borderRadius: borderRadius.md,
-    paddingHorizontal: spacing.lg,
-    height: 52,
-    fontSize: typography.fontSize.base,
-    color: colors.text.primary,
-    backgroundColor: colors.background.primary,
-  },
-  inputMultiline: {
-    height: 100,
-    paddingTop: spacing.md,
-    paddingBottom: spacing.md,
-  },
-  sizeRow: {
-    flexDirection: 'row',
-    gap: spacing.sm,
-  },
+  sizeRow: { flexDirection: 'row', gap: spacing.sm },
   sizeChip: {
     flex: 1,
     paddingVertical: spacing.md,
@@ -373,26 +241,11 @@ const styles = StyleSheet.create({
     borderColor: colors.gray[200],
     alignItems: 'center',
   },
-  sizeChipSelected: {
-    borderColor: colors.primary[500],
-    backgroundColor: colors.primary[50],
-  },
-  sizeChipText: {
-    fontSize: typography.fontSize.sm,
-    fontWeight: typography.fontWeight.medium,
-    color: colors.text.secondary,
-  },
-  sizeChipTextSelected: {
-    color: colors.primary[600],
-    fontWeight: typography.fontWeight.bold,
-  },
-  rowFields: {
-    flexDirection: 'row',
-    gap: spacing.md,
-  },
-  halfField: {
-    flex: 1,
-  },
+  sizeChipSelected: { borderColor: colors.primary[500], backgroundColor: colors.primary[50] },
+  sizeChipText: { fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.medium, color: colors.text.secondary },
+  sizeChipTextSelected: { color: colors.primary[600], fontWeight: typography.fontWeight.bold },
+  rowFields: { flexDirection: 'row', gap: spacing.md, marginBottom: spacing.xl },
+  halfField: { flex: 1 },
   currencyInput: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -403,11 +256,7 @@ const styles = StyleSheet.create({
     height: 52,
     backgroundColor: colors.background.primary,
   },
-  currencyPrefix: {
-    fontSize: typography.fontSize.sm,
-    color: colors.text.secondary,
-    marginRight: spacing.sm,
-  },
+  currencyPrefix: { fontSize: typography.fontSize.sm, color: colors.text.secondary, marginRight: spacing.sm },
   currencyField: {
     flex: 1,
     fontSize: typography.fontSize.base,
@@ -420,8 +269,5 @@ const styles = StyleSheet.create({
     color: colors.error,
     textAlign: 'center',
     marginTop: spacing.md,
-  },
-  footer: {
-    paddingTop: spacing.lg,
   },
 });

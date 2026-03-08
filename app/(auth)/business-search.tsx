@@ -9,13 +9,11 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { colors, typography, spacing } from '../../src/theme';
-import { borderRadius } from '../../src/theme';
+import { colors, typography, spacing, borderRadius } from '../../src/theme';
 import { strings } from '../../src/constants/strings';
 import { searchPlaces } from '../../src/lib/googlePlaces';
-import ProgressBar from '../../src/components/ui/ProgressBar';
+import ScreenShell from '../../src/components/ui/ScreenShell';
 
 interface PlaceResult {
   placeId: string;
@@ -25,7 +23,6 @@ interface PlaceResult {
 
 export default function BusinessSearchScreen() {
   const router = useRouter();
-  const insets = useSafeAreaInsets();
   const { countryId, countryCode } = useLocalSearchParams<{
     countryId: string;
     countryCode: string;
@@ -80,19 +77,12 @@ export default function BusinessSearchScreen() {
   };
 
   return (
-    <View style={[styles.container, { paddingTop: insets.top + spacing.lg }]}>
-      <TouchableOpacity
-        style={styles.backButton}
-        onPress={() => router.back()}
-        hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
-      >
-        <Ionicons name="arrow-back" size={24} color={colors.text.primary} />
-      </TouchableOpacity>
-
-      <Text style={styles.title}>{strings.businessSearch.title}</Text>
-      <Text style={styles.subtitle}>{strings.businessSearch.subtitle}</Text>
-
-      {/* Search input */}
+    <ScreenShell
+      title={strings.businessSearch.title}
+      subtitle={strings.businessSearch.subtitle}
+      scrollable={false}
+      progress={{ current: 1, total: 6 }}
+    >
       <View style={styles.searchContainer}>
         <Ionicons name="search" size={20} color={colors.gray[400]} style={styles.searchIcon} />
         <TextInput
@@ -115,7 +105,6 @@ export default function BusinessSearchScreen() {
         <ActivityIndicator size="small" color={colors.primary[500]} style={styles.loader} />
       )}
 
-      {/* Results */}
       <FlatList
         data={results}
         keyExtractor={(item) => item.placeId}
@@ -147,44 +136,16 @@ export default function BusinessSearchScreen() {
         showsVerticalScrollIndicator={false}
       />
 
-      {/* Always show manual entry option */}
       {!hasSearched && (
         <TouchableOpacity style={styles.manualButton} onPress={handleManualEntry}>
           <Text style={styles.manualButtonText}>{strings.businessSearch.addManually}</Text>
         </TouchableOpacity>
       )}
-
-      <ProgressBar current={1} total={6} />
-      <View style={{ height: insets.bottom + spacing.md }} />
-    </View>
+    </ScreenShell>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: colors.background.primary,
-    paddingHorizontal: spacing.xxl,
-  },
-  backButton: {
-    width: 40,
-    height: 40,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: spacing.lg,
-  },
-  title: {
-    fontSize: typography.fontSize.xl,
-    fontWeight: typography.fontWeight.bold,
-    color: colors.text.primary,
-    marginBottom: spacing.xs,
-  },
-  subtitle: {
-    fontSize: typography.fontSize.sm,
-    color: colors.text.secondary,
-    lineHeight: typography.fontSize.sm * typography.lineHeight.relaxed,
-    marginBottom: spacing.xxl,
-  },
   searchContainer: {
     flexDirection: 'row',
     alignItems: 'center',

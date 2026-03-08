@@ -1,9 +1,10 @@
-import { View, Text, StyleSheet, ScrollView } from 'react-native';
+import { View, Text, StyleSheet } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { colors, typography, spacing, borderRadius } from '../../src/theme';
+import { colors, typography, spacing } from '../../src/theme';
 import { strings } from '../../src/constants/strings';
+import ScreenShell from '../../src/components/ui/ScreenShell';
+import BagSummaryCard from '../../src/components/ui/BagSummaryCard';
 import Button from '../../src/components/ui/Button';
 
 const STEPS = [
@@ -26,7 +27,6 @@ const STEPS = [
 
 export default function BagWhatsNextScreen() {
   const router = useRouter();
-  const insets = useSafeAreaInsets();
   const params = useLocalSearchParams<{
     bagTitle: string;
     bagPrice: string;
@@ -35,81 +35,72 @@ export default function BagWhatsNextScreen() {
   }>();
 
   return (
-    <View style={[styles.container, { paddingTop: insets.top + spacing.xxl }]}>
-      <ScrollView style={styles.scroll} showsVerticalScrollIndicator={false}>
-        <View style={styles.celebrationIcon}>
-          <Ionicons name="checkmark-circle" size={64} color={colors.primary[500]} />
-        </View>
-
-        <Text style={styles.title}>{strings.bagWhatsNext.title}</Text>
-        <Text style={styles.subtitle}>{strings.bagWhatsNext.subtitle}</Text>
-
-        {/* Bag summary card */}
-        <View style={styles.summaryCard}>
-          <Text style={styles.summaryTitle}>{params.bagTitle}</Text>
-          <Text style={styles.summaryDetail}>
-            {params.bagQuantity} {strings.bagWhatsNext.perDay}
-          </Text>
-          <View style={styles.priceRow}>
-            <Text style={styles.summaryPrice}>USD {params.bagPrice}</Text>
-            <Text style={styles.summaryOriginal}>USD {params.bagValue}</Text>
-          </View>
-        </View>
-
-        {/* What's next section */}
-        <Text style={styles.whatsNextTitle}>{strings.bagWhatsNext.whatsNextTitle}</Text>
-        <Text style={styles.whatsNextSubtitle}>{strings.bagWhatsNext.whatsNextSubtitle}</Text>
-
-        <View style={styles.stepsList}>
-          {STEPS.map((step, index) => (
-            <View key={index} style={styles.stepRow}>
-              <View style={styles.stepIconContainer}>
-                <View style={styles.stepNumber}>
-                  <Text style={styles.stepNumberText}>{index + 1}</Text>
-                </View>
-                {index < STEPS.length - 1 && <View style={styles.stepLine} />}
-              </View>
-              <View style={styles.stepContent}>
-                <View style={styles.stepHeader}>
-                  <Ionicons name={step.icon} size={20} color={colors.primary[500]} />
-                  <Text style={styles.stepTitle}>{step.title}</Text>
-                </View>
-                <Text style={styles.stepDescription}>{step.description}</Text>
-              </View>
-            </View>
-          ))}
-        </View>
-
-        <View style={{ height: spacing.xxl }} />
-      </ScrollView>
-
-      <View style={[styles.footer, { paddingBottom: insets.bottom + spacing.xxl }]}>
-        <Button
-          label={strings.bagWhatsNext.startSelling}
-          onPress={() => router.replace('/(business-tabs)')}
-          size="lg"
-          fullWidth
-        />
-        <Button
-          label={strings.bagWhatsNext.maybeLater}
-          onPress={() => router.replace('/(business-tabs)')}
-          variant="ghost"
-          size="lg"
-          fullWidth
-        />
+    <ScreenShell
+      showBackButton={false}
+      containerStyle={styles.topPadding}
+      footer={
+        <>
+          <Button
+            label={strings.bagWhatsNext.startSelling}
+            onPress={() => router.replace('/(business-tabs)')}
+            size="lg"
+            fullWidth
+          />
+          <Button
+            label={strings.bagWhatsNext.maybeLater}
+            onPress={() => router.replace('/(business-tabs)')}
+            variant="ghost"
+            size="lg"
+            fullWidth
+          />
+        </>
+      }
+    >
+      <View style={styles.celebrationIcon}>
+        <Ionicons name="checkmark-circle" size={64} color={colors.primary[500]} />
       </View>
-    </View>
+
+      <Text style={styles.title}>{strings.bagWhatsNext.title}</Text>
+      <Text style={styles.subtitle}>{strings.bagWhatsNext.subtitle}</Text>
+
+      <BagSummaryCard
+        title={params.bagTitle || ''}
+        quantity={params.bagQuantity}
+        quantityLabel={strings.bagWhatsNext.perDay}
+        price={params.bagPrice || ''}
+        originalPrice={params.bagValue || ''}
+        centered
+      />
+
+      <Text style={styles.whatsNextTitle}>{strings.bagWhatsNext.whatsNextTitle}</Text>
+      <Text style={styles.whatsNextSubtitle}>{strings.bagWhatsNext.whatsNextSubtitle}</Text>
+
+      <View style={styles.stepsList}>
+        {STEPS.map((step, index) => (
+          <View key={index} style={styles.stepRow}>
+            <View style={styles.stepIconContainer}>
+              <View style={styles.stepNumber}>
+                <Text style={styles.stepNumberText}>{index + 1}</Text>
+              </View>
+              {index < STEPS.length - 1 && <View style={styles.stepLine} />}
+            </View>
+            <View style={styles.stepContent}>
+              <View style={styles.stepHeader}>
+                <Ionicons name={step.icon} size={20} color={colors.primary[500]} />
+                <Text style={styles.stepTitle}>{step.title}</Text>
+              </View>
+              <Text style={styles.stepDescription}>{step.description}</Text>
+            </View>
+          </View>
+        ))}
+      </View>
+    </ScreenShell>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: colors.background.primary,
-    paddingHorizontal: spacing.xxl,
-  },
-  scroll: {
-    flex: 1,
+  topPadding: {
+    paddingTop: spacing.xxl,
   },
   celebrationIcon: {
     alignItems: 'center',
@@ -127,41 +118,6 @@ const styles = StyleSheet.create({
     color: colors.text.secondary,
     textAlign: 'center',
     marginBottom: spacing.xxl,
-  },
-  summaryCard: {
-    backgroundColor: colors.background.secondary,
-    borderRadius: borderRadius.md,
-    padding: spacing.lg,
-    marginBottom: spacing.xxl,
-    borderWidth: 1,
-    borderColor: colors.gray[200],
-    alignItems: 'center',
-  },
-  summaryTitle: {
-    fontSize: typography.fontSize.md,
-    fontWeight: typography.fontWeight.semibold,
-    color: colors.text.primary,
-    marginBottom: spacing.xs,
-  },
-  summaryDetail: {
-    fontSize: typography.fontSize.sm,
-    color: colors.text.secondary,
-    marginBottom: spacing.xs,
-  },
-  priceRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-  },
-  summaryPrice: {
-    fontSize: typography.fontSize.md,
-    fontWeight: typography.fontWeight.bold,
-    color: colors.text.primary,
-  },
-  summaryOriginal: {
-    fontSize: typography.fontSize.sm,
-    color: colors.text.tertiary,
-    textDecorationLine: 'line-through',
   },
   whatsNextTitle: {
     fontSize: typography.fontSize.lg,
@@ -225,9 +181,5 @@ const styles = StyleSheet.create({
     fontSize: typography.fontSize.sm,
     color: colors.text.secondary,
     lineHeight: typography.fontSize.sm * typography.lineHeight.relaxed,
-  },
-  footer: {
-    paddingTop: spacing.lg,
-    gap: spacing.xs,
   },
 });

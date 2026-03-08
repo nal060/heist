@@ -1,21 +1,16 @@
 import { useState } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  TouchableOpacity,
-  ScrollView,
-} from 'react-native';
+import { View, StyleSheet, Text } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Ionicons } from '@expo/vector-icons';
 import { colors, typography, spacing } from '../../src/theme';
 import { strings } from '../../src/constants/strings';
 import { useAuth } from '../../src/context/AuthContext';
 import { saveUserPreference } from '../../src/data/auth';
+import { sharedStyles } from '../../src/styles/shared';
+import ScreenShell from '../../src/components/ui/ScreenShell';
+import MultiSelectList from '../../src/components/ui/MultiSelectList';
 import Button from '../../src/components/ui/Button';
 
-const PICKUP_OPTIONS = [
+const OPTIONS = [
   { key: 'earlyMorning', label: strings.pickupPreferences.options.earlyMorning },
   { key: 'lateMorning', label: strings.pickupPreferences.options.lateMorning },
   { key: 'midday', label: strings.pickupPreferences.options.midday },
@@ -26,7 +21,6 @@ const PICKUP_OPTIONS = [
 
 export default function PickupPreferencesScreen() {
   const router = useRouter();
-  const insets = useSafeAreaInsets();
   const { user } = useAuth();
   const { countryId } = useLocalSearchParams<{ countryId: string }>();
 
@@ -49,110 +43,44 @@ export default function PickupPreferencesScreen() {
       if (selected.size > 0) {
         await saveUserPreference(user.id, 'pickup_times', Array.from(selected));
       }
-      router.push({
-        pathname: '/(auth)/user-location',
-        params: { countryId },
-      });
     } catch {
-      router.push({
-        pathname: '/(auth)/user-location',
-        params: { countryId },
-      });
+      // Continue even if save fails
     } finally {
       setSaving(false);
+      router.push({ pathname: '/(auth)/user-location', params: { countryId } });
     }
   };
 
   return (
-    <View style={[styles.container, { paddingTop: insets.top + spacing.lg }]}>
-      <TouchableOpacity
-        style={styles.backButton}
-        onPress={() => router.back()}
-        hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
-      >
-        <Ionicons name="arrow-back" size={24} color={colors.text.primary} />
-      </TouchableOpacity>
-
-      <ScrollView
-        style={styles.scroll}
-        contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}
-      >
-        <Text style={styles.title}>{strings.pickupPreferences.title}</Text>
-        <Text style={styles.subtitle}>{strings.pickupPreferences.subtitle}</Text>
-        <Text style={styles.selectLabel}>{strings.pickupPreferences.selectAll}</Text>
-
-        <View style={styles.optionsList}>
-          {PICKUP_OPTIONS.map((option) => {
-            const isSelected = selected.has(option.key);
-            return (
-              <TouchableOpacity
-                key={option.key}
-                style={styles.optionRow}
-                onPress={() => toggle(option.key)}
-                activeOpacity={0.7}
-              >
-                <Text style={styles.optionText}>{option.label}</Text>
-                <View style={[styles.circle, isSelected && styles.circleSelected]}>
-                  {isSelected && (
-                    <Ionicons name="checkmark" size={16} color={colors.white} />
-                  )}
-                </View>
-              </TouchableOpacity>
-            );
-          })}
-        </View>
-      </ScrollView>
-
-      {/* Page indicator */}
-      <View style={styles.dotsRow}>
-        <View style={styles.dot} />
-        <View style={[styles.dot, styles.dotActive]} />
-        <View style={styles.dot} />
-      </View>
-
-      <View style={[styles.footer, { paddingBottom: insets.bottom + spacing.xxl }]}>
-        <Button
-          label={strings.common.next}
-          onPress={handleNext}
-          size="lg"
-          fullWidth
-          loading={saving}
-        />
-      </View>
-    </View>
+    <ScreenShell
+      title={strings.pickupPreferences.title}
+      subtitle={strings.pickupPreferences.subtitle}
+      titleStyle={styles.title}
+      subtitleStyle={styles.subtitle}
+      footer={
+        <>
+          <View style={styles.dotsRow}>
+            <View style={styles.dot} />
+            <View style={[styles.dot, styles.dotActive]} />
+            <View style={styles.dot} />
+          </View>
+          <Button label={strings.common.next} onPress={handleNext} size="lg" fullWidth loading={saving} />
+        </>
+      }
+    >
+      <Text style={styles.selectLabel}>{strings.pickupPreferences.selectAll}</Text>
+      <MultiSelectList options={OPTIONS} selected={selected} onToggle={toggle} />
+    </ScreenShell>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: colors.background.primary,
-    paddingHorizontal: spacing.xxl,
-  },
-  backButton: {
-    width: 40,
-    height: 40,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: spacing.lg,
-  },
-  scroll: {
-    flex: 1,
-  },
-  scrollContent: {
-    paddingBottom: spacing.xxl,
-  },
   title: {
-    fontSize: typography.fontSize.xl,
-    fontWeight: typography.fontWeight.bold,
-    color: colors.text.primary,
-    marginBottom: spacing.lg,
     letterSpacing: 1,
+    marginBottom: spacing.lg,
   },
   subtitle: {
     fontSize: typography.fontSize.base,
-    color: colors.text.secondary,
     lineHeight: typography.fontSize.base * typography.lineHeight.relaxed,
     marginBottom: spacing.md,
     textAlign: 'center',
@@ -163,52 +91,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginBottom: spacing.xxxl,
   },
-  optionsList: {
-    gap: spacing.xs,
-  },
-  optionRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingVertical: spacing.lg,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.gray[100],
-  },
-  optionText: {
-    flex: 1,
-    fontSize: typography.fontSize.base,
-    color: colors.text.primary,
-    marginRight: spacing.md,
-  },
-  circle: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    borderWidth: 2,
-    borderColor: colors.gray[300],
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  circleSelected: {
-    backgroundColor: colors.primary[500],
-    borderColor: colors.primary[500],
-  },
-  dotsRow: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    gap: spacing.sm,
-    paddingVertical: spacing.md,
-  },
-  dot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: colors.gray[300],
-  },
-  dotActive: {
-    backgroundColor: colors.primary[500],
-  },
-  footer: {
-    paddingTop: spacing.sm,
-  },
+  dotsRow: sharedStyles.dotsRow,
+  dot: sharedStyles.dot,
+  dotActive: sharedStyles.dotActive,
 });

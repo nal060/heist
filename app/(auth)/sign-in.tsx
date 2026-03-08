@@ -1,44 +1,28 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState } from 'react';
 import {
   View,
   Text,
   TextInput,
   StyleSheet,
-  KeyboardAvoidingView,
-  Platform,
-  Animated,
-  TouchableOpacity,
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { colors, typography, spacing } from '../../src/theme';
-import { borderRadius } from '../../src/theme';
+import { colors, typography, spacing, borderRadius } from '../../src/theme';
 import { strings } from '../../src/constants/strings';
 import { useAuth } from '../../src/context/AuthContext';
+import ScreenShell from '../../src/components/ui/ScreenShell';
 import Button from '../../src/components/ui/Button';
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export default function SignInScreen() {
   const router = useRouter();
-  const insets = useSafeAreaInsets();
   const { signInWithOtp } = useAuth();
   const { role } = useLocalSearchParams<{ role?: string }>();
 
   const [email, setEmail] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-
-  const fadeIn = useRef(new Animated.Value(0)).current;
-
-  useEffect(() => {
-    Animated.timing(fadeIn, {
-      toValue: 1,
-      duration: 300,
-      useNativeDriver: true,
-    }).start();
-  }, [fadeIn]);
 
   const handleContinue = async () => {
     setError('');
@@ -68,88 +52,52 @@ export default function SignInScreen() {
     : strings.signIn.subtitle;
 
   return (
-    <KeyboardAvoidingView
-      style={styles.flex}
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+    <ScreenShell
+      keyboardAvoiding
+      scrollable={false}
+      footer={
+        <Button
+          label={strings.signIn.continue}
+          onPress={handleContinue}
+          size="lg"
+          fullWidth
+          loading={loading}
+          disabled={!email.trim()}
+        />
+      }
     >
-      <Animated.View
-        style={[
-          styles.container,
-          { paddingTop: insets.top + spacing.lg, opacity: fadeIn },
-        ]}
-      >
-        <TouchableOpacity
-          style={styles.backButton}
-          onPress={() => router.back()}
-          hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
-        >
-          <Ionicons name="arrow-back" size={24} color={colors.text.primary} />
-        </TouchableOpacity>
+      <Text style={styles.title}>{strings.signIn.title}</Text>
+      <Text style={styles.subtitle}>{subtitle}</Text>
 
-        <View style={styles.content}>
-          <Text style={styles.title}>{strings.signIn.title}</Text>
-          <Text style={styles.subtitle}>{subtitle}</Text>
+      <View style={styles.inputContainer}>
+        <Ionicons
+          name="mail-outline"
+          size={20}
+          color={error ? colors.error : colors.gray[400]}
+          style={styles.inputIcon}
+        />
+        <TextInput
+          style={[styles.input, error ? styles.inputError : null]}
+          placeholder={strings.signIn.emailPlaceholder}
+          placeholderTextColor={colors.gray[400]}
+          value={email}
+          onChangeText={(text) => {
+            setEmail(text);
+            if (error) setError('');
+          }}
+          keyboardType="email-address"
+          autoCapitalize="none"
+          autoComplete="email"
+          autoFocus
+        />
+      </View>
 
-          <View style={styles.inputContainer}>
-            <Ionicons
-              name="mail-outline"
-              size={20}
-              color={error ? colors.error : colors.gray[400]}
-              style={styles.inputIcon}
-            />
-            <TextInput
-              style={[styles.input, error ? styles.inputError : null]}
-              placeholder={strings.signIn.emailPlaceholder}
-              placeholderTextColor={colors.gray[400]}
-              value={email}
-              onChangeText={(text) => {
-                setEmail(text);
-                if (error) setError('');
-              }}
-              keyboardType="email-address"
-              autoCapitalize="none"
-              autoComplete="email"
-              autoFocus
-            />
-          </View>
-
-          {error ? <Text style={styles.errorText}>{error}</Text> : null}
-        </View>
-
-        <View style={[styles.footer, { paddingBottom: insets.bottom + spacing.xxl }]}>
-          <Button
-            label={strings.signIn.continue}
-            onPress={handleContinue}
-            size="lg"
-            fullWidth
-            loading={loading}
-            disabled={!email.trim()}
-          />
-        </View>
-      </Animated.View>
-    </KeyboardAvoidingView>
+      {error ? <Text style={styles.errorText}>{error}</Text> : null}
+    </ScreenShell>
   );
 }
 
 const styles = StyleSheet.create({
-  flex: {
-    flex: 1,
-    backgroundColor: colors.background.primary,
-  },
-  container: {
-    flex: 1,
-    paddingHorizontal: spacing.xxl,
-  },
-  backButton: {
-    width: 40,
-    height: 40,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: spacing.xxl,
-  },
-  content: {
-    flex: 1,
-  },
   title: {
     fontSize: typography.fontSize.xl,
     fontWeight: typography.fontWeight.bold,
@@ -187,8 +135,5 @@ const styles = StyleSheet.create({
     fontSize: typography.fontSize.sm,
     color: colors.error,
     marginTop: spacing.sm,
-  },
-  footer: {
-    paddingTop: spacing.lg,
   },
 });

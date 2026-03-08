@@ -8,8 +8,8 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { colors, typography, spacing } from '../../src/theme';
-import { borderRadius, shadows } from '../../src/theme';
+import { colors, typography, spacing, borderRadius, shadows } from '../../src/theme';
+import { sharedStyles } from '../../src/styles/shared';
 import { strings } from '../../src/constants/strings';
 import { useAuth } from '../../src/context/AuthContext';
 import { supabase } from '../../src/lib/supabase';
@@ -148,14 +148,8 @@ export default function BusinessOrdersScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: colors.background.primary,
-  },
-  center: {
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
+  container: sharedStyles.containerNoPadding,
+  center: sharedStyles.center,
   title: {
     fontSize: typography.fontSize.xl,
     fontWeight: typography.fontWeight.bold,
