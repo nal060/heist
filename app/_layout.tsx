@@ -18,7 +18,9 @@ export default function RootLayout() {
             contentStyle: { backgroundColor: colors.background.primary },
           }}
         >
+          <Stack.Screen name="index" />
           <Stack.Screen name="(tabs)" />
+          <Stack.Screen name="(business-tabs)" />
           <Stack.Screen
             name="bag/[id]"
             options={{
@@ -27,6 +29,13 @@ export default function RootLayout() {
             }}
           />
           <Stack.Screen
+            name="bag/create"
+            options={{
+              presentation: 'card',
+              animation: 'slide_from_right',
+            }}
+          />
+<Stack.Screen
             name="checkout/[bagId]"
             options={{
               presentation: 'card',
@@ -56,6 +65,13 @@ export default function RootLayout() {
           />
           <Stack.Screen
             name="order-history"
+            options={{
+              presentation: 'card',
+              animation: 'slide_from_right',
+            }}
+          />
+          <Stack.Screen
+            name="collect"
             options={{
               presentation: 'card',
               animation: 'slide_from_right',

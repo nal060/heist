@@ -31,7 +31,7 @@ export default function ProfileScreen() {
     loadOrders();
   }, []);
 
-  const completedOrders = orders.filter((o) => o.status === 'picked_up');
+  const completedOrders = orders.filter((o) => o.status === 'collected');
 
   const impactStats = [
     {
