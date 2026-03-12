@@ -4,6 +4,7 @@
     Business,
     Category,
     ConsumerProfile,
+    Order,
     OrderWithDetails,
     SurplusBag,
   } from '../types';
@@ -270,10 +271,85 @@ export async function getAllActiveBags(): Promise<BagWithBusiness[]> {
     return data;
   }
 
-  /**
-   * Returns order history with full details.
-   */
-  export async function getOrderHistory(): Promise<OrderWithDetails[]> {
+  // ─── Order creation ─────────────────────────────────────────────────────────
+
+  function generatePickupCode(): string {
+    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+    let code = '';
+    for (let i = 0; i < 6; i++) {
+      code += chars[Math.floor(Math.random() * chars.length)];
+    }
+    return code;
+  }
+
+  export interface CreateOrderInput {
+    bagId: string;
+    quantity: number;
+    subtotal: number;
+    tax: number;
+    total: number;
+  }
+
+  export async function createOrder(input: CreateOrderInput): Promise<Order> {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) throw new Error('No se encontro la sesion del usuario.');
+
+    // Fetch bag to get pickup times
+    const { data: bag, error: bagError } = await supabase
+      .from('surplus_bags')
+      .select('pickup_start_time, pickup_end_time, date, quantity_available')
+      .eq('id', input.bagId)
+      .single();
+
+    if (bagError || !bag) throw new Error('No se pudo obtener la bolsa.');
+    if (bag.quantity_available < input.quantity) throw new Error('No hay suficientes bolsas disponibles.');
+
+    const pickupCode = generatePickupCode();
+    const today = new Date().toISOString().split('T')[0];
+
+    // Insert order
+    const { data: order, error: orderError } = await supabase
+      .from('orders')
+      .insert({
+        user_id: user.id,
+        surplus_bag_id: input.bagId,
+        quantity: input.quantity,
+        total_price: input.total,
+        pickup_code: pickupCode,
+        pickup_start_time: bag.pickup_start_time,
+        pickup_end_time: bag.pickup_end_time,
+        pickup_date: bag.date || today,
+        status: 'reserved',
+        reserved_at: new Date().toISOString(),
+      })
+      .select()
+      .single();
+
+    if (orderError) throw new Error('No se pudo crear el pedido: ' + orderError.message);
+
+    // Create payment record (bypassed — marked as completed)
+    await supabase
+      .from('payments')
+      .insert({
+        order_id: order.id,
+        total: input.total,
+        subtotal: input.subtotal,
+        payment_method: 'card',
+        payment_status: 'completed',
+        paid_at: new Date().toISOString(),
+        breakdown: { subtotal: input.subtotal, tax: input.tax },
+      });
+
+    // Decrement quantity_available
+    await supabase.rpc('decrement_bag_quantity', {
+      bag_id: input.bagId,
+      amount: input.quantity,
+    });
+
+    return order as Order;
+  }
+
+  export async function getOrderById(orderId: string): Promise<OrderWithDetails | null> {
     const { data, error } = await supabase
       .from('orders')
       .select(`
@@ -281,6 +357,35 @@ export async function getAllActiveBags(): Promise<BagWithBusiness[]> {
         bag:surplus_bags(*, business:businesses(*)),
         payment:payments(*)
       `)
+      .eq('id', orderId)
+      .single();
+
+    if (error || !data) return null;
+
+    const bag = data.bag as (SurplusBag & { business: Business }) | null;
+    return {
+      ...data,
+      business: bag?.business ?? null,
+      bag: bag as SurplusBag,
+      payment: Array.isArray(data.payment) ? data.payment[0] ?? null : data.payment,
+    } as OrderWithDetails;
+  }
+
+  /**
+   * Returns order history with full details.
+   */
+  export async function getOrderHistory(): Promise<OrderWithDetails[]> {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return [];
+
+    const { data, error } = await supabase
+      .from('orders')
+      .select(`
+        *,
+        bag:surplus_bags(*, business:businesses(*)),
+        payment:payments(*)
+      `)
+      .eq('user_id', user.id)
       .order('created_at', { ascending: false });
 
     if (error) {

@@ -90,7 +90,11 @@ export default function ProfileScreen() {
           </View>
           <View style={styles.userInfo}>
             <Text style={styles.userName}>{userName}</Text>
-            <Text style={styles.userJoined}>Miembro desde 2024</Text>
+            <Text style={styles.userJoined}>
+              {authUser?.created_at
+                ? `Miembro desde ${new Date(authUser.created_at).toLocaleDateString('es-PA', { month: 'long', year: 'numeric' })}`
+                : ''}
+            </Text>
           </View>
         </View>
 

@@ -6,13 +6,14 @@ import {
   Text,
   TouchableOpacity,
   ActivityIndicator,
+  Alert,
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, spacing, typography, borderRadius, shadows } from '../../src/theme';
 import { strings } from '../../src/constants/strings';
-import { getBagById } from '../../src/data';
+import { getBagById, createOrder } from '../../src/data';
 import ErrorState from '../../src/components/ui/ErrorState';
 import ScreenHeader from '../../src/components/ui/ScreenHeader';
 import QuantityStepper from '../../src/components/ui/QuantityStepper';
@@ -30,6 +31,7 @@ export default function CheckoutScreen() {
   const [bag, setBag] = useState<BagWithBusiness | undefined>(undefined);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
+  const [paying, setPaying] = useState(false);
 
   const loadBag = useCallback(() => {
     setLoading(true);
@@ -72,9 +74,22 @@ export default function CheckoutScreen() {
   const tax = subtotal * 0.07;
   const total = subtotal + tax;
 
-  const handlePay = () => {
-    const orderId = `order-${Date.now()}`;
-    router.replace(`/order-confirmation/${orderId}`);
+  const handlePay = async () => {
+    if (paying) return;
+    setPaying(true);
+    try {
+      const order = await createOrder({
+        bagId: bag.id,
+        quantity,
+        subtotal,
+        tax,
+        total,
+      });
+      router.replace(`/order-confirmation/${order.id}`);
+    } catch (e) {
+      Alert.alert(strings.common.error, (e as Error).message);
+      setPaying(false);
+    }
   };
 
   const maxQuantity = Math.min(bag.quantity_available, 5);
@@ -149,10 +164,18 @@ export default function CheckoutScreen() {
 
       {/* Pay Button */}
       <View style={[styles.bottomBar, { paddingBottom: insets.bottom + spacing.md }]}>
-        <TouchableOpacity style={styles.payButton} onPress={handlePay}>
-          <Text style={styles.payButtonText}>
-            {strings.checkout.pay} {formatCurrency(total)}
-          </Text>
+        <TouchableOpacity
+          style={[styles.payButton, paying && styles.payButtonDisabled]}
+          onPress={handlePay}
+          disabled={paying}
+        >
+          {paying ? (
+            <ActivityIndicator color={colors.white} />
+          ) : (
+            <Text style={styles.payButtonText}>
+              {strings.checkout.pay} {formatCurrency(total)}
+            </Text>
+          )}
         </TouchableOpacity>
       </View>
     </View>
@@ -276,6 +299,9 @@ const styles = StyleSheet.create({
     borderRadius: borderRadius.md,
     paddingVertical: spacing.lg,
     alignItems: 'center',
+  },
+  payButtonDisabled: {
+    opacity: 0.7,
   },
   payButtonText: {
     fontSize: typography.fontSize.md,
