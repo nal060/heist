@@ -120,7 +120,7 @@ export default function ChangeLocationScreen() {
     try {
       const { status } = await Location.requestForegroundPermissionsAsync();
       if (status !== 'granted') {
-        Alert.alert('Permiso denegado', 'Necesitamos acceso a tu ubicacion para esta funcion.');
+        Alert.alert(strings.changeLocation.permissionDenied, strings.changeLocation.permissionMessage);
         return;
       }
 
@@ -130,17 +130,17 @@ export default function ChangeLocationScreen() {
       setMapCenter({ latitude, longitude });
       setSelectedAddress({
         id: 'current',
-        name: 'Mi ubicacion actual',
+        name: strings.changeLocation.myCurrentLocation,
         latitude,
         longitude,
       });
-      setQuery('Mi ubicacion actual');
+      setQuery(strings.changeLocation.myCurrentLocation);
       mapRef.current?.animateToRegion(
         { latitude, longitude, latitudeDelta: 1.5, longitudeDelta: 1.5 },
         500,
       );
     } catch {
-      Alert.alert('Error', 'No se pudo obtener tu ubicacion.');
+      Alert.alert(strings.common.error, strings.changeLocation.locationError);
     } finally {
       setLocating(false);
     }
@@ -225,7 +225,7 @@ export default function ChangeLocationScreen() {
                 )}
                 ListEmptyComponent={
                   <View style={styles.suggestionItem}>
-                    <Text style={styles.noResultsText}>No se encontraron resultados</Text>
+                    <Text style={styles.noResultsText}>{strings.changeLocation.noResults}</Text>
                   </View>
                 }
               />

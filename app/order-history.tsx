@@ -2,13 +2,13 @@ import React, { useState, useEffect } from 'react';
 import { View, FlatList, StyleSheet, Text, TouchableOpacity } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import { colors, spacing, typography, borderRadius, shadows } from '../src/theme';
 import { strings } from '../src/constants/strings';
 import { getOrderHistory } from '../src/data';
 import EmptyState from '../src/components/ui/EmptyState';
 import Badge from '../src/components/ui/Badge';
+import ScreenHeader from '../src/components/ui/ScreenHeader';
 import { formatCurrency } from '../src/utils/formatCurrency';
 import { formatRelativeDate } from '../src/utils/formatDate';
 import type { OrderWithDetails, OrderStatus } from '../src/types';
@@ -56,14 +56,7 @@ export default function OrderHistoryScreen() {
 
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
-      {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-          <Ionicons name="arrow-back" size={24} color={colors.text.primary} />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>{strings.orderHistory.title}</Text>
-        <View style={styles.backButton} />
-      </View>
+      <ScreenHeader title={strings.orderHistory.title} />
 
       <FlatList
         data={orders}
@@ -90,27 +83,6 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.background.secondary,
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.md,
-    backgroundColor: colors.white,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.gray[200],
-  },
-  backButton: {
-    width: 40,
-    height: 40,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  headerTitle: {
-    fontSize: typography.fontSize.md,
-    fontWeight: typography.fontWeight.bold,
-    color: colors.text.primary,
   },
   listContainer: {
     padding: spacing.lg,

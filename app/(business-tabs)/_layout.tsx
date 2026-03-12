@@ -28,6 +28,10 @@ export default function BusinessTabLayout() {
       }}
     >
       <Tabs.Screen
+        name="index"
+        options={{ href: null }}
+      />
+      <Tabs.Screen
         name="dashboard"
         options={{
           title: strings.businessTabs.dashboard,

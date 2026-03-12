@@ -141,6 +141,11 @@ export const strings = {
     searchPlaceholder: 'Buscar direccion...',
     locateMe: 'Ubicarme',
     confirm: 'Confirmar ubicacion',
+    permissionDenied: 'Permiso denegado',
+    permissionMessage: 'Necesitamos acceso a tu ubicacion para esta funcion.',
+    myCurrentLocation: 'Mi ubicacion actual',
+    locationError: 'No se pudo obtener tu ubicacion.',
+    noResults: 'No se encontraron resultados',
   },
 
   // Common
@@ -487,6 +492,18 @@ export const strings = {
     addressLabel: 'Direccion',
     phoneLabel: 'Telefono',
     save: 'Guardar cambios',
+  },
+
+  // Collect screen
+  collect: {
+    title: 'Recoger Pedido',
+    enterCode: 'Introduce el codigo de recogida',
+    notFound: 'No se encontro ningun pedido para este codigo.',
+    alreadyCollected: 'ya ha sido recogido.',
+    success: 'Listo! Introduce otro codigo para continuar.',
+    outsideWindow: 'Este pedido esta fuera de la ventana de recogida',
+    clear: 'Borrar',
+    confirmPickup: 'Confirmar Recogida',
   },
 
   // Business calendar

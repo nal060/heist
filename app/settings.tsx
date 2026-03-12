@@ -1,22 +1,16 @@
 import React from 'react';
-import { View, ScrollView, StyleSheet, Text, TouchableOpacity, Alert } from 'react-native';
-import { useRouter } from 'expo-router';
+import { View, ScrollView, StyleSheet, Text, Alert } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Ionicons } from '@expo/vector-icons';
 import { colors, spacing, typography } from '../src/theme';
 import { strings } from '../src/constants/strings';
 import { useAuth } from '../src/context/AuthContext';
 import Divider from '../src/components/ui/Divider';
+import ScreenHeader from '../src/components/ui/ScreenHeader';
+import SettingsRow from '../src/components/ui/SettingsRow';
 
-type IoniconsName = React.ComponentProps<typeof Ionicons>['name'];
+type IoniconsName = React.ComponentProps<typeof import('@expo/vector-icons').Ionicons>['name'];
 
-interface SettingsItem {
-  icon: IoniconsName;
-  label: string;
-  danger?: boolean;
-}
-
-const SETTINGS_ITEMS: SettingsItem[] = [
+const SETTINGS_ITEMS: { icon: IoniconsName; label: string }[] = [
   { icon: 'person-outline', label: strings.settings.accountDetails },
   { icon: 'notifications-outline', label: strings.settings.notifications },
   { icon: 'card-outline', label: strings.settings.paymentMethods },
@@ -25,7 +19,6 @@ const SETTINGS_ITEMS: SettingsItem[] = [
 ];
 
 export default function SettingsScreen() {
-  const router = useRouter();
   const insets = useSafeAreaInsets();
   const { signOut, deleteAccount } = useAuth();
 
@@ -64,27 +57,14 @@ export default function SettingsScreen() {
 
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
-      {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-          <Ionicons name="arrow-back" size={24} color={colors.text.primary} />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>{strings.settings.title}</Text>
-        <View style={styles.backButton} />
-      </View>
+      <ScreenHeader title={strings.settings.title} />
 
       <ScrollView showsVerticalScrollIndicator={false}>
         {/* Settings Items */}
         <View style={styles.section}>
           {SETTINGS_ITEMS.map((item, index) => (
             <React.Fragment key={item.label}>
-              <TouchableOpacity style={styles.settingsRow}>
-                <View style={styles.settingsLeft}>
-                  <Ionicons name={item.icon} size={22} color={colors.text.primary} />
-                  <Text style={styles.settingsLabel}>{item.label}</Text>
-                </View>
-                <Ionicons name="chevron-forward" size={20} color={colors.gray[400]} />
-              </TouchableOpacity>
+              <SettingsRow icon={item.icon} label={item.label} />
               {index < SETTINGS_ITEMS.length - 1 && <Divider />}
             </React.Fragment>
           ))}
@@ -92,23 +72,19 @@ export default function SettingsScreen() {
 
         {/* Logout & Delete */}
         <View style={styles.section}>
-          <TouchableOpacity style={styles.settingsRow} onPress={handleLogout}>
-            <View style={styles.settingsLeft}>
-              <Ionicons name="log-out-outline" size={22} color={colors.error} />
-              <Text style={[styles.settingsLabel, styles.dangerText]}>
-                {strings.settings.logout}
-              </Text>
-            </View>
-          </TouchableOpacity>
+          <SettingsRow
+            icon="log-out-outline"
+            label={strings.settings.logout}
+            danger
+            onPress={handleLogout}
+          />
           <Divider />
-          <TouchableOpacity style={styles.settingsRow} onPress={handleDeleteAccount}>
-            <View style={styles.settingsLeft}>
-              <Ionicons name="trash-outline" size={22} color={colors.error} />
-              <Text style={[styles.settingsLabel, styles.dangerText]}>
-                {strings.common.deleteAccount}
-              </Text>
-            </View>
-          </TouchableOpacity>
+          <SettingsRow
+            icon="trash-outline"
+            label={strings.common.deleteAccount}
+            danger
+            onPress={handleDeleteAccount}
+          />
         </View>
 
         {/* Version */}
@@ -123,50 +99,9 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: colors.background.secondary,
   },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.md,
-    backgroundColor: colors.white,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.gray[200],
-  },
-  backButton: {
-    width: 40,
-    height: 40,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  headerTitle: {
-    fontSize: typography.fontSize.md,
-    fontWeight: typography.fontWeight.bold,
-    color: colors.text.primary,
-  },
   section: {
     backgroundColor: colors.white,
     marginTop: spacing.md,
-  },
-  settingsRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.lg,
-    minHeight: 56,
-  },
-  settingsLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.md,
-  },
-  settingsLabel: {
-    fontSize: typography.fontSize.base,
-    color: colors.text.primary,
-  },
-  dangerText: {
-    color: colors.error,
   },
   version: {
     fontSize: typography.fontSize.sm,

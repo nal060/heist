@@ -14,6 +14,8 @@ import { colors, spacing, typography, borderRadius, shadows } from '../../src/th
 import { strings } from '../../src/constants/strings';
 import { getBagById } from '../../src/data';
 import ErrorState from '../../src/components/ui/ErrorState';
+import ScreenHeader from '../../src/components/ui/ScreenHeader';
+import QuantityStepper from '../../src/components/ui/QuantityStepper';
 import BusinessLogo from '../../src/components/business/BusinessLogo';
 import Divider from '../../src/components/ui/Divider';
 import { formatCurrency } from '../../src/utils/formatCurrency';
@@ -79,14 +81,7 @@ export default function CheckoutScreen() {
 
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
-      {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-          <Ionicons name="arrow-back" size={24} color={colors.text.primary} />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>{strings.checkout.title}</Text>
-        <View style={styles.backButton} />
-      </View>
+      <ScreenHeader title={strings.checkout.title} />
 
       <ScrollView showsVerticalScrollIndicator={false}>
         {/* Business & Bag Info */}
@@ -114,31 +109,7 @@ export default function CheckoutScreen() {
         {/* Quantity Selector */}
         <View style={styles.card}>
           <Text style={styles.sectionLabel}>{strings.checkout.quantity}</Text>
-          <View style={styles.quantityRow}>
-            <TouchableOpacity
-              style={[styles.quantityButton, quantity <= 1 && styles.quantityButtonDisabled]}
-              onPress={() => setQuantity(Math.max(1, quantity - 1))}
-              disabled={quantity <= 1}
-            >
-              <Ionicons
-                name="remove"
-                size={20}
-                color={quantity <= 1 ? colors.gray[400] : colors.primary[500]}
-              />
-            </TouchableOpacity>
-            <Text style={styles.quantityText}>{quantity}</Text>
-            <TouchableOpacity
-              style={[styles.quantityButton, quantity >= maxQuantity && styles.quantityButtonDisabled]}
-              onPress={() => setQuantity(Math.min(maxQuantity, quantity + 1))}
-              disabled={quantity >= maxQuantity}
-            >
-              <Ionicons
-                name="add"
-                size={20}
-                color={quantity >= maxQuantity ? colors.gray[400] : colors.primary[500]}
-              />
-            </TouchableOpacity>
-          </View>
+          <QuantityStepper value={quantity} onChange={setQuantity} min={1} max={maxQuantity} />
         </View>
 
         {/* Payment Method */}
@@ -197,27 +168,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.md,
-    backgroundColor: colors.white,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.gray[200],
-  },
-  backButton: {
-    width: 40,
-    height: 40,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  headerTitle: {
-    fontSize: typography.fontSize.md,
-    fontWeight: typography.fontWeight.bold,
-    color: colors.text.primary,
-  },
   card: {
     backgroundColor: colors.white,
     marginHorizontal: spacing.lg,
@@ -264,31 +214,6 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase',
     letterSpacing: 0.5,
     marginBottom: spacing.md,
-  },
-  quantityRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: spacing.xxl,
-  },
-  quantityButton: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    borderWidth: 1.5,
-    borderColor: colors.primary[500],
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  quantityButtonDisabled: {
-    borderColor: colors.gray[300],
-  },
-  quantityText: {
-    fontSize: typography.fontSize.xl,
-    fontWeight: typography.fontWeight.bold,
-    color: colors.text.primary,
-    minWidth: 40,
-    textAlign: 'center',
   },
   paymentMethodRow: {
     flexDirection: 'row',
