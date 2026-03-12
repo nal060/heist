@@ -95,10 +95,44 @@ export async function getAllActiveBags(): Promise<BagWithBusiness[]> {
         )
       `)
       .in('business_id', businessIds)
+      .eq('status', 'active')
       .order('created_at', { ascending: false });
 
     if (error) {
       throw new Error('Failed to fetch nearby bags: ' + error.message);
+    }
+    return (data ?? []).map((bag) => {
+      const biz = bag.business as Business & { business_categories: { category: Category }[] };
+      return {
+        ...bag,
+        business: biz,
+        category: biz?.business_categories?.[0]?.category ?? null,
+        isFavorite: false,
+      };
+    });
+  }
+
+  /**
+   * Returns recommended bags (not location-dependent).
+   */
+  export async function getRecommendedBags(): Promise<BagWithBusiness[]> {
+    const { data, error } = await supabase
+      .from('surplus_bags')
+      .select(`
+        *,
+        business:businesses(
+          *,
+          business_categories(
+            category:categories(*)
+          )
+        )
+      `)
+      .eq('status', 'active')
+      .order('created_at', { ascending: false })
+      .limit(12);
+
+    if (error) {
+      throw new Error('Failed to fetch recommended bags: ' + error.message);
     }
     return (data ?? []).map((bag) => {
       const biz = bag.business as Business & { business_categories: { category: Category }[] };

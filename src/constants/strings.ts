@@ -20,6 +20,8 @@ export const strings = {
     recommended: 'Recomendados para ti',
     seeAll: 'Ver todo',
     greeting: 'Hola',
+    noNearbyTitle: 'No hay ofertas cerca',
+    noNearbySubtitle: 'Intenta cambiar tu ubicacion para ver mas opciones.',
   },
 
   // Browse screen

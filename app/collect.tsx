@@ -25,7 +25,7 @@ import {
 
 type LookupState = 'idle' | 'loading' | 'found' | 'not_found' | 'already_collected' | 'success' | 'error';
 
-const CODE_LENGTH = 4;
+const CODE_LENGTH = 6;
 
 function slotColor(state: LookupState): { border: string; text: string } {
   if (state === 'found')             return { border: '#2E7D32', text: '#2E7D32' };
@@ -251,7 +251,7 @@ const styles = StyleSheet.create({
   // Slots
   slotsRow: {
     flexDirection: 'row',
-    gap: spacing.xl,
+    gap: spacing.md,
     justifyContent: 'center',
   },
   slot: {
