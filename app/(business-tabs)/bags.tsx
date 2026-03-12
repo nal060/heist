@@ -21,26 +21,27 @@ import {
   cancelBag,
   type BusinessBag,
 } from '../../src/data/business';
+import { strings } from '../../src/constants/strings';
 
 // ─── Filter config ────────────────────────────────────────────────────────────
 
 type FilterKey = 'all' | 'active' | 'draft' | 'sold_out' | 'expired' | 'cancelled';
 
 const FILTERS: { key: FilterKey; label: string }[] = [
-  { key: 'all',       label: 'Todos' },
-  { key: 'active',    label: 'Activos' },
-  { key: 'draft',     label: 'Pendientes' },
-  { key: 'sold_out',  label: 'Agotados' },
-  { key: 'expired',   label: 'Expirados' },
-  { key: 'cancelled', label: 'Cancelados' },
+  { key: 'all',       label: strings.businessBags.filters.all },
+  { key: 'active',    label: strings.businessBags.filters.active },
+  { key: 'draft',     label: strings.businessBags.filters.draft },
+  { key: 'sold_out',  label: strings.businessBags.filters.sold_out },
+  { key: 'expired',   label: strings.businessBags.filters.expired },
+  { key: 'cancelled', label: strings.businessBags.filters.cancelled },
 ];
 
 const STATUS_CONFIG: Record<BagStatus, { label: string; bg: string; text: string }> = {
-  active:    { label: 'Activo',    bg: '#E8F5E9', text: '#2E7D32' },
-  draft:     { label: 'Borrador',  bg: '#F5F5F5', text: '#757575' },
-  sold_out:  { label: 'Agotado',   bg: '#FFF8E1', text: '#F57F17' },
-  expired:   { label: 'Expirado',  bg: '#FFEBEE', text: '#C62828' },
-  cancelled: { label: 'Cancelado', bg: '#F5F5F5', text: '#9E9E9E' },
+  active:    { label: strings.businessBags.statusLabels.active,    bg: '#E8F5E9', text: '#2E7D32' },
+  draft:     { label: strings.businessBags.statusLabels.draft,     bg: '#F5F5F5', text: '#757575' },
+  sold_out:  { label: strings.businessBags.statusLabels.sold_out,  bg: '#FFF8E1', text: '#F57F17' },
+  expired:   { label: strings.businessBags.statusLabels.expired,   bg: '#FFEBEE', text: '#C62828' },
+  cancelled: { label: strings.businessBags.statusLabels.cancelled, bg: '#F5F5F5', text: '#9E9E9E' },
 };
 
 // ─── Bag Card ─────────────────────────────────────────────────────────────────
@@ -71,7 +72,7 @@ function BagCard({
       }}
     >
       <Ionicons name="close-circle-outline" size={20} color={colors.white} />
-      <Text style={styles.cancelActionText}>Cancelar</Text>
+      <Text style={styles.cancelActionText}>{strings.businessBags.cancelAction}</Text>
     </TouchableOpacity>
   );
 
@@ -84,7 +85,7 @@ function BagCard({
       }}
     >
       <Ionicons name="refresh-outline" size={20} color={colors.white} />
-      <Text style={styles.relistActionText}>Volver a publicar</Text>
+      <Text style={styles.relistActionText}>{strings.businessBags.relistAction}</Text>
     </TouchableOpacity>
   );
 
@@ -170,12 +171,12 @@ function BagCard({
 
 function BagsEmptyState({ filter }: { filter: FilterKey }) {
   const messages: Record<FilterKey, string> = {
-    all:       "Aún no has creado ninguna bolsa.",
-    active:    'No hay bolsas activas en este momento.',
-    draft:     'No hay bolsas pendientes.',
-    sold_out:  'No hay bolsas agotadas.',
-    expired:   'No hay bolsas vencidas.',
-    cancelled: 'No hay bolsas canceladas.',
+    all:       strings.businessBags.emptyMessages.all,
+    active:    strings.businessBags.emptyMessages.active,
+    draft:     strings.businessBags.emptyMessages.draft,
+    sold_out:  strings.businessBags.emptyMessages.sold_out,
+    expired:   strings.businessBags.emptyMessages.expired,
+    cancelled: strings.businessBags.emptyMessages.cancelled,
   };
   return (
     <View style={styles.emptyState}>
@@ -230,7 +231,6 @@ export default function BagsScreen() {
       );
     } catch (e) {
       // TODO: surface error to user
-      console.error(e);
     }
   };
   const handleRelist = (bag: BusinessBag) =>
@@ -260,7 +260,7 @@ export default function BagsScreen() {
         <Ionicons name="alert-circle-outline" size={40} color={colors.error} />
         <Text style={styles.errorText}>{error}</Text>
         <TouchableOpacity style={styles.retryBtn} onPress={() => load()}>
-          <Text style={styles.retryText}>Reintentar</Text>
+          <Text style={styles.retryText}>{strings.common.retry}</Text>
         </TouchableOpacity>
       </View>
     );
@@ -270,7 +270,7 @@ export default function BagsScreen() {
     <View style={[styles.container, { paddingTop: insets.top }]}>
       {/* Header */}
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>Mis Bolsos</Text>
+        <Text style={styles.headerTitle}>{strings.businessBags.headerTitle}</Text>
         <TouchableOpacity style={styles.addBtn} onPress={handleCreate}>
           <Ionicons name="add" size={20} color={colors.white} />
         </TouchableOpacity>

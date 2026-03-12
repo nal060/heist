@@ -444,11 +444,24 @@ export const strings = {
     noBags: 'Aun no tienes bolsas',
     noBagsSubtitle: 'Crea tu primera Bolsa Sorpresa para empezar a vender',
     createBag: 'Crear bolsa',
+    greetingMorning: 'Buenos días',
+    greetingAfternoon: 'Buenas tardes',
+    greetingEvening: 'Buenas noches',
+    recentPickups: 'Recolecciones recientes',
+    noPickupsYet: 'Sin recolecciones aún',
+    collectAction: 'Recoger',
+    errorLoading: 'No se pudo cargar el panel',
+    orderStatus: {
+      reserved: 'Reservado',
+      collected: 'Recogido',
+      cancelled: 'Cancelado',
+    },
   },
 
   // Business bags management
   businessBags: {
     title: 'Mis bolsas',
+    headerTitle: 'Mis Bolsos',
     addBag: 'Nueva bolsa',
     emptyTitle: 'Sin bolsas',
     emptySubtitle: 'Crea tu primera Bolsa Sorpresa',
@@ -459,6 +472,31 @@ export const strings = {
       expired: 'Expirada',
       cancelled: 'Cancelada',
     },
+    filters: {
+      all: 'Todos',
+      active: 'Activos',
+      draft: 'Pendientes',
+      sold_out: 'Agotados',
+      expired: 'Expirados',
+      cancelled: 'Cancelados',
+    },
+    statusLabels: {
+      active: 'Activo',
+      draft: 'Borrador',
+      sold_out: 'Agotado',
+      expired: 'Expirado',
+      cancelled: 'Cancelado',
+    },
+    emptyMessages: {
+      all: 'Aún no has creado ninguna bolsa.',
+      active: 'No hay bolsas activas en este momento.',
+      draft: 'No hay bolsas pendientes.',
+      sold_out: 'No hay bolsas agotadas.',
+      expired: 'No hay bolsas vencidas.',
+      cancelled: 'No hay bolsas canceladas.',
+    },
+    cancelAction: 'Cancelar',
+    relistAction: 'Volver a publicar',
   },
 
   // Business orders
@@ -471,6 +509,31 @@ export const strings = {
       collected: 'Recogido',
       cancelled: 'Cancelado',
     },
+    filters: {
+      all: 'Todo',
+      reserved: 'Reservado',
+      collected: 'Recogido',
+      cancelled: 'Cancelado',
+    },
+    statusLabels: {
+      reserved: 'Reservado',
+      collected: 'Recogido',
+      cancelled: 'Cancelado',
+    },
+    summaryReserved: 'Reservado',
+    summaryCollected: 'Recogido',
+    summaryRevenue: 'Ingresos',
+    dateFilterToday: 'Hoy',
+    dateFilterAll: 'Total',
+    emptyMessages: {
+      all: 'Aún no hay pedidos hoy.',
+      reserved: 'No hay pedidos reservados en este momento.',
+      collected: 'Aún no hay pedidos recogidos.',
+      cancelled: 'No hay pedidos cancelados.',
+    },
+    cancelAction: 'Cancelar',
+    collectAction: 'Recogido',
+    codeLabel: 'CÓDIGO',
   },
 
   // Business profile
@@ -553,5 +616,8 @@ export const strings = {
     activate: 'Activar',
     edit: 'Editar',
     timeError: 'La hora de fin debe ser posterior a la hora de inicio.',
+    maxPhotosAlert: 'Maximo {max} fotos permitidas.',
+    permissionsTitle: 'Permisos',
+    permissionsGallery: 'Se necesitan permisos para acceder a la galeria.',
   },
 } as const;

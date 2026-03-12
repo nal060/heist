@@ -25,13 +25,13 @@ export default function ImagePickerSection({ photos, onAdd, onRemove, maxPhotos 
 
   const pickImage = async () => {
     if (photos.length >= maxPhotos) {
-      Alert.alert('', `Maximo ${maxPhotos} fotos permitidas.`);
+      Alert.alert('', strings.bagForm.maxPhotosAlert.replace('{max}', String(maxPhotos)));
       return;
     }
 
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (status !== 'granted') {
-      Alert.alert('Permisos', 'Se necesitan permisos para acceder a la galeria.');
+      Alert.alert(strings.bagForm.permissionsTitle, strings.bagForm.permissionsGallery);
       return;
     }
 

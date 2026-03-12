@@ -28,16 +28,16 @@ import type { OrderStatus, BagStatus } from '../../src/types';
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 const STATUS_CONFIG: Record<OrderStatus, { label: string; bg: string; text: string }> = {
-  reserved:  { label: 'Reservado',  bg: '#FFF8E1', text: '#F57F17' },
-  collected: { label: 'Recogido',   bg: '#E8F5E9', text: '#2E7D32' },
-  cancelled: { label: 'Cancelado',  bg: '#F5F5F5', text: '#9E9E9E' },
+  reserved:  { label: strings.businessDashboard.orderStatus.reserved,  bg: '#FFF8E1', text: '#F57F17' },
+  collected: { label: strings.businessDashboard.orderStatus.collected, bg: '#E8F5E9', text: '#2E7D32' },
+  cancelled: { label: strings.businessDashboard.orderStatus.cancelled, bg: '#F5F5F5', text: '#9E9E9E' },
 };
 
 function getGreeting() {
   const hour = new Date().getHours();
-  if (hour < 12) return 'Buenos días';
-  if (hour < 17) return 'Buenas tardes';
-  return 'Buenas noches';
+  if (hour < 12) return strings.businessDashboard.greetingMorning;
+  if (hour < 17) return strings.businessDashboard.greetingAfternoon;
+  return strings.businessDashboard.greetingEvening;
 }
 
 // ─── Sub-components ───────────────────────────────────────────────────────────
@@ -223,9 +223,9 @@ export default function DashboardScreen() {
     return (
       <View style={[styles.container, styles.centered, { paddingTop: insets.top }]}>
         <Ionicons name="cloud-offline-outline" size={40} color={colors.text.tertiary} />
-        <Text style={styles.errorText}>No se pudo cargar el panel</Text>
+        <Text style={styles.errorText}>{strings.businessDashboard.errorLoading}</Text>
         <TouchableOpacity style={styles.retryBtn} onPress={() => load()}>
-          <Text style={styles.retryText}>Reintentar</Text>
+          <Text style={styles.retryText}>{strings.common.retry}</Text>
         </TouchableOpacity>
       </View>
     );
@@ -287,20 +287,20 @@ export default function DashboardScreen() {
             onPress={() => router.push('/collect')}
           >
             <Ionicons name="bag-check-outline" size={18} color={colors.white} />
-            <Text style={styles.actionBtnPrimaryText}>Recoger</Text>
+            <Text style={styles.actionBtnPrimaryText}>{strings.businessDashboard.collectAction}</Text>
           </TouchableOpacity>
         </View>
 
         {/* Recent Pickups */}
         <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>Recolecciones recientes</Text>
+          <Text style={styles.sectionTitle}>{strings.businessDashboard.recentPickups}</Text>
           <TouchableOpacity onPress={() => router.push('/(business-tabs)/orders')}>
             <Text style={styles.seeAll}>{strings.discover.seeAll}</Text>
           </TouchableOpacity>
         </View>
         <View style={[styles.card, shadows.sm]}>
           {collectedOrders.length === 0 ? (
-            <Text style={styles.emptyText}>Sin recolecciones aún</Text>
+            <Text style={styles.emptyText}>{strings.businessDashboard.noPickupsYet}</Text>
           ) : (
             collectedOrders.map((order, idx, arr) => (
               <React.Fragment key={order.id}>

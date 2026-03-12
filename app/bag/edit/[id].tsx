@@ -6,50 +6,20 @@ import { strings } from '../../../src/constants/strings';
 import { getBusinessBagById, updateBagStatus } from '../../../src/data/business';
 import { updateSurplusBag, saveBagSchedule, uploadBagPhoto, deleteBagPhoto } from '../../../src/data/auth';
 import { BAG_SIZES, DAYS_OF_WEEK, type BagSize } from '../../../src/constants/app';
-import type { SurplusBag, BagSizeType, BagPickupSchedule, BagPhoto } from '../../../src/types';
+import type { SurplusBag, BagSizeType, BagPhoto } from '../../../src/types';
 import ScreenShell from '../../../src/components/ui/ScreenShell';
 import FormField from '../../../src/components/ui/FormField';
 import CurrencyInput from '../../../src/components/ui/CurrencyInput';
 import DayScheduleEditor, { type DaySchedule } from '../../../src/components/ui/DayScheduleEditor';
 import Button from '../../../src/components/ui/Button';
 import ImagePickerSection, { type PhotoItem } from '../../../src/components/ui/ImagePickerSection';
+import { scheduleToEntries, buildScheduleState } from '../../../src/utils/schedule';
 
 const SIZES: { key: BagSize; label: string }[] = [
   { key: 'small', label: strings.bagSizeSetup.small },
   { key: 'medium', label: strings.bagSizeSetup.medium },
   { key: 'large', label: strings.bagSizeSetup.large },
 ];
-
-function buildScheduleState(scheduleRows: BagPickupSchedule[]): Record<string, DaySchedule> {
-  const dayMap: Record<number, string> = { 1: 'mon', 2: 'tue', 3: 'wed', 4: 'thu', 5: 'fri', 6: 'sat', 0: 'sun' };
-  const state: Record<string, DaySchedule> = {};
-  DAYS_OF_WEEK.forEach((d) => {
-    state[d.key] = { active: false, startTime: '17:00', endTime: '18:00' };
-  });
-  scheduleRows.forEach((row) => {
-    const key = dayMap[row.day_of_week];
-    if (key) {
-      state[key] = {
-        active: true,
-        startTime: row.start_time.slice(0, 5),
-        endTime: row.end_time.slice(0, 5),
-      };
-    }
-  });
-  return state;
-}
-
-function scheduleToEntries(schedule: Record<string, DaySchedule>) {
-  const keyToDay: Record<string, number> = { mon: 1, tue: 2, wed: 3, thu: 4, fri: 5, sat: 6, sun: 0 };
-  return DAYS_OF_WEEK
-    .filter((d) => schedule[d.key].active)
-    .map((d) => ({
-      dayOfWeek: keyToDay[d.key],
-      startTime: schedule[d.key].startTime,
-      endTime: schedule[d.key].endTime,
-      isActive: true,
-    }));
-}
 
 export default function EditBagScreen() {
   const router = useRouter();

@@ -3,7 +3,7 @@
     BagWithBusiness,
     Business,
     Category,
-    ConsumerProfile,
+
     Order,
     OrderWithDetails,
     SurplusBag,
@@ -437,17 +437,3 @@ export async function getAllActiveBags(): Promise<BagWithBusiness[]> {
     });
   }
 
-/**
- * Returns the current user profile.
- * Hardcoded until auth is implemented.
- */
-export function getUser(): ConsumerProfile {
-  return {
-    id: '00000000-0000-0000-0000-000000000001',
-    user_id: '00000000-0000-0000-0000-000000000001',
-    name: 'Usuario Demo',
-    country_id: null,
-    created_at: '2024-01-01T00:00:00Z',
-    updated_at: '2024-01-01T00:00:00Z',
-  };
-}

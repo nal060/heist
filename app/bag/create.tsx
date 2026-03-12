@@ -15,24 +15,13 @@ import RadioButton from '../../src/components/ui/RadioButton';
 import DayScheduleEditor, { type DaySchedule } from '../../src/components/ui/DayScheduleEditor';
 import Button from '../../src/components/ui/Button';
 import ImagePickerSection, { type PhotoItem } from '../../src/components/ui/ImagePickerSection';
+import { scheduleToEntries } from '../../src/utils/schedule';
 
 const SIZES: { key: BagSize; label: string; recommended?: boolean }[] = [
   { key: 'small', label: strings.bagSizeSetup.small },
   { key: 'medium', label: strings.bagSizeSetup.medium, recommended: true },
   { key: 'large', label: strings.bagSizeSetup.large },
 ];
-
-function scheduleToEntries(schedule: Record<string, DaySchedule>) {
-  const keyToDay: Record<string, number> = { mon: 1, tue: 2, wed: 3, thu: 4, fri: 5, sat: 6, sun: 0 };
-  return DAYS_OF_WEEK
-    .filter((d) => schedule[d.key].active)
-    .map((d) => ({
-      dayOfWeek: keyToDay[d.key],
-      startTime: schedule[d.key].startTime,
-      endTime: schedule[d.key].endTime,
-      isActive: true,
-    }));
-}
 
 export default function CreateBagScreen() {
   const router = useRouter();
