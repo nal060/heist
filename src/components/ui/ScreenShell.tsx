@@ -6,6 +6,7 @@ import {
   TouchableOpacity,
   KeyboardAvoidingView,
   Platform,
+  ActivityIndicator,
   StyleSheet,
   type StyleProp,
   type ViewStyle,
@@ -16,6 +17,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, typography, spacing } from '../../theme';
 import ProgressBar from './ProgressBar';
+import ErrorState from './ErrorState';
 
 interface ScreenShellProps {
   children: React.ReactNode;
@@ -30,6 +32,14 @@ interface ScreenShellProps {
   containerStyle?: StyleProp<ViewStyle>;
   titleStyle?: StyleProp<TextStyle>;
   subtitleStyle?: StyleProp<TextStyle>;
+  /** Show a full-screen centered loading spinner instead of content */
+  loading?: boolean;
+  /** Show ErrorState with retry instead of content (only when children would be empty) */
+  loadingError?: string | null;
+  /** Retry callback for loadingError */
+  onRetry?: () => void;
+  /** Inline error message shown at the bottom of the content area */
+  error?: string;
 }
 
 export default function ScreenShell({
@@ -45,9 +55,29 @@ export default function ScreenShell({
   containerStyle,
   titleStyle,
   subtitleStyle,
+  loading = false,
+  loadingError,
+  onRetry,
+  error,
 }: ScreenShellProps) {
   const router = useRouter();
   const insets = useSafeAreaInsets();
+
+  if (loading) {
+    return (
+      <View style={[styles.centered, { paddingTop: insets.top }]}>
+        <ActivityIndicator size="large" color={colors.primary[500]} />
+      </View>
+    );
+  }
+
+  if (loadingError) {
+    return (
+      <View style={[styles.centered, { paddingTop: insets.top }]}>
+        <ErrorState message={loadingError} onRetry={onRetry} />
+      </View>
+    );
+  }
 
   const content = (
     <View style={[styles.container, { paddingTop: insets.top + spacing.lg }, containerStyle]}>
@@ -70,6 +100,7 @@ export default function ScreenShell({
           {title && <Text style={[styles.title, titleStyle]}>{title}</Text>}
           {subtitle && <Text style={[styles.subtitle, subtitleStyle]}>{subtitle}</Text>}
           {children}
+          {error ? <Text style={styles.errorText}>{error}</Text> : null}
           <View style={{ height: spacing.xxl }} />
         </ScrollView>
       ) : (
@@ -77,6 +108,7 @@ export default function ScreenShell({
           {title && <Text style={[styles.title, titleStyle]}>{title}</Text>}
           {subtitle && <Text style={[styles.subtitle, subtitleStyle]}>{subtitle}</Text>}
           {children}
+          {error ? <Text style={styles.errorText}>{error}</Text> : null}
         </View>
       )}
 
@@ -139,5 +171,17 @@ const styles = StyleSheet.create({
   footer: {
     paddingTop: spacing.lg,
     gap: spacing.xs,
+  },
+  centered: {
+    flex: 1,
+    backgroundColor: colors.background.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  errorText: {
+    fontSize: typography.fontSize.sm,
+    color: colors.error,
+    textAlign: 'center',
+    marginTop: spacing.md,
   },
 });

@@ -1,5 +1,4 @@
-import { useState, useRef, useEffect } from 'react';
-import { Animated } from 'react-native';
+import { useState } from 'react';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { strings } from '../../src/constants/strings';
 import ScreenShell from '../../src/components/ui/ScreenShell';
@@ -23,8 +22,6 @@ export default function BusinessManualScreen() {
     categoryId?: string;
   }>();
 
-  const fadeAnim = useRef(new Animated.Value(0)).current;
-
   const [form, setForm] = useState<FormData>({
     name: params.name || '',
     address: params.address || '',
@@ -32,10 +29,6 @@ export default function BusinessManualScreen() {
     phone: params.phone || '',
   });
   const [errors, setErrors] = useState<Partial<FormData>>({});
-
-  useEffect(() => {
-    Animated.timing(fadeAnim, { toValue: 1, duration: 300, useNativeDriver: true }).start();
-  }, [fadeAnim]);
 
   const updateField = (field: keyof FormData, value: string) => {
     setForm((prev) => ({ ...prev, [field]: value }));

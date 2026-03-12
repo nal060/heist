@@ -132,6 +132,7 @@ export default function BagReviewScreen() {
       title={strings.bagReviewSetup.title}
       subtitle={strings.bagReviewSetup.subtitle}
       progress={{ current: 6, total: 6 }}
+      error={error || undefined}
       footer={
         <>
           <Button
@@ -182,7 +183,6 @@ export default function BagReviewScreen() {
         <Text style={styles.earningsValue}>~USD {params.earningsPerWeek}/semana</Text>
       </View>
 
-      {error ? <Text style={styles.errorText}>{error}</Text> : null}
     </ScreenShell>
   );
 }
@@ -224,11 +224,5 @@ const styles = StyleSheet.create({
     fontSize: typography.fontSize.md,
     fontWeight: typography.fontWeight.bold,
     color: colors.primary[600],
-  },
-  errorText: {
-    fontSize: typography.fontSize.sm,
-    color: colors.error,
-    textAlign: 'center',
-    marginTop: spacing.md,
   },
 });

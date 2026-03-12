@@ -5,6 +5,7 @@ import { colors, typography, spacing, borderRadius } from '../../src/theme';
 import { strings } from '../../src/constants/strings';
 import { BAG_SIZES, type BagSize } from '../../src/constants/app';
 import ScreenShell from '../../src/components/ui/ScreenShell';
+import RadioButton from '../../src/components/ui/RadioButton';
 import RecommendationBox from '../../src/components/ui/RecommendationBox';
 import HelpSection from '../../src/components/ui/HelpSection';
 import Button from '../../src/components/ui/Button';
@@ -84,9 +85,7 @@ export default function BagSizeScreen() {
                 activeOpacity={0.7}
               >
                 <View style={styles.sizeLeft}>
-                  <View style={styles.radioOuter}>
-                    {isSelected && <View style={styles.radioInner} />}
-                  </View>
+                  <RadioButton selected={isSelected} />
                   <Text style={styles.sizeName}>{size.label}</Text>
                 </View>
                 <View style={styles.sizeRight}>
@@ -159,22 +158,7 @@ const styles = StyleSheet.create({
   sizeLeft: {
     flexDirection: 'row',
     alignItems: 'center',
-  },
-  radioOuter: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    borderWidth: 2,
-    borderColor: colors.gray[300],
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: spacing.md,
-  },
-  radioInner: {
-    width: 12,
-    height: 12,
-    borderRadius: 6,
-    backgroundColor: colors.primary[500],
+    gap: spacing.md,
   },
   sizeName: {
     fontSize: typography.fontSize.md,

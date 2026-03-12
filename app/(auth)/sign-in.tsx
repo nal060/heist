@@ -55,6 +55,7 @@ export default function SignInScreen() {
     <ScreenShell
       keyboardAvoiding
       scrollable={false}
+      error={error || undefined}
       footer={
         <Button
           label={strings.signIn.continue}
@@ -92,7 +93,6 @@ export default function SignInScreen() {
         />
       </View>
 
-      {error ? <Text style={styles.errorText}>{error}</Text> : null}
     </ScreenShell>
   );
 }
@@ -130,10 +130,5 @@ const styles = StyleSheet.create({
   },
   inputError: {
     borderColor: colors.error,
-  },
-  errorText: {
-    fontSize: typography.fontSize.sm,
-    color: colors.error,
-    marginTop: spacing.sm,
   },
 });

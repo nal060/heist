@@ -1,13 +1,13 @@
 import { useState } from 'react';
-import { View, StyleSheet, Text } from 'react-native';
+import { StyleSheet, Text } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { colors, typography, spacing } from '../../src/theme';
 import { strings } from '../../src/constants/strings';
 import { useAuth } from '../../src/context/AuthContext';
 import { saveUserPreference } from '../../src/data/auth';
-import { sharedStyles } from '../../src/styles/shared';
 import ScreenShell from '../../src/components/ui/ScreenShell';
 import MultiSelectList from '../../src/components/ui/MultiSelectList';
+import PageDots from '../../src/components/ui/PageDots';
 import Button from '../../src/components/ui/Button';
 
 const OPTIONS = [
@@ -59,11 +59,7 @@ export default function PickupPreferencesScreen() {
       subtitleStyle={styles.subtitle}
       footer={
         <>
-          <View style={styles.dotsRow}>
-            <View style={styles.dot} />
-            <View style={[styles.dot, styles.dotActive]} />
-            <View style={styles.dot} />
-          </View>
+          <PageDots total={3} current={1} />
           <Button label={strings.common.next} onPress={handleNext} size="lg" fullWidth loading={saving} />
         </>
       }
@@ -91,7 +87,4 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginBottom: spacing.xxxl,
   },
-  dotsRow: sharedStyles.dotsRow,
-  dot: sharedStyles.dot,
-  dotActive: sharedStyles.dotActive,
 });

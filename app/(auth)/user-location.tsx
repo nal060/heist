@@ -14,7 +14,7 @@ import { strings } from '../../src/constants/strings';
 import { useAuth } from '../../src/context/AuthContext';
 import { useLocation } from '../../src/context/LocationContext';
 import { createConsumerProfile } from '../../src/data/auth';
-import { sharedStyles } from '../../src/styles/shared';
+import PageDots from '../../src/components/ui/PageDots';
 import Button from '../../src/components/ui/Button';
 
 export default function UserLocationScreen() {
@@ -87,11 +87,7 @@ export default function UserLocationScreen() {
         <ActivityIndicator size="large" color={colors.primary[500]} style={styles.loader} />
       ) : (
         <View style={styles.footer}>
-          <View style={styles.dotsRow}>
-            <View style={styles.dot} />
-            <View style={styles.dot} />
-            <View style={[styles.dot, styles.dotActive]} />
-          </View>
+          <PageDots total={3} current={2} />
 
           <Button
             label={strings.userLocation.useCurrentLocation}
@@ -150,9 +146,6 @@ const styles = StyleSheet.create({
   loader: {
     marginBottom: spacing.xxl,
   },
-  dotsRow: sharedStyles.dotsRow,
-  dot: sharedStyles.dot,
-  dotActive: sharedStyles.dotActive,
   footer: {
     gap: spacing.sm,
   },

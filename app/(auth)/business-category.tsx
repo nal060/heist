@@ -4,15 +4,14 @@ import {
   Text,
   StyleSheet,
   TouchableOpacity,
-  ActivityIndicator,
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors, typography, spacing, borderRadius } from '../../src/theme';
 import { strings } from '../../src/constants/strings';
 import { getAllCategories } from '../../src/data/auth';
 import type { Category } from '../../src/types';
 import ScreenShell from '../../src/components/ui/ScreenShell';
+import RadioButton from '../../src/components/ui/RadioButton';
 import Button from '../../src/components/ui/Button';
 
 const CATEGORY_COLORS: Record<string, { bg: string; icon: string }> = {
@@ -26,7 +25,6 @@ const CATEGORY_COLORS: Record<string, { bg: string; icon: string }> = {
 
 export default function BusinessCategoryScreen() {
   const router = useRouter();
-  const insets = useSafeAreaInsets();
   const params = useLocalSearchParams<{
     name: string;
     description: string;
@@ -58,18 +56,11 @@ export default function BusinessCategoryScreen() {
     });
   };
 
-  if (loading) {
-    return (
-      <View style={[styles.loadingContainer, { paddingTop: insets.top }]}>
-        <ActivityIndicator size="large" color={colors.primary[500]} />
-      </View>
-    );
-  }
-
   return (
     <ScreenShell
       title={strings.businessCategory.title}
       subtitle={strings.businessCategory.subtitle}
+      loading={loading}
       progress={{ current: 2, total: 6 }}
       footer={
         <Button
@@ -96,9 +87,7 @@ export default function BusinessCategoryScreen() {
               onPress={() => setSelectedId(cat.id)}
               activeOpacity={0.7}
             >
-              <View style={styles.radioOuter}>
-                {isSelected && <View style={[styles.radioInner, { backgroundColor: catColors.icon }]} />}
-              </View>
+              <RadioButton selected={isSelected} color={catColors.icon} />
               <Text style={[styles.optionText, isSelected && { fontWeight: typography.fontWeight.semibold }]}>
                 {cat.name}
               </Text>
@@ -111,12 +100,6 @@ export default function BusinessCategoryScreen() {
 }
 
 const styles = StyleSheet.create({
-  loadingContainer: {
-    flex: 1,
-    backgroundColor: colors.background.primary,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
   optionsList: {
     gap: spacing.sm,
   },
@@ -128,21 +111,7 @@ const styles = StyleSheet.create({
     borderColor: colors.gray[200],
     borderRadius: borderRadius.md,
     backgroundColor: colors.background.primary,
-  },
-  radioOuter: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    borderWidth: 2,
-    borderColor: colors.gray[300],
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: spacing.md,
-  },
-  radioInner: {
-    width: 12,
-    height: 12,
-    borderRadius: 6,
+    gap: spacing.md,
   },
   optionText: {
     fontSize: typography.fontSize.base,

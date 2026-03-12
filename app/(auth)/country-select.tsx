@@ -4,10 +4,8 @@ import {
   Text,
   StyleSheet,
   TouchableOpacity,
-  ActivityIndicator,
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, typography, spacing, borderRadius } from '../../src/theme';
 import { strings } from '../../src/constants/strings';
@@ -19,7 +17,6 @@ import Button from '../../src/components/ui/Button';
 
 export default function CountrySelectScreen() {
   const router = useRouter();
-  const insets = useSafeAreaInsets();
   const { role } = useLocalSearchParams<{ role?: string }>();
   const { setUserRole } = useAuth();
 
@@ -56,17 +53,10 @@ export default function CountrySelectScreen() {
     }
   };
 
-  if (loading) {
-    return (
-      <View style={[styles.loadingContainer, { paddingTop: insets.top }]}>
-        <ActivityIndicator size="large" color={colors.primary[500]} />
-      </View>
-    );
-  }
-
   return (
     <ScreenShell
       scrollable={false}
+      loading={loading}
       titleStyle={styles.titleStyle}
       title={strings.countrySelect.title}
       footer={
@@ -129,12 +119,6 @@ export default function CountrySelectScreen() {
 }
 
 const styles = StyleSheet.create({
-  loadingContainer: {
-    flex: 1,
-    backgroundColor: colors.background.primary,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
   titleStyle: {
     textAlign: 'center',
     marginBottom: spacing.xxxl,

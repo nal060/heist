@@ -2,13 +2,10 @@ import { useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
-  TextInput,
   StyleSheet,
   TouchableOpacity,
-  ActivityIndicator,
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors, typography, spacing, borderRadius } from '../src/theme';
 import { strings } from '../src/constants/strings';
 import { updateSurplusBag } from '../src/data/auth';
@@ -17,8 +14,8 @@ import { type BagSize } from '../src/constants/app';
 import type { SurplusBag, BagSizeType } from '../src/types';
 import ScreenShell from '../src/components/ui/ScreenShell';
 import FormField from '../src/components/ui/FormField';
+import CurrencyInput from '../src/components/ui/CurrencyInput';
 import Button from '../src/components/ui/Button';
-import ErrorState from '../src/components/ui/ErrorState';
 
 const SIZES: { key: BagSize; label: string }[] = [
   { key: 'small', label: strings.bagSizeSetup.small },
@@ -28,7 +25,6 @@ const SIZES: { key: BagSize; label: string }[] = [
 
 export default function BusinessEditBagScreen() {
   const router = useRouter();
-  const insets = useSafeAreaInsets();
   const { bagId } = useLocalSearchParams<{ bagId: string }>();
 
   const [bag, setBag] = useState<SurplusBag | null>(null);
@@ -106,25 +102,13 @@ export default function BusinessEditBagScreen() {
     }
   };
 
-  if (loading) {
-    return (
-      <View style={[styles.loadingContainer, { paddingTop: insets.top }]}>
-        <ActivityIndicator size="large" color={colors.primary[500]} />
-      </View>
-    );
-  }
-
-  if (error && !bag) {
-    return (
-      <View style={[styles.loadingContainer, { paddingTop: insets.top }]}>
-        <ErrorState message={error} onRetry={loadBag} />
-      </View>
-    );
-  }
-
   return (
     <ScreenShell
       keyboardAvoiding
+      loading={loading}
+      loadingError={!bag ? error : undefined}
+      onRetry={loadBag}
+      error={!loading && bag && error ? error : undefined}
       footer={
         <Button
           label={strings.businessProfileEdit.save}
@@ -174,36 +158,16 @@ export default function BusinessEditBagScreen() {
 
       {/* Value and Price */}
       <View style={styles.rowFields}>
-        <View style={styles.halfField}>
-          <Text style={styles.label}>{strings.bagSizeSetup.minValue}</Text>
-          <View style={styles.currencyInput}>
-            <Text style={styles.currencyPrefix}>USD</Text>
-            <TextInput style={styles.currencyField} value={value} onChangeText={setValue} keyboardType="decimal-pad" />
-          </View>
-        </View>
-        <View style={styles.halfField}>
-          <Text style={styles.label}>{strings.bagSizeSetup.priceInApp}</Text>
-          <View style={styles.currencyInput}>
-            <Text style={styles.currencyPrefix}>USD</Text>
-            <TextInput style={styles.currencyField} value={price} onChangeText={setPrice} keyboardType="decimal-pad" />
-          </View>
-        </View>
+        <CurrencyInput label={strings.bagSizeSetup.minValue} value={value} onChangeText={setValue} />
+        <CurrencyInput label={strings.bagSizeSetup.priceInApp} value={price} onChangeText={setPrice} />
       </View>
 
       <FormField label={strings.bagQuantitySetup.title} value={quantity} onChangeText={setQuantity} keyboardType="number-pad" />
-
-      {error ? <Text style={styles.errorText}>{error}</Text> : null}
     </ScreenShell>
   );
 }
 
 const styles = StyleSheet.create({
-  loadingContainer: {
-    flex: 1,
-    backgroundColor: colors.background.primary,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
   headerRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -245,29 +209,4 @@ const styles = StyleSheet.create({
   sizeChipText: { fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.medium, color: colors.text.secondary },
   sizeChipTextSelected: { color: colors.primary[600], fontWeight: typography.fontWeight.bold },
   rowFields: { flexDirection: 'row', gap: spacing.md, marginBottom: spacing.xl },
-  halfField: { flex: 1 },
-  currencyInput: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    borderWidth: 1.5,
-    borderColor: colors.gray[300],
-    borderRadius: borderRadius.md,
-    paddingHorizontal: spacing.lg,
-    height: 52,
-    backgroundColor: colors.background.primary,
-  },
-  currencyPrefix: { fontSize: typography.fontSize.sm, color: colors.text.secondary, marginRight: spacing.sm },
-  currencyField: {
-    flex: 1,
-    fontSize: typography.fontSize.base,
-    fontWeight: typography.fontWeight.bold,
-    color: colors.text.primary,
-    paddingVertical: 0,
-  },
-  errorText: {
-    fontSize: typography.fontSize.sm,
-    color: colors.error,
-    textAlign: 'center',
-    marginTop: spacing.md,
-  },
 });

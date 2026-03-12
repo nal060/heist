@@ -1,6 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { View, Text, StyleSheet, ActivityIndicator } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { View, Text, StyleSheet } from 'react-native';
 import { useRouter } from 'expo-router';
 import { colors, typography, spacing } from '../src/theme';
 import { strings } from '../src/constants/strings';
@@ -12,14 +11,12 @@ import type { BagPickupSchedule } from '../src/types';
 import ScreenShell from '../src/components/ui/ScreenShell';
 import DayScheduleEditor, { type DaySchedule } from '../src/components/ui/DayScheduleEditor';
 import Button from '../src/components/ui/Button';
-import ErrorState from '../src/components/ui/ErrorState';
 
 const DEFAULT_START = '17:00';
 const DEFAULT_END = '18:00';
 
 export default function BusinessCalendarScreen() {
   const router = useRouter();
-  const insets = useSafeAreaInsets();
   const { user } = useAuth();
 
   const [bagId, setBagId] = useState<string | null>(null);
@@ -125,26 +122,14 @@ export default function BusinessCalendarScreen() {
     }
   };
 
-  if (loading) {
-    return (
-      <View style={[styles.loadingContainer, { paddingTop: insets.top }]}>
-        <ActivityIndicator size="large" color={colors.primary[500]} />
-      </View>
-    );
-  }
-
-  if (error && !bagId) {
-    return (
-      <View style={[styles.loadingContainer, { paddingTop: insets.top }]}>
-        <ErrorState message={error} onRetry={loadSchedule} />
-      </View>
-    );
-  }
-
   return (
     <ScreenShell
       title={strings.businessCalendar.title}
       subtitle={strings.businessCalendar.calendarDescription}
+      loading={loading}
+      loadingError={!bagId && !loading ? error : undefined}
+      onRetry={loadSchedule}
+      error={!loading && bagId && error ? error : undefined}
       footer={
         <Button
           label={strings.businessProfileEdit.save}
@@ -174,19 +159,11 @@ export default function BusinessCalendarScreen() {
       />
 
       <Text style={styles.hint}>{strings.businessCalendar.tapToEdit}</Text>
-
-      {error ? <Text style={styles.errorText}>{error}</Text> : null}
     </ScreenShell>
   );
 }
 
 const styles = StyleSheet.create({
-  loadingContainer: {
-    flex: 1,
-    backgroundColor: colors.background.primary,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
   legend: {
     flexDirection: 'row',
     gap: spacing.xl,
@@ -211,11 +188,5 @@ const styles = StyleSheet.create({
     color: colors.text.tertiary,
     marginTop: spacing.xl,
     fontStyle: 'italic',
-  },
-  errorText: {
-    fontSize: typography.fontSize.sm,
-    color: colors.error,
-    textAlign: 'center',
-    marginTop: spacing.md,
   },
 });

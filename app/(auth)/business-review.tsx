@@ -4,10 +4,8 @@ import {
   Text,
   StyleSheet,
   TouchableOpacity,
-  ActivityIndicator,
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, typography, spacing, borderRadius, shadows } from '../../src/theme';
 import { strings } from '../../src/constants/strings';
@@ -17,7 +15,6 @@ import Button from '../../src/components/ui/Button';
 
 export default function BusinessReviewScreen() {
   const router = useRouter();
-  const insets = useSafeAreaInsets();
   const { placeId, placeName, placeAddress, countryId } = useLocalSearchParams<{
     placeId: string;
     placeName: string;
@@ -91,18 +88,11 @@ export default function BusinessReviewScreen() {
     });
   };
 
-  if (loading) {
-    return (
-      <View style={[styles.loadingContainer, { paddingTop: insets.top }]}>
-        <ActivityIndicator size="large" color={colors.primary[500]} />
-      </View>
-    );
-  }
-
   return (
     <ScreenShell
       title={strings.businessSearch.reviewTitle}
       subtitle={strings.businessSearch.reviewSubtitle}
+      loading={loading}
       progress={{ current: 1, total: 6 }}
       footer={
         <Button
@@ -145,12 +135,6 @@ export default function BusinessReviewScreen() {
 }
 
 const styles = StyleSheet.create({
-  loadingContainer: {
-    flex: 1,
-    backgroundColor: colors.background.primary,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
   card: {
     borderRadius: borderRadius.lg,
     borderWidth: 1,
