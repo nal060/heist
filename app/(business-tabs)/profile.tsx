@@ -23,7 +23,7 @@ import ErrorState from '../../src/components/ui/ErrorState';
 export default function BusinessProfileScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
-  const { user, signOut } = useAuth();
+  const { user, signOut, deleteAccount } = useAuth();
 
   const [business, setBusiness] = useState<Business | null>(null);
   const [photoUrl, setPhotoUrl] = useState<string | null>(null);
@@ -66,6 +66,28 @@ export default function BusinessProfileScreen() {
           text: strings.common.confirm,
           style: 'destructive',
           onPress: signOut,
+        },
+      ],
+    );
+  };
+
+  const handleDeleteAccount = () => {
+    Alert.alert(
+      strings.common.deleteAccountTitle,
+      strings.common.deleteAccountMessage,
+      [
+        { text: strings.common.cancel, style: 'cancel' },
+        {
+          text: strings.common.deleteAccountConfirm,
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await deleteAccount();
+            } catch (err: unknown) {
+              const message = err instanceof Error ? err.message : strings.common.error;
+              Alert.alert(strings.common.error, message);
+            }
+          },
         },
       ],
     );
@@ -169,6 +191,12 @@ export default function BusinessProfileScreen() {
         <Text style={styles.logoutText}>{strings.businessProfile.logout}</Text>
       </TouchableOpacity>
 
+      {/* Delete account */}
+      <TouchableOpacity style={styles.deleteButton} onPress={handleDeleteAccount}>
+        <Ionicons name="trash-outline" size={22} color={colors.error} />
+        <Text style={styles.deleteText}>{strings.common.deleteAccount}</Text>
+      </TouchableOpacity>
+
       {/* Email */}
       <Text style={styles.email}>{user?.email}</Text>
     </ScrollView>
@@ -252,6 +280,18 @@ const styles = StyleSheet.create({
     marginBottom: spacing.lg,
   },
   logoutText: {
+    fontSize: typography.fontSize.base,
+    color: colors.error,
+    marginLeft: spacing.lg,
+    fontWeight: typography.fontWeight.medium,
+  },
+  deleteButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: spacing.lg,
+    marginBottom: spacing.lg,
+  },
+  deleteText: {
     fontSize: typography.fontSize.base,
     color: colors.error,
     marginLeft: spacing.lg,

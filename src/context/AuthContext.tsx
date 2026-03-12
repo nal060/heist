@@ -12,6 +12,7 @@ interface AuthContextValue {
   signInWithOtp: (email: string) => Promise<void>;
   verifyOtp: (email: string, token: string) => Promise<void>;
   signOut: () => Promise<void>;
+  deleteAccount: () => Promise<void>;
   setUserRole: (role: UserRole) => void;
   setOnboarded: () => void;
 }
@@ -79,6 +80,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setIsOnboarded(false);
   }, []);
 
+  const deleteAccount = useCallback(async () => {
+    if (!session?.user) throw new Error('No user session');
+
+    // Call the SECURITY DEFINER function that deletes the current user
+    // Cascading FKs will remove all related data (businesses, bags, orders, etc.)
+    const { error } = await supabase.rpc('delete_own_account');
+    if (error) throw new Error(error.message);
+
+    await supabase.auth.signOut();
+    setSession(null);
+    setUserRoleState(null);
+    setIsOnboarded(false);
+  }, [session]);
+
   const setUserRole = useCallback((role: UserRole) => {
     setUserRoleState(role);
   }, []);
@@ -98,6 +113,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         signInWithOtp,
         verifyOtp,
         signOut,
+        deleteAccount,
         setUserRole,
         setOnboarded,
       }}

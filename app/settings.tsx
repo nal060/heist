@@ -27,7 +27,7 @@ const SETTINGS_ITEMS: SettingsItem[] = [
 export default function SettingsScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { signOut } = useAuth();
+  const { signOut, deleteAccount } = useAuth();
 
   const handleLogout = () => {
     Alert.alert(
@@ -36,6 +36,28 @@ export default function SettingsScreen() {
       [
         { text: strings.common.cancel, style: 'cancel' },
         { text: strings.common.confirm, style: 'destructive', onPress: signOut },
+      ],
+    );
+  };
+
+  const handleDeleteAccount = () => {
+    Alert.alert(
+      strings.common.deleteAccountTitle,
+      strings.common.deleteAccountMessage,
+      [
+        { text: strings.common.cancel, style: 'cancel' },
+        {
+          text: strings.common.deleteAccountConfirm,
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await deleteAccount();
+            } catch (err: unknown) {
+              const message = err instanceof Error ? err.message : strings.common.error;
+              Alert.alert(strings.common.error, message);
+            }
+          },
+        },
       ],
     );
   };
@@ -68,13 +90,22 @@ export default function SettingsScreen() {
           ))}
         </View>
 
-        {/* Logout */}
+        {/* Logout & Delete */}
         <View style={styles.section}>
           <TouchableOpacity style={styles.settingsRow} onPress={handleLogout}>
             <View style={styles.settingsLeft}>
               <Ionicons name="log-out-outline" size={22} color={colors.error} />
               <Text style={[styles.settingsLabel, styles.dangerText]}>
                 {strings.settings.logout}
+              </Text>
+            </View>
+          </TouchableOpacity>
+          <Divider />
+          <TouchableOpacity style={styles.settingsRow} onPress={handleDeleteAccount}>
+            <View style={styles.settingsLeft}>
+              <Ionicons name="trash-outline" size={22} color={colors.error} />
+              <Text style={[styles.settingsLabel, styles.dangerText]}>
+                {strings.common.deleteAccount}
               </Text>
             </View>
           </TouchableOpacity>

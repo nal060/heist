@@ -163,6 +163,10 @@ export const strings = {
     skip: 'Omitir',
     required: 'Requerido',
     edit: 'Editar',
+    deleteAccount: 'Eliminar cuenta',
+    deleteAccountTitle: 'Eliminar cuenta',
+    deleteAccountMessage: 'Esta accion es permanente y eliminara todos tus datos, incluyendo historial de pedidos, favoritos y configuracion. Si eres negocio, asegurate de haber cobrado todas tus ganancias antes de continuar.',
+    deleteAccountConfirm: 'Eliminar',
   },
 
   // Categories
