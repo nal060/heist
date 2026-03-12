@@ -16,10 +16,10 @@ import { colors, spacing, typography, borderRadius, shadows } from '../src/theme
 import { strings } from '../src/constants/strings';
 import ScreenHeader from '../src/components/ui/ScreenHeader';
 import NoticeCard from '../src/components/ui/NoticeCard';
+import { useAuth } from '../src/context/AuthContext';
 import {
   getOrderByCode,
   collectOrder,
-  DEMO_BUSINESS_ID,
   type DashboardOrder,
 } from '../src/data/business';
 
@@ -37,6 +37,7 @@ function slotColor(state: LookupState): { border: string; text: string } {
 
 export default function CollectScreen() {
   const insets = useSafeAreaInsets();
+  const { businessId } = useAuth();
   const inputRef = useRef<TextInput>(null);
   const [code, setCode] = useState('');
   const [lookupState, setLookupState] = useState<LookupState>('idle');
@@ -57,7 +58,8 @@ export default function CollectScreen() {
     setLookupState('loading');
     setPreviewOrder(null);
     try {
-      const order = await getOrderByCode(DEMO_BUSINESS_ID, upper);
+      if (!businessId) return;
+      const order = await getOrderByCode(businessId, upper);
       if (!order) {
         setLookupState('not_found');
       } else if (order.status !== 'reserved') {

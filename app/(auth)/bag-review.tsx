@@ -20,7 +20,7 @@ import Button from '../../src/components/ui/Button';
 
 export default function BagReviewScreen() {
   const router = useRouter();
-  const { user, setOnboarded } = useAuth();
+  const { user, setOnboarded, setUserRole, setBusinessId } = useAuth();
   const params = useLocalSearchParams<{
     name: string;
     description: string;
@@ -104,6 +104,8 @@ export default function BagReviewScreen() {
         await saveBagSchedule(bag.id, schedule);
       }
 
+      setUserRole('business');
+      setBusinessId(business.id);
       setOnboarded();
 
       if (status === 'active') {

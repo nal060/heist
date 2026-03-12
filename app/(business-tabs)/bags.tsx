@@ -14,21 +14,22 @@ import { useRouter, useFocusEffect } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, spacing, typography, borderRadius, shadows } from '../../src/theme';
+import { useAuth } from '../../src/context/AuthContext';
 import type { BagStatus } from '../../src/types';
 import {
   getBusinessBags,
   cancelBag,
-  DEMO_BUSINESS_ID,
   type BusinessBag,
 } from '../../src/data/business';
 
 // ─── Filter config ────────────────────────────────────────────────────────────
 
-type FilterKey = 'all' | 'active' | 'sold_out' | 'expired' | 'cancelled';
+type FilterKey = 'all' | 'active' | 'draft' | 'sold_out' | 'expired' | 'cancelled';
 
 const FILTERS: { key: FilterKey; label: string }[] = [
   { key: 'all',       label: 'Todos' },
   { key: 'active',    label: 'Activos' },
+  { key: 'draft',     label: 'Pendientes' },
   { key: 'sold_out',  label: 'Agotados' },
   { key: 'expired',   label: 'Expirados' },
   { key: 'cancelled', label: 'Cancelados' },
@@ -167,6 +168,7 @@ function BagsEmptyState({ filter }: { filter: FilterKey }) {
   const messages: Record<FilterKey, string> = {
     all:       "Aún no has creado ninguna bolsa.",
     active:    'No hay bolsas activas en este momento.',
+    draft:     'No hay bolsas pendientes.',
     sold_out:  'No hay bolsas agotadas.',
     expired:   'No hay bolsas vencidas.',
     cancelled: 'No hay bolsas canceladas.',
@@ -184,6 +186,7 @@ function BagsEmptyState({ filter }: { filter: FilterKey }) {
 export default function BagsScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
+  const { businessId } = useAuth();
   const [activeFilter, setActiveFilter] = useState<FilterKey>('all');
   const [allBags, setAllBags] = useState<BusinessBag[]>([]);
   const [loading, setLoading] = useState(true);
@@ -196,17 +199,18 @@ export default function BagsScreen() {
   );
 
   const load = useCallback(async (isRefresh = false) => {
+    if (!businessId) return;
     isRefresh ? setRefreshing(true) : setLoading(true);
     setError(null);
     try {
-      const data = await getBusinessBags(DEMO_BUSINESS_ID);
+      const data = await getBusinessBags(businessId);
       setAllBags(data);
     } catch (e) {
       setError((e as Error).message);
     } finally {
       isRefresh ? setRefreshing(false) : setLoading(false);
     }
-  }, []);
+  }, [businessId]);
 
   // Reload each time the tab comes into focus
   useFocusEffect(

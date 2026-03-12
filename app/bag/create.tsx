@@ -17,7 +17,8 @@ import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, spacing, typography, borderRadius, shadows } from '../../src/theme';
-import { createBag, DEMO_BUSINESS_ID } from '../../src/data/business';
+import { createBag } from '../../src/data/business';
+import { useAuth } from '../../src/context/AuthContext';
 
 // ─── Time slots ───────────────────────────────────────────────────────────────
 
@@ -221,6 +222,7 @@ type FormState = {
 export default function CreateBagScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
+  const { businessId } = useAuth();
   const params = useLocalSearchParams<{
     title?: string;
     originalPrice?: string;
@@ -300,7 +302,8 @@ export default function CreateBagScreen() {
     if (!canPublish || submitting) return;
     setSubmitting(true);
     try {
-      await createBag(DEMO_BUSINESS_ID, {
+      if (!businessId) return;
+      await createBag(businessId, {
         title: form.title.trim(),
         description: form.description.trim() || null,
         originalPrice: origNum,

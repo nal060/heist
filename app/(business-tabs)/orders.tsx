@@ -15,12 +15,12 @@ import { useNavigation } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, spacing, typography, borderRadius, shadows } from '../../src/theme';
+import { useAuth } from '../../src/context/AuthContext';
 import type { OrderStatus } from '../../src/types';
 import {
   getBusinessOrders,
   cancelOrder,
   collectOrder,
-  DEMO_BUSINESS_ID,
   type DashboardOrder,
 } from '../../src/data/business';
 
@@ -188,6 +188,7 @@ function OrdersEmptyState({ filter }: { filter: FilterKey }) {
 export default function OrdersScreen() {
   const insets = useSafeAreaInsets();
   const navigation = useNavigation();
+  const { businessId } = useAuth();
   const [activeFilter, setActiveFilter] = useState<FilterKey>('all');
   const [dateFilter, setDateFilter] = useState<'today' | 'all'>('today');
   const dateFilterRef = useRef<'today' | 'all'>('today');
@@ -201,17 +202,18 @@ export default function OrdersScreen() {
   );
 
   const load = useCallback(async (isRefresh = false) => {
+    if (!businessId) return;
     isRefresh ? setRefreshing(true) : setLoading(true);
     setError(null);
     try {
-      const data = await getBusinessOrders(DEMO_BUSINESS_ID, dateFilterRef.current);
+      const data = await getBusinessOrders(businessId, dateFilterRef.current);
       setAllOrders(data);
     } catch (e) {
       setError((e as Error).message);
     } finally {
       isRefresh ? setRefreshing(false) : setLoading(false);
     }
-  }, []);
+  }, [businessId]);
 
   const handleDateFilter = (f: 'today' | 'all') => {
     dateFilterRef.current = f;

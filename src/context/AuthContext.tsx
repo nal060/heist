@@ -2,11 +2,13 @@ import React, { createContext, useContext, useState, useEffect, useCallback } fr
 import { supabase } from '../lib/supabase';
 import { getUserRole, type UserRole } from '../data/auth';
 import type { Session, User } from '@supabase/supabase-js';
+import type { Business } from '../types';
 
 interface AuthContextValue {
   session: Session | null;
   user: User | null;
   userRole: UserRole | null;
+  businessId: string | null;
   isLoading: boolean;
   isOnboarded: boolean;
   signInWithOtp: (email: string) => Promise<void>;
@@ -14,6 +16,7 @@ interface AuthContextValue {
   signOut: () => Promise<void>;
   deleteAccount: () => Promise<void>;
   setUserRole: (role: UserRole) => void;
+  setBusinessId: (id: string) => void;
   setOnboarded: () => void;
 }
 
@@ -22,6 +25,7 @@ const AuthContext = createContext<AuthContextValue | null>(null);
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [userRole, setUserRoleState] = useState<UserRole | null>(null);
+  const [businessId, setBusinessIdState] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isOnboarded, setIsOnboarded] = useState(false);
 
@@ -30,8 +34,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     supabase.auth.getSession().then(({ data: { session: currentSession } }) => {
       setSession(currentSession);
       if (currentSession?.user) {
-        getUserRole(currentSession.user.id).then(({ role }) => {
+        getUserRole(currentSession.user.id).then(({ role, profile }) => {
           setUserRoleState(role);
+          setBusinessIdState(role === 'business' && profile ? (profile as Business).id : null);
           setIsOnboarded(role !== null);
           setIsLoading(false);
         });
@@ -44,12 +49,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       (_event, newSession) => {
         setSession(newSession);
         if (newSession?.user) {
-          getUserRole(newSession.user.id).then(({ role }) => {
+          getUserRole(newSession.user.id).then(({ role, profile }) => {
             setUserRoleState(role);
+            setBusinessIdState(role === 'business' && profile ? (profile as Business).id : null);
             setIsOnboarded(role !== null);
           });
         } else {
           setUserRoleState(null);
+          setBusinessIdState(null);
           setIsOnboarded(false);
         }
       },
@@ -77,6 +84,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (error) throw new Error(error.message);
     setSession(null);
     setUserRoleState(null);
+    setBusinessIdState(null);
     setIsOnboarded(false);
   }, []);
 
@@ -91,11 +99,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     await supabase.auth.signOut();
     setSession(null);
     setUserRoleState(null);
+    setBusinessIdState(null);
     setIsOnboarded(false);
   }, [session]);
 
   const setUserRole = useCallback((role: UserRole) => {
     setUserRoleState(role);
+  }, []);
+
+  const setBusinessId = useCallback((id: string) => {
+    setBusinessIdState(id);
   }, []);
 
   const setOnboarded = useCallback(() => {
@@ -108,6 +121,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         session,
         user: session?.user ?? null,
         userRole,
+        businessId,
         isLoading,
         isOnboarded,
         signInWithOtp,
@@ -115,6 +129,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         signOut,
         deleteAccount,
         setUserRole,
+        setBusinessId,
         setOnboarded,
       }}
     >
