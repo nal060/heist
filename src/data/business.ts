@@ -382,3 +382,47 @@ export async function cancelBag(bagId: string): Promise<void> {
   if (bagRes.error) throw new Error('No se pudo cancelar la bolsa: ' + bagRes.error.message);
   if (ordersRes.error) throw new Error('No se pudieron cancelar los pedidos: ' + ordersRes.error.message);
 }
+
+// ─── Business bag detail ──────────────────────────────────────────────────────
+
+export async function getBusinessBagById(bagId: string): Promise<{
+  bag: import('../types').SurplusBag;
+  schedule: import('../types').BagPickupSchedule[];
+  photos: import('../types').BagPhoto[];
+} | null> {
+  const { data: bag, error: bagError } = await supabase
+    .from('surplus_bags')
+    .select('*')
+    .eq('id', bagId)
+    .single();
+
+  if (bagError || !bag) return null;
+
+  const [scheduleRes, photosRes] = await Promise.all([
+    supabase
+      .from('bag_pickup_schedule')
+      .select('*')
+      .eq('bag_id', bagId)
+      .eq('is_active', true)
+      .order('day_of_week'),
+    supabase
+      .from('bag_photos')
+      .select('*')
+      .eq('bag_id', bagId)
+      .order('display_order'),
+  ]);
+
+  return {
+    bag: bag as import('../types').SurplusBag,
+    schedule: (scheduleRes.data ?? []) as import('../types').BagPickupSchedule[],
+    photos: (photosRes.data ?? []) as import('../types').BagPhoto[],
+  };
+}
+
+export async function updateBagStatus(bagId: string, status: BagStatus): Promise<void> {
+  const { error } = await supabase
+    .from('surplus_bags')
+    .update({ status, updated_at: new Date().toISOString() })
+    .eq('id', bagId);
+  if (error) throw new Error('No se pudo actualizar el estado: ' + error.message);
+}

@@ -125,18 +125,26 @@ export async function getAllActiveBags(): Promise<BagWithBusiness[]> {
 
     if (error || !data) return undefined;
 
-    const { data: catData } = await supabase
-      .from('business_categories')
-      .select('category:categories(*)')
-      .eq('business_id', data.business_id)
-      .limit(1)
-      .single();
-      
+    const [{ data: catData }, { data: photosData }] = await Promise.all([
+      supabase
+        .from('business_categories')
+        .select('category:categories(*)')
+        .eq('business_id', data.business_id)
+        .limit(1)
+        .single(),
+      supabase
+        .from('bag_photos')
+        .select('*')
+        .eq('bag_id', id)
+        .order('display_order'),
+    ]);
+
     return {
       ...data,
       business: data.business as Business,
       category: (catData?.category as Category[] | undefined)?.[0] ?? null,
       isFavorite: false,
+      photos: (photosData ?? []) as import('../types').BagPhoto[],
     };
   }
 

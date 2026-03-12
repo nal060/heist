@@ -126,13 +126,6 @@ function RootNavigator() {
           }}
         />
         <Stack.Screen
-          name="business-edit-bag"
-          options={{
-            presentation: 'card',
-            animation: 'slide_from_right',
-          }}
-        />
-        <Stack.Screen
           name="business-calendar"
           options={{
             presentation: 'card',

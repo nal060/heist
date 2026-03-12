@@ -105,6 +105,14 @@ export interface BusinessPhoto {
   created_at: string;
 }
 
+export interface BagPhoto {
+  id: string;
+  bag_id: string;
+  photo_url: string;
+  display_order: number;
+  created_at: string;
+}
+
 export interface ConsumerProfile {
   id: string;
   user_id: string;
@@ -191,10 +199,16 @@ export interface BagWithBusiness extends SurplusBag {
   business: Business;
   category: Category | null;
   isFavorite: boolean;
+  photos?: BagPhoto[];
 }
 
 export interface OrderWithDetails extends Order {
   business: Business;
   bag: SurplusBag;
   payment: Payment | null;
+}
+
+export interface BusinessBagDetail extends SurplusBag {
+  schedule: BagPickupSchedule[];
+  photos: BagPhoto[];
 }

@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   View,
   ScrollView,
@@ -13,11 +13,13 @@ import { useNavigation } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
+import ReanimatedSwipeable, { type SwipeableMethods } from 'react-native-gesture-handler/ReanimatedSwipeable';
 import { colors, spacing, typography, borderRadius, shadows } from '../../src/theme';
 import { strings } from '../../src/constants/strings';
 import { useAuth } from '../../src/context/AuthContext';
 import {
   getBusinessDashboard,
+  updateBagStatus,
   type DashboardOrder,
   type DashboardBag,
 } from '../../src/data/business';
@@ -103,54 +105,72 @@ function OrderRow({ order }: { order: DashboardOrder }) {
   );
 }
 
-function ActiveBagCard({ bag }: { bag: DashboardBag }) {
+function ActiveBagCard({ bag, onPress, onDeactivate }: { bag: DashboardBag; onPress: () => void; onDeactivate: () => void }) {
+  const swipeableRef = useRef<SwipeableMethods>(null);
   const pctLeft = bag.total > 0 ? bag.available / bag.total : 0;
   const barColor =
     pctLeft > 0.5 ? '#4CAF50' : pctLeft > 0.2 ? '#FF9800' : colors.error;
   const statusCfg = BAG_STATUS_CONFIG[bag.status];
 
+  const renderLeftActions = () => (
+    <TouchableOpacity
+      style={styles.deactivateAction}
+      onPress={() => {
+        swipeableRef.current?.close();
+        onDeactivate();
+      }}
+    >
+      <Ionicons name="pause-circle-outline" size={20} color={colors.white} />
+      <Text style={styles.deactivateActionText}>{strings.bagForm.deactivate}</Text>
+    </TouchableOpacity>
+  );
+
   return (
-    <View style={styles.bagCard}>
-      {bag.photoUrl && (
-        <Image
-          source={{ uri: bag.photoUrl }}
-          style={styles.bagCardImage}
-          contentFit="cover"
-          transition={200}
-        />
-      )}
-      <View style={styles.bagCardBody}>
-        <View style={styles.bagCardTopRow}>
-          <Text style={styles.bagTitle} numberOfLines={1}>{bag.title}</Text>
-          <View style={[styles.bagStatusBadge, { backgroundColor: statusCfg.bg }]}>
-            <Text style={[styles.bagStatusText, { color: statusCfg.text }]}>{statusCfg.label}</Text>
-          </View>
-        </View>
-
-        {(bag.scheduleDays || bag.scheduleTime) ? (
-          <View style={styles.bagScheduleRow}>
-            <Ionicons name="calendar-outline" size={13} color={colors.text.tertiary} />
-            <Text style={styles.bagScheduleText}>
-              {bag.scheduleDays}{bag.scheduleDays && bag.scheduleTime ? ' · ' : ''}{bag.scheduleTime}
-            </Text>
-          </View>
-        ) : null}
-
-        <View style={styles.bagCardBottomRow}>
-          <View style={styles.progressWrap}>
-            <View style={styles.progressTrack}>
-              <View
-                style={[styles.progressFill, { width: `${pctLeft * 100}%`, backgroundColor: barColor }]}
-              />
+    <ReanimatedSwipeable ref={swipeableRef} renderLeftActions={bag.status === 'active' ? renderLeftActions : undefined}>
+      <TouchableOpacity activeOpacity={0.7} onPress={onPress}>
+        <View style={styles.bagCard}>
+          {bag.photoUrl && (
+            <Image
+              source={{ uri: bag.photoUrl }}
+              style={styles.bagCardImage}
+              contentFit="cover"
+              transition={200}
+            />
+          )}
+          <View style={styles.bagCardBody}>
+            <View style={styles.bagCardTopRow}>
+              <Text style={styles.bagTitle} numberOfLines={1}>{bag.title}</Text>
+              <View style={[styles.bagStatusBadge, { backgroundColor: statusCfg.bg }]}>
+                <Text style={[styles.bagStatusText, { color: statusCfg.text }]}>{statusCfg.label}</Text>
+              </View>
             </View>
-            <Text style={styles.bagAvailText}>
-              {bag.available}/{bag.total}
-            </Text>
+
+            {(bag.scheduleDays || bag.scheduleTime) ? (
+              <View style={styles.bagScheduleRow}>
+                <Ionicons name="calendar-outline" size={13} color={colors.text.tertiary} />
+                <Text style={styles.bagScheduleText}>
+                  {bag.scheduleDays}{bag.scheduleDays && bag.scheduleTime ? ' · ' : ''}{bag.scheduleTime}
+                </Text>
+              </View>
+            ) : null}
+
+            <View style={styles.bagCardBottomRow}>
+              <View style={styles.progressWrap}>
+                <View style={styles.progressTrack}>
+                  <View
+                    style={[styles.progressFill, { width: `${pctLeft * 100}%`, backgroundColor: barColor }]}
+                  />
+                </View>
+                <Text style={styles.bagAvailText}>
+                  {bag.available}/{bag.total}
+                </Text>
+              </View>
+              <Text style={styles.bagPrice}>${bag.price.toFixed(2)}</Text>
+            </View>
           </View>
-          <Text style={styles.bagPrice}>${bag.price.toFixed(2)}</Text>
         </View>
-      </View>
-    </View>
+      </TouchableOpacity>
+    </ReanimatedSwipeable>
   );
 }
 
@@ -309,7 +329,17 @@ export default function DashboardScreen() {
         ) : (
           <View style={styles.bagsListContainer}>
             {data.activeBags.map((bag) => (
-              <ActiveBagCard key={bag.id} bag={bag} />
+              <ActiveBagCard
+                key={bag.id}
+                bag={bag}
+                onPress={() => router.push(`/bag/edit/${bag.id}`)}
+                onDeactivate={async () => {
+                  try {
+                    await updateBagStatus(bag.id, 'draft');
+                    load(true);
+                  } catch {}
+                }}
+              />
             ))}
           </View>
         )}
@@ -635,5 +665,19 @@ const styles = StyleSheet.create({
     fontSize: typography.fontSize.xs,
     color: colors.text.tertiary,
     textAlign: 'center',
+  },
+  deactivateAction: {
+    backgroundColor: '#FF9800',
+    borderRadius: borderRadius.lg,
+    marginRight: spacing.sm,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: spacing.lg,
+    gap: 4,
+  },
+  deactivateActionText: {
+    fontSize: typography.fontSize.xs,
+    fontWeight: typography.fontWeight.semibold,
+    color: colors.white,
   },
 });

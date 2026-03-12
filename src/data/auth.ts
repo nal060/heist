@@ -331,3 +331,65 @@ export async function getBusinessPhotos(businessId: string) {
   if (error) throw new Error(`Error al obtener fotos: ${error.message}`);
   return data;
 }
+
+// --- Bag Photos ---
+
+export async function uploadBagPhoto(
+  bagId: string,
+  uri: string,
+  displayOrder: number,
+): Promise<string> {
+  const ext = uri.split('.').pop() ?? 'jpg';
+  const fileName = `${bagId}/${Date.now()}.${ext}`;
+  const response = await fetch(uri);
+  const blob = await response.blob();
+
+  const { error: uploadError } = await supabase.storage
+    .from('bag-photos')
+    .upload(fileName, blob, { contentType: `image/${ext}`, upsert: false });
+
+  if (uploadError) throw new Error(`Error al subir foto: ${uploadError.message}`);
+
+  const { data: urlData } = supabase.storage
+    .from('bag-photos')
+    .getPublicUrl(fileName);
+
+  const photoUrl = urlData.publicUrl;
+
+  const { error: dbError } = await supabase
+    .from('bag_photos')
+    .insert({
+      bag_id: bagId,
+      photo_url: photoUrl,
+      display_order: displayOrder,
+    });
+
+  if (dbError) throw new Error(`Error al guardar foto: ${dbError.message}`);
+  return photoUrl;
+}
+
+export async function deleteBagPhoto(photoId: string, photoUrl: string): Promise<void> {
+  // Extract file path from URL
+  const match = photoUrl.match(/bag-photos\/(.+)$/);
+  if (match) {
+    await supabase.storage.from('bag-photos').remove([match[1]]);
+  }
+
+  const { error } = await supabase
+    .from('bag_photos')
+    .delete()
+    .eq('id', photoId);
+
+  if (error) throw new Error(`Error al eliminar foto: ${error.message}`);
+}
+
+export async function getBagPhotos(bagId: string) {
+  const { data, error } = await supabase
+    .from('bag_photos')
+    .select('*')
+    .eq('bag_id', bagId)
+    .order('display_order');
+
+  if (error) throw new Error(`Error al obtener fotos: ${error.message}`);
+  return data;
+}

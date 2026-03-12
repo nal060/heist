@@ -49,10 +49,12 @@ function BagCard({
   bag,
   onCancel,
   onRelist,
+  onPress,
 }: {
   bag: BusinessBag;
   onCancel: (id: string) => void;
   onRelist: (bag: BusinessBag) => void;
+  onPress: () => void;
 }) {
   const swipeableRef = useRef<SwipeableMethods>(null);
   const cfg = STATUS_CONFIG[bag.status];
@@ -87,48 +89,50 @@ function BagCard({
   );
 
   const card = (
-    <View style={[styles.bagCard, shadows.sm]}>
-      {/* Title + status */}
-      <View style={styles.cardTopRow}>
-        <View style={styles.cardTitleWrap}>
-          <Text style={styles.cardTitle} numberOfLines={1}>{bag.title}</Text>
-        </View>
-        <View style={[styles.statusBadge, { backgroundColor: cfg.bg }]}>
-          <Text style={[styles.statusText, { color: cfg.text }]}>{cfg.label}</Text>
-        </View>
-      </View>
-
-      {/* Pricing + quantity */}
-      <View style={styles.cardMidRow}>
-        <View style={styles.priceGroup}>
-          <Text style={styles.discountedPrice}>${bag.discountedPrice.toFixed(2)}</Text>
-          <Text style={styles.originalPrice}>${bag.originalPrice.toFixed(2)}</Text>
-          <View style={styles.discountBadge}>
-            <Text style={styles.discountText}>-{discountPct}%</Text>
+    <TouchableOpacity activeOpacity={0.7} onPress={onPress}>
+      <View style={[styles.bagCard, shadows.sm]}>
+        {/* Title + status */}
+        <View style={styles.cardTopRow}>
+          <View style={styles.cardTitleWrap}>
+            <Text style={styles.cardTitle} numberOfLines={1}>{bag.title}</Text>
+          </View>
+          <View style={[styles.statusBadge, { backgroundColor: cfg.bg }]}>
+            <Text style={[styles.statusText, { color: cfg.text }]}>{cfg.label}</Text>
           </View>
         </View>
-        <View style={styles.qtyGroup}>
-          <Ionicons
-            name="people-outline"
-            size={14}
-            color={isAvailable ? colors.text.secondary : colors.error}
-          />
-          <Text style={[styles.qtyText, !isAvailable && styles.qtyEmpty]}>
-            {bag.quantityAvailable}/{bag.quantityTotal}
-          </Text>
-        </View>
-      </View>
 
-      {/* Pickup */}
-      <View style={styles.cardBottomRow}>
-        <View style={styles.pickupInfo}>
-          <Ionicons name="time-outline" size={13} color={colors.text.tertiary} />
-          <Text style={styles.pickupText}>
-            {bag.date} · {bag.pickupStart}–{bag.pickupEnd}
-          </Text>
+        {/* Pricing + quantity */}
+        <View style={styles.cardMidRow}>
+          <View style={styles.priceGroup}>
+            <Text style={styles.discountedPrice}>${bag.discountedPrice.toFixed(2)}</Text>
+            <Text style={styles.originalPrice}>${bag.originalPrice.toFixed(2)}</Text>
+            <View style={styles.discountBadge}>
+              <Text style={styles.discountText}>-{discountPct}%</Text>
+            </View>
+          </View>
+          <View style={styles.qtyGroup}>
+            <Ionicons
+              name="people-outline"
+              size={14}
+              color={isAvailable ? colors.text.secondary : colors.error}
+            />
+            <Text style={[styles.qtyText, !isAvailable && styles.qtyEmpty]}>
+              {bag.quantityAvailable}/{bag.quantityTotal}
+            </Text>
+          </View>
+        </View>
+
+        {/* Pickup */}
+        <View style={styles.cardBottomRow}>
+          <View style={styles.pickupInfo}>
+            <Ionicons name="time-outline" size={13} color={colors.text.tertiary} />
+            <Text style={styles.pickupText}>
+              {bag.date} · {bag.pickupStart}–{bag.pickupEnd}
+            </Text>
+          </View>
         </View>
       </View>
-    </View>
+    </TouchableOpacity>
   );
 
   if (bag.status === 'active') {
@@ -309,7 +313,7 @@ export default function BagsScreen() {
         keyExtractor={(item) => item.id}
         contentContainerStyle={styles.listContent}
         showsVerticalScrollIndicator={false}
-        renderItem={({ item }) => <BagCard bag={item} onCancel={handleCancel} onRelist={handleRelist} />}
+        renderItem={({ item }) => <BagCard bag={item} onCancel={handleCancel} onRelist={handleRelist} onPress={() => router.push(`/bag/edit/${item.id}`)} />}
         ListEmptyComponent={<BagsEmptyState filter={activeFilter} />}
         ItemSeparatorComponent={() => <View style={{ height: spacing.md }} />}
         refreshControl={
