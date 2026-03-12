@@ -1,115 +1,259 @@
-import { useState, useEffect, useCallback } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   View,
-  Text,
+  ScrollView,
   StyleSheet,
+  Text,
+  TouchableOpacity,
   FlatList,
-  RefreshControl,
   ActivityIndicator,
+  RefreshControl,
 } from 'react-native';
+import ReanimatedSwipeable, { type SwipeableMethods } from 'react-native-gesture-handler/ReanimatedSwipeable';
+import { useFocusEffect } from 'expo-router';
+import { useNavigation } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { colors, typography, spacing, borderRadius, shadows } from '../../src/theme';
-import { sharedStyles } from '../../src/styles/shared';
-import { strings } from '../../src/constants/strings';
-import { useAuth } from '../../src/context/AuthContext';
-import { supabase } from '../../src/lib/supabase';
-import ErrorState from '../../src/components/ui/ErrorState';
-import EmptyState from '../../src/components/ui/EmptyState';
-import Badge from '../../src/components/ui/Badge';
+import { Ionicons } from '@expo/vector-icons';
+import { colors, spacing, typography, borderRadius, shadows } from '../../src/theme';
+import type { OrderStatus } from '../../src/types';
+import {
+  getBusinessOrders,
+  cancelOrder,
+  collectOrder,
+  DEMO_BUSINESS_ID,
+  type DashboardOrder,
+} from '../../src/data/business';
 
-interface BusinessOrder {
-  id: string;
-  quantity: number;
-  total_price: number;
-  pickup_code: string;
-  pickup_date: string;
-  pickup_start_time: string;
-  pickup_end_time: string;
-  status: string;
-  created_at: string;
-  surplus_bags: { title: string };
-}
+// ─── Filter config ────────────────────────────────────────────────────────────
 
-const STATUS_VARIANT: Record<string, 'popular' | 'nuevo' | 'remaining' | 'soldOut'> = {
-  reserved: 'remaining',
-  collected: 'popular',
-  cancelled: 'soldOut',
+type FilterKey = 'all' | OrderStatus;
+
+const FILTERS: { key: FilterKey; label: string }[] = [
+  { key: 'all',       label: 'Todo' },
+  { key: 'reserved',  label: 'Reservado' },
+  { key: 'collected', label: 'Recogido' },
+  { key: 'cancelled', label: 'Cancelado' },
+];
+
+const STATUS_CONFIG: Record<OrderStatus, { label: string; bg: string; text: string }> = {
+  reserved:  { label: 'Reservado',  bg: '#FFF8E1', text: '#F57F17' },
+  collected: { label: 'Recogido',   bg: '#E8F5E9', text: '#2E7D32' },
+  cancelled: { label: 'Cancelado',  bg: '#F5F5F5', text: '#9E9E9E' },
 };
 
-export default function BusinessOrdersScreen() {
-  const insets = useSafeAreaInsets();
-  const { user } = useAuth();
+// ─── Order Card ───────────────────────────────────────────────────────────────
 
-  const [orders, setOrders] = useState<BusinessOrder[]>([]);
+function OrderCard({
+  order,
+  onCancel,
+  onCollect,
+}: {
+  order: DashboardOrder;
+  onCancel: (id: string) => void;
+  onCollect: (id: string) => void;
+}) {
+  const swipeableRef = useRef<SwipeableMethods>(null);
+  const cfg = STATUS_CONFIG[order.status];
+
+  const renderLeftActions = () => (
+    <TouchableOpacity
+      style={styles.cancelAction}
+      onPress={() => {
+        swipeableRef.current?.close();
+        onCancel(order.id);
+      }}
+    >
+      <Ionicons name="close-circle-outline" size={20} color={colors.white} />
+      <Text style={styles.cancelActionText}>Cancelar</Text>
+    </TouchableOpacity>
+  );
+
+  const renderRightActions = () => (
+    <TouchableOpacity
+      style={styles.collectAction}
+      onPress={() => {
+        swipeableRef.current?.close();
+        onCollect(order.id);
+      }}
+    >
+      <Ionicons name="bag-check-outline" size={20} color={colors.white} />
+      <Text style={styles.collectActionText}>Recogido</Text>
+    </TouchableOpacity>
+  );
+
+  const card = (
+    <View style={[styles.card, shadows.sm]}>
+      {/* Top row: code + status */}
+      <View style={styles.cardTop}>
+        <View style={styles.codeWrap}>
+          <Text style={styles.codeLabel}>CÓDIGO</Text>
+          <Text style={styles.codeValue}>{order.pickupCode}</Text>
+        </View>
+        <View style={[styles.statusBadge, { backgroundColor: cfg.bg }]}>
+          <Text style={[styles.statusText, { color: cfg.text }]}>{cfg.label}</Text>
+        </View>
+      </View>
+
+      {/* Bag info */}
+      <Text style={styles.bagTitle} numberOfLines={1}>
+        {order.bagTitle}
+        <Text style={styles.qty}> × {order.quantity}</Text>
+      </Text>
+
+      {/* Meta row */}
+      <View style={styles.metaRow}>
+        <View style={styles.metaItem}>
+          <Ionicons name="cash-outline" size={13} color={colors.text.tertiary} />
+          <Text style={styles.metaText}>${order.totalPrice.toFixed(2)}</Text>
+        </View>
+        <View style={styles.metaDot} />
+        <View style={styles.metaItem}>
+          <Ionicons name="calendar-outline" size={13} color={colors.text.tertiary} />
+          <Text style={styles.metaText}>{order.pickupDate}</Text>
+        </View>
+        <View style={styles.metaDot} />
+        <View style={styles.metaItem}>
+          <Ionicons name="time-outline" size={13} color={colors.text.tertiary} />
+          <Text style={styles.metaText}>{order.pickupWindow}</Text>
+        </View>
+      </View>
+    </View>
+  );
+
+  if (order.status === 'reserved') {
+    return (
+      <ReanimatedSwipeable
+        ref={swipeableRef}
+        renderLeftActions={renderLeftActions}
+        renderRightActions={renderRightActions}
+      >
+        {card}
+      </ReanimatedSwipeable>
+    );
+  }
+
+  return card;
+}
+
+// ─── Summary Bar ──────────────────────────────────────────────────────────────
+
+function SummaryBar({ orders }: { orders: DashboardOrder[] }) {
+  const reserved = orders.filter((o) => o.status === 'reserved').length;
+  const collected = orders.filter((o) => o.status === 'collected').length;
+  const revenue = orders
+    .filter((o) => o.status === 'collected')
+    .reduce((sum, o) => sum + o.totalPrice, 0);
+
+  return (
+    <View style={styles.summaryBar}>
+      <View style={styles.summaryItem}>
+        <Text style={styles.summaryValue}>{reserved}</Text>
+        <Text style={styles.summaryLabel}>Reservado</Text>
+      </View>
+      <View style={styles.summaryDivider} />
+      <View style={styles.summaryItem}>
+        <Text style={[styles.summaryValue, collected > 0 && styles.summaryValueGreen]}>
+          {collected}
+        </Text>
+        <Text style={styles.summaryLabel}>Recogido</Text>
+      </View>
+      <View style={styles.summaryDivider} />
+      <View style={styles.summaryItem}>
+        <Text style={styles.summaryValue}>${revenue.toFixed(2)}</Text>
+        <Text style={styles.summaryLabel}>Ingresos</Text>
+      </View>
+    </View>
+  );
+}
+
+// ─── Empty State ──────────────────────────────────────────────────────────────
+
+function OrdersEmptyState({ filter }: { filter: FilterKey }) {
+  const messages: Record<FilterKey, string> = {
+    all:       'Aún no hay pedidos hoy.',
+    reserved:  'No hay pedidos reservados en este momento.',
+    collected: 'Aún no hay pedidos recogidos.',
+    cancelled: 'No hay pedidos cancelados.',
+  };
+  return (
+    <View style={styles.emptyState}>
+      <Ionicons name="receipt-outline" size={48} color={colors.gray[300]} />
+      <Text style={styles.emptyText}>{messages[filter]}</Text>
+    </View>
+  );
+}
+
+// ─── Main Screen ──────────────────────────────────────────────────────────────
+
+export default function OrdersScreen() {
+  const insets = useSafeAreaInsets();
+  const navigation = useNavigation();
+  const [activeFilter, setActiveFilter] = useState<FilterKey>('all');
+  const [dateFilter, setDateFilter] = useState<'today' | 'all'>('today');
+  const dateFilterRef = useRef<'today' | 'all'>('today');
+  const [allOrders, setAllOrders] = useState<DashboardOrder[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const loadOrders = useCallback(async () => {
-    if (!user) return;
+  const filtered = allOrders.filter(
+    (o) => activeFilter === 'all' || o.status === activeFilter
+  );
+
+  const load = useCallback(async (isRefresh = false) => {
+    isRefresh ? setRefreshing(true) : setLoading(true);
     setError(null);
-
     try {
-      const { data: business } = await supabase
-        .from('businesses')
-        .select('id')
-        .eq('user_id', user.id)
-        .single();
-
-      if (!business) throw new Error('Negocio no encontrado');
-
-      const { data, error: fetchError } = await supabase
-        .from('orders')
-        .select('id, quantity, total_price, pickup_code, pickup_date, pickup_start_time, pickup_end_time, status, created_at, surplus_bags(title)')
-        .eq('surplus_bags.business_id', business.id)
-        .order('created_at', { ascending: false });
-
-      if (fetchError) throw new Error(fetchError.message);
-      setOrders((data as unknown as BusinessOrder[]) || []);
-    } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : strings.common.error;
-      setError(message);
+      const data = await getBusinessOrders(DEMO_BUSINESS_ID, dateFilterRef.current);
+      setAllOrders(data);
+    } catch (e) {
+      setError((e as Error).message);
     } finally {
-      setLoading(false);
-      setRefreshing(false);
+      isRefresh ? setRefreshing(false) : setLoading(false);
     }
-  }, [user]);
+  }, []);
 
-  useEffect(() => {
-    loadOrders();
-  }, [loadOrders]);
-
-  const onRefresh = () => {
-    setRefreshing(true);
-    loadOrders();
+  const handleDateFilter = (f: 'today' | 'all') => {
+    dateFilterRef.current = f;
+    setDateFilter(f);
+    load();
   };
 
-  const renderOrder = ({ item }: { item: BusinessOrder }) => {
-    const statusLabel = strings.businessOrders.status[item.status as keyof typeof strings.businessOrders.status] || item.status;
-    const variant = STATUS_VARIANT[item.status] || 'soldOut';
+  // Reload when navigating to this tab
+  useFocusEffect(useCallback(() => { load(); }, [load]));
 
-    return (
-      <View style={styles.orderCard}>
-        <View style={styles.orderHeader}>
-          <Text style={styles.orderTitle} numberOfLines={1}>
-            {item.surplus_bags?.title || 'Pedido'}
-          </Text>
-          <Badge text={statusLabel} variant={variant} />
-        </View>
-        <View style={styles.orderDetails}>
-          <Text style={styles.orderCode}>#{item.pickup_code}</Text>
-          <Text style={styles.orderPrice}>${item.total_price.toFixed(2)}</Text>
-        </View>
-        <Text style={styles.orderTime}>
-          {item.pickup_date} | {item.pickup_start_time.slice(0, 5)} - {item.pickup_end_time.slice(0, 5)}
-        </Text>
-      </View>
-    );
+  // Reload when tapping the already-active tab
+  useEffect(() => {
+    return navigation.addListener('tabPress' as any, () => {
+      if (navigation.isFocused()) load(true);
+    });
+  }, [navigation, load]);
+
+  const handleCancel = async (id: string) => {
+    try {
+      await cancelOrder(id);
+      setAllOrders((prev) =>
+        prev.map((o) => (o.id === id ? { ...o, status: 'cancelled' as OrderStatus } : o))
+      );
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  const handleCollect = async (id: string) => {
+    try {
+      await collectOrder(id);
+      setAllOrders((prev) =>
+        prev.map((o) => (o.id === id ? { ...o, status: 'collected' as OrderStatus } : o))
+      );
+    } catch (e) {
+      console.error(e);
+    }
   };
 
   if (loading) {
     return (
-      <View style={[styles.container, styles.center, { paddingTop: insets.top }]}>
+      <View style={[styles.centered, { paddingTop: insets.top }]}>
         <ActivityIndicator size="large" color={colors.primary[500]} />
       </View>
     );
@@ -117,29 +261,86 @@ export default function BusinessOrdersScreen() {
 
   if (error) {
     return (
-      <View style={[styles.container, styles.center, { paddingTop: insets.top }]}>
-        <ErrorState message={error} onRetry={loadOrders} />
+      <View style={[styles.centered, { paddingTop: insets.top }]}>
+        <Ionicons name="alert-circle-outline" size={40} color={colors.error} />
+        <Text style={styles.errorText}>{error}</Text>
+        <TouchableOpacity style={styles.retryBtn} onPress={() => load()}>
+          <Text style={styles.retryText}>Reintentar</Text>
+        </TouchableOpacity>
       </View>
     );
   }
 
   return (
-    <View style={[styles.container, { paddingTop: insets.top + spacing.lg }]}>
-      <Text style={styles.title}>{strings.businessOrders.title}</Text>
+    <View style={[styles.container, { paddingTop: insets.top }]}>
+      {/* Header */}
+      <View style={styles.header}>
+        <Text style={styles.headerTitle}>Pedidos</Text>
+        <View style={styles.dateToggle}>
+          {(['today', 'all'] as const).map((f) => (
+            <TouchableOpacity
+              key={f}
+              style={[styles.dateToggleBtn, dateFilter === f && styles.dateToggleBtnActive]}
+              onPress={() => handleDateFilter(f)}
+            >
+              <Text style={[styles.dateToggleText, dateFilter === f && styles.dateToggleTextActive]}>
+                {f === 'today' ? 'Hoy' : 'Total'}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+      </View>
 
+      {/* Summary bar */}
+      <SummaryBar orders={allOrders} />
+
+      {/* Filter bar */}
+      <View style={styles.filterBar}>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.filterRow}
+        >
+          {FILTERS.map((f) => {
+            const count =
+              f.key === 'all'
+                ? allOrders.length
+                : allOrders.filter((o) => o.status === f.key).length;
+            const isActive = activeFilter === f.key;
+            return (
+              <TouchableOpacity
+                key={f.key}
+                style={[styles.filterPill, isActive && styles.filterPillActive]}
+                onPress={() => setActiveFilter(f.key)}
+              >
+                <Text style={[styles.filterLabel, isActive && styles.filterLabelActive]}>
+                  {f.label}
+                </Text>
+                <View style={[styles.filterCount, isActive && styles.filterCountActive]}>
+                  <Text style={styles.filterCountText}>{count}</Text>
+                </View>
+              </TouchableOpacity>
+            );
+          })}
+        </ScrollView>
+      </View>
+
+      {/* Order list */}
       <FlatList
-        data={orders}
+        data={filtered}
         keyExtractor={(item) => item.id}
-        renderItem={renderOrder}
         contentContainerStyle={styles.listContent}
+        showsVerticalScrollIndicator={false}
+        renderItem={({ item }) => (
+          <OrderCard order={item} onCancel={handleCancel} onCollect={handleCollect} />
+        )}
+        ListEmptyComponent={<OrdersEmptyState filter={activeFilter} />}
+        ItemSeparatorComponent={() => <View style={{ height: spacing.md }} />}
         refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
-        }
-        ListEmptyComponent={
-          <EmptyState
-            icon="receipt-outline"
-            title={strings.businessOrders.emptyTitle}
-            subtitle={strings.businessOrders.emptySubtitle}
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={() => load(true)}
+            tintColor={colors.primary[500]}
           />
         }
       />
@@ -147,60 +348,281 @@ export default function BusinessOrdersScreen() {
   );
 }
 
+// ─── Styles ───────────────────────────────────────────────────────────────────
+
 const styles = StyleSheet.create({
-  container: sharedStyles.containerNoPadding,
-  center: sharedStyles.center,
-  title: {
+  container: {
+    flex: 1,
+    backgroundColor: colors.background.secondary,
+  },
+
+  centered: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.md,
+    backgroundColor: colors.background.secondary,
+  },
+  errorText: {
+    fontSize: typography.fontSize.sm,
+    color: colors.text.secondary,
+    textAlign: 'center',
+    paddingHorizontal: spacing.xl,
+  },
+  retryBtn: {
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.sm,
+    backgroundColor: colors.primary[500],
+    borderRadius: borderRadius.full,
+  },
+  retryText: {
+    fontSize: typography.fontSize.sm,
+    fontWeight: typography.fontWeight.semibold,
+    color: colors.white,
+  },
+
+  // Header
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: spacing.lg,
+    paddingTop: spacing.lg,
+    paddingBottom: spacing.md,
+    backgroundColor: colors.background.primary,
+  },
+  headerTitle: {
+    fontSize: typography.fontSize.xxl,
+    fontWeight: typography.fontWeight.bold,
+    color: colors.text.primary,
+  },
+  dateToggle: {
+    flexDirection: 'row',
+    backgroundColor: colors.background.tertiary,
+    borderRadius: borderRadius.full,
+    borderWidth: 1,
+    borderColor: colors.gray[200],
+    overflow: 'hidden',
+  },
+  dateToggleBtn: {
+    paddingHorizontal: spacing.md,
+    paddingVertical: 6,
+  },
+  dateToggleBtnActive: {
+    backgroundColor: colors.primary[500],
+  },
+  dateToggleText: {
+    fontSize: typography.fontSize.sm,
+    fontWeight: typography.fontWeight.medium,
+    color: colors.text.secondary,
+  },
+  dateToggleTextActive: {
+    color: colors.white,
+    fontWeight: typography.fontWeight.semibold,
+  },
+
+  // Summary bar
+  summaryBar: {
+    flexDirection: 'row',
+    backgroundColor: colors.background.primary,
+    paddingHorizontal: spacing.lg,
+    paddingBottom: spacing.md,
+    gap: spacing.sm,
+  },
+  summaryItem: {
+    flex: 1,
+    alignItems: 'center',
+    gap: 2,
+  },
+  summaryValue: {
     fontSize: typography.fontSize.xl,
     fontWeight: typography.fontWeight.bold,
     color: colors.text.primary,
-    paddingHorizontal: spacing.xxl,
-    marginBottom: spacing.lg,
   },
-  listContent: {
-    paddingHorizontal: spacing.xxl,
-    paddingBottom: spacing.xxxxl,
+  summaryValueGreen: {
+    color: '#2E7D32',
   },
-  orderCard: {
+  summaryLabel: {
+    fontSize: typography.fontSize.xs,
+    color: colors.text.tertiary,
+  },
+  summaryDivider: {
+    width: 1,
+    backgroundColor: colors.gray[200],
+    marginVertical: spacing.xs,
+  },
+
+  // Filter bar
+  filterBar: {
     backgroundColor: colors.background.primary,
-    borderRadius: borderRadius.md,
-    padding: spacing.lg,
-    marginBottom: spacing.md,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.gray[200],
+  },
+  filterRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md,
+    gap: spacing.sm,
+  },
+  filterPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    borderRadius: borderRadius.full,
+    backgroundColor: colors.background.tertiary,
     borderWidth: 1,
     borderColor: colors.gray[200],
-    ...shadows.sm,
   },
-  orderHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+  filterPillActive: {
+    backgroundColor: colors.primary[50],
+    borderColor: colors.primary[300],
+  },
+  filterLabel: {
+    fontSize: typography.fontSize.sm,
+    fontWeight: typography.fontWeight.medium,
+    color: colors.text.secondary,
+  },
+  filterLabelActive: {
+    color: colors.primary[700],
+    fontWeight: typography.fontWeight.semibold,
+  },
+  filterCount: {
+    backgroundColor: colors.gray[400],
+    borderRadius: borderRadius.full,
+    minWidth: 18,
+    height: 18,
     alignItems: 'center',
-    marginBottom: spacing.sm,
+    justifyContent: 'center',
+    paddingHorizontal: 5,
   },
-  orderTitle: {
-    flex: 1,
+  filterCountActive: {
+    backgroundColor: colors.primary[500],
+  },
+  filterCountText: {
+    fontSize: 10,
+    fontWeight: typography.fontWeight.bold,
+    color: colors.white,
+  },
+
+  // List
+  listContent: {
+    padding: spacing.lg,
+    paddingBottom: spacing.xxxxl,
+  },
+
+  // Order card
+  card: {
+    backgroundColor: colors.background.primary,
+    borderRadius: borderRadius.lg,
+    padding: spacing.lg,
+    gap: spacing.sm,
+  },
+  cardTop: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  codeWrap: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+  },
+  codeLabel: {
+    fontSize: typography.fontSize.xs,
+    fontWeight: typography.fontWeight.bold,
+    color: colors.text.tertiary,
+    letterSpacing: 0.8,
+  },
+  codeValue: {
+    fontSize: typography.fontSize.lg,
+    fontWeight: typography.fontWeight.bold,
+    color: colors.text.primary,
+    letterSpacing: 2,
+  },
+  statusBadge: {
+    borderRadius: borderRadius.full,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 4,
+  },
+  statusText: {
+    fontSize: typography.fontSize.xs,
+    fontWeight: typography.fontWeight.semibold,
+  },
+  bagTitle: {
     fontSize: typography.fontSize.base,
     fontWeight: typography.fontWeight.semibold,
     color: colors.text.primary,
-    marginRight: spacing.sm,
   },
-  orderDetails: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: spacing.xs,
-  },
-  orderCode: {
-    fontSize: typography.fontSize.sm,
-    fontWeight: typography.fontWeight.medium,
-    color: colors.primary[500],
-  },
-  orderPrice: {
-    fontSize: typography.fontSize.md,
-    fontWeight: typography.fontWeight.bold,
-    color: colors.text.primary,
-  },
-  orderTime: {
-    fontSize: typography.fontSize.sm,
+  qty: {
+    fontWeight: typography.fontWeight.regular,
     color: colors.text.secondary,
+  },
+
+  // Meta row
+  metaRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+  },
+  metaItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  metaText: {
+    fontSize: typography.fontSize.xs,
+    color: colors.text.tertiary,
+  },
+  metaDot: {
+    width: 3,
+    height: 3,
+    borderRadius: 1.5,
+    backgroundColor: colors.gray[300],
+  },
+
+  // Swipe actions
+  cancelAction: {
+    backgroundColor: colors.error,
+    borderRadius: borderRadius.lg,
+    marginRight: spacing.sm,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: spacing.lg,
+    gap: 4,
+  },
+  cancelActionText: {
+    fontSize: typography.fontSize.xs,
+    fontWeight: typography.fontWeight.semibold,
+    color: colors.white,
+  },
+  collectAction: {
+    backgroundColor: '#2E7D32',
+    borderRadius: borderRadius.lg,
+    marginLeft: spacing.sm,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: spacing.lg,
+    gap: 4,
+  },
+  collectActionText: {
+    fontSize: typography.fontSize.xs,
+    fontWeight: typography.fontWeight.semibold,
+    color: colors.white,
+  },
+
+  // Empty state
+  emptyState: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: spacing.xxxxl * 2,
+    gap: spacing.md,
+  },
+  emptyText: {
+    fontSize: typography.fontSize.base,
+    color: colors.text.tertiary,
+    textAlign: 'center',
   },
 });

@@ -70,6 +70,13 @@ function RootNavigator() {
           }}
         />
         <Stack.Screen
+          name="bag/create"
+          options={{
+            presentation: 'card',
+            animation: 'slide_from_right',
+          }}
+        />
+        <Stack.Screen
           name="checkout/[bagId]"
           options={{
             presentation: 'card',
@@ -99,6 +106,13 @@ function RootNavigator() {
         />
         <Stack.Screen
           name="order-history"
+          options={{
+            presentation: 'card',
+            animation: 'slide_from_right',
+          }}
+        />
+        <Stack.Screen
+          name="collect"
           options={{
             presentation: 'card',
             animation: 'slide_from_right',

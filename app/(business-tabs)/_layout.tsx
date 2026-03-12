@@ -1,8 +1,8 @@
 import { Tabs } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import { Platform } from 'react-native';
 import { colors } from '../../src/theme';
 import { strings } from '../../src/constants/strings';
-import { Platform } from 'react-native';
 
 type TabIconName = React.ComponentProps<typeof Ionicons>['name'];
 
@@ -28,11 +28,11 @@ export default function BusinessTabLayout() {
       }}
     >
       <Tabs.Screen
-        name="index"
+        name="dashboard"
         options={{
           title: strings.businessTabs.dashboard,
           tabBarIcon: ({ color, size }: { color: string; size: number }) => (
-            <Ionicons name={'home' as TabIconName} size={size} color={color} />
+            <Ionicons name={'grid-outline' as TabIconName} size={size} color={color} />
           ),
         }}
       />
@@ -41,7 +41,7 @@ export default function BusinessTabLayout() {
         options={{
           title: strings.businessTabs.bags,
           tabBarIcon: ({ color, size }: { color: string; size: number }) => (
-            <Ionicons name={'bag-handle' as TabIconName} size={size} color={color} />
+            <Ionicons name={'bag-outline' as TabIconName} size={size} color={color} />
           ),
         }}
       />
@@ -50,7 +50,7 @@ export default function BusinessTabLayout() {
         options={{
           title: strings.businessTabs.orders,
           tabBarIcon: ({ color, size }: { color: string; size: number }) => (
-            <Ionicons name={'receipt' as TabIconName} size={size} color={color} />
+            <Ionicons name={'receipt-outline' as TabIconName} size={size} color={color} />
           ),
         }}
       />
@@ -59,7 +59,7 @@ export default function BusinessTabLayout() {
         options={{
           title: strings.businessTabs.profile,
           tabBarIcon: ({ color, size }: { color: string; size: number }) => (
-            <Ionicons name={'storefront' as TabIconName} size={size} color={color} />
+            <Ionicons name={'storefront-outline' as TabIconName} size={size} color={color} />
           ),
         }}
       />

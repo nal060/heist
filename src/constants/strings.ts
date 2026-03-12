@@ -129,12 +129,9 @@ export const strings = {
     emptyTitle: 'Sin pedidos',
     emptySubtitle: 'Cuando hagas tu primer pedido, aparecera aqui',
     status: {
-      pending: 'Pendiente',
-      confirmed: 'Confirmado',
-      ready: 'Listo',
-      picked_up: 'Recogido',
+      reserved: 'Reservado',
+      collected: 'Recogido',
       cancelled: 'Cancelado',
-      no_show: 'No recogido',
     },
   },
 

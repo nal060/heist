@@ -14,12 +14,9 @@ import { formatRelativeDate } from '../src/utils/formatDate';
 import type { OrderWithDetails, OrderStatus } from '../src/types';
 
 const STATUS_BADGE_VARIANT: Record<OrderStatus, 'popular' | 'nuevo' | 'remaining' | 'soldOut'> = {
-  pending: 'remaining',
-  confirmed: 'nuevo',
-  ready: 'nuevo',
-  picked_up: 'popular',
+  reserved:  'remaining',
+  collected: 'popular',
   cancelled: 'soldOut',
-  no_show: 'soldOut',
 };
 
 export default function OrderHistoryScreen() {
