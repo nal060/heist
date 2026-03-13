@@ -1,623 +1,350 @@
-import React, { useState } from 'react';
-import {
-  View,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  Modal,
-  FlatList,
-  KeyboardAvoidingView,
-  Platform,
-  ActivityIndicator,
-  Alert,
-} from 'react-native';
+import { useState } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, Alert } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { colors, spacing, typography, borderRadius, shadows } from '../../src/theme';
-import { createBag, DEMO_BUSINESS_ID } from '../../src/data/business';
+import { colors, typography, spacing, borderRadius } from '../../src/theme';
+import { strings } from '../../src/constants/strings';
+import { useAuth } from '../../src/context/AuthContext';
+import { createSurplusBag, saveBagSchedule, uploadBagPhoto } from '../../src/data/auth';
+import { BAG_SIZES, DAYS_OF_WEEK, type BagSize } from '../../src/constants/app';
+import type { BagSizeType } from '../../src/types';
+import ScreenShell from '../../src/components/ui/ScreenShell';
+import FormField from '../../src/components/ui/FormField';
+import CurrencyInput from '../../src/components/ui/CurrencyInput';
+import RadioButton from '../../src/components/ui/RadioButton';
+import DayScheduleEditor, { type DaySchedule } from '../../src/components/ui/DayScheduleEditor';
+import Button from '../../src/components/ui/Button';
+import ImagePickerSection, { type PhotoItem } from '../../src/components/ui/ImagePickerSection';
+import { scheduleToEntries } from '../../src/utils/schedule';
 
-// ─── Time slots ───────────────────────────────────────────────────────────────
-
-function generateTimeSlots() {
-  const slots: { label: string; value: string }[] = [];
-  for (let h = 6; h <= 23; h++) {
-    for (const m of [0, 30]) {
-      const hour12 = h % 12 === 0 ? 12 : h % 12;
-      const ampm = h < 12 ? 'AM' : 'PM';
-      const label = `${hour12}:${m === 0 ? '00' : '30'} ${ampm}`;
-      const value = `${String(h).padStart(2, '0')}:${m === 0 ? '00' : '30'}:00`;
-      slots.push({ label, value });
-    }
-  }
-  return slots;
-}
-
-const TIME_SLOTS = generateTimeSlots();
-
-// ─── Date options ─────────────────────────────────────────────────────────────
-
-function getDateOptions() {
-  const today = new Date();
-  const tomorrow = new Date(today);
-  tomorrow.setDate(today.getDate() + 1);
-  const fmt = (d: Date) => d.toISOString().split('T')[0];
-  return [
-{ label: 'Hoy', value: fmt(today) },
-{ label: 'Mañana', value: fmt(tomorrow) },
-  ];
-}
-
-const DATE_OPTIONS = getDateOptions();
-
-// ─── Sub-components ───────────────────────────────────────────────────────────
-
-function FormLabel({ children }: { children: string }) {
-  return <Text style={styles.label}>{children}</Text>;
-}
-
-function FormSection({ title, children }: { title: string; children: React.ReactNode }) {
-  return (
-    <View style={styles.section}>
-      <Text style={styles.sectionTitle}>{title}</Text>
-      {children}
-    </View>
-  );
-}
-
-function FieldError({ message }: { message: string }) {
-  return (
-    <View style={styles.fieldError}>
-      <Ionicons name="alert-circle" size={13} color={colors.error} />
-      <Text style={styles.fieldErrorText}>{message}</Text>
-    </View>
-  );
-}
-
-function TimePicker({
-  label,
-  value,
-  onChange,
-  error,
-}: {
-  label: string;
-  value: string;
-  onChange: (value: string) => void;
-  error?: boolean;
-}) {
-  const [open, setOpen] = useState(false);
-  const selected = TIME_SLOTS.find((s) => s.value === value);
-
-  return (
-    <>
-      <View style={styles.timePickerWrap}>
-        <FormLabel>{label}</FormLabel>
-        <TouchableOpacity
-          style={[styles.timePickerBtn, error && styles.inputErrorBorder]}
-          onPress={() => setOpen(true)}
-        >
-          <Ionicons
-            name="time-outline"
-            size={16}
-            color={error ? colors.error : colors.text.secondary}
-          />
-          <Text style={[styles.timePickerText, !selected && styles.timePlaceholder]}>
-          {selected ? selected.label : 'Selecciona'}
-          </Text>
-          <Ionicons name="chevron-down" size={14} color={colors.text.tertiary} />
-        </TouchableOpacity>
-      </View>
-
-      <Modal visible={open} transparent animationType="slide">
-        <TouchableOpacity
-          style={styles.modalOverlay}
-          activeOpacity={1}
-          onPress={() => setOpen(false)}
-        >
-          <View style={styles.modalSheet}>
-            <View style={styles.modalHandle} />
-            <Text style={styles.modalTitle}>{label}</Text>
-            <FlatList
-              data={TIME_SLOTS}
-              keyExtractor={(item) => item.value}
-              showsVerticalScrollIndicator={false}
-              style={styles.timeList}
-              renderItem={({ item }) => {
-                const isSelected = item.value === value;
-                return (
-                  <TouchableOpacity
-                    style={[styles.timeOption, isSelected && styles.timeOptionSelected]}
-                    onPress={() => {
-                      onChange(item.value);
-                      setOpen(false);
-                    }}
-                  >
-                    <Text
-                      style={[styles.timeOptionText, isSelected && styles.timeOptionTextSelected]}
-                    >
-                      {item.label}
-                    </Text>
-                    {isSelected && (
-                      <Ionicons name="checkmark" size={18} color={colors.primary[500]} />
-                    )}
-                  </TouchableOpacity>
-                );
-              }}
-            />
-          </View>
-        </TouchableOpacity>
-      </Modal>
-    </>
-  );
-}
-
-function QuantityStepper({
-  value,
-  onChange,
-}: {
-  value: number;
-  onChange: (v: number) => void;
-}) {
-  // Local string so the field can be empty while the user is mid-type
-  const [inputVal, setInputVal] = useState(String(value));
-
-  const commit = (raw: string) => {
-    const parsed = parseInt(raw, 10);
-    const clamped = isNaN(parsed) || parsed < 1 ? 1 : Math.min(parsed, 99);
-    onChange(clamped);
-    setInputVal(String(clamped));
-  };
-
-  const handleStepperPress = (next: number) => {
-    onChange(next);
-    setInputVal(String(next));
-  };
-
-  return (
-    <View style={styles.stepper}>
-      <TouchableOpacity
-        style={[styles.stepperBtn, value <= 1 && styles.stepperBtnDisabled]}
-        onPress={() => handleStepperPress(Math.max(1, value - 1))}
-        disabled={value <= 1}
-      >
-        <Ionicons name="remove" size={18} color={value <= 1 ? colors.gray[300] : colors.text.primary} />
-      </TouchableOpacity>
-      <TextInput
-        style={styles.stepperValue}
-        value={inputVal}
-        onChangeText={(t) => setInputVal(t.replace(/[^0-9]/g, ''))}
-        onBlur={() => commit(inputVal)}
-        keyboardType="number-pad"
-        maxLength={2}
-        textAlign="center"
-        selectTextOnFocus
-      />
-      <TouchableOpacity
-        style={[styles.stepperBtn, value >= 99 && styles.stepperBtnDisabled]}
-        onPress={() => handleStepperPress(Math.min(99, value + 1))}
-        disabled={value >= 99}
-      >
-        <Ionicons name="add" size={18} color={value >= 99 ? colors.gray[300] : colors.text.primary} />
-      </TouchableOpacity>
-    </View>
-  );
-}
-
-// ─── Main Screen ──────────────────────────────────────────────────────────────
-
-type FormState = {
-  title: string;
-  description: string;
-  originalPrice: string;
-  discountedPrice: string;
-  date: string;
-  pickupStart: string;
-  pickupEnd: string;
-  quantityTotal: number;
-};
+const SIZES: { key: BagSize; label: string; recommended?: boolean }[] = [
+  { key: 'small', label: strings.bagSizeSetup.small },
+  { key: 'medium', label: strings.bagSizeSetup.medium, recommended: true },
+  { key: 'large', label: strings.bagSizeSetup.large },
+];
 
 export default function CreateBagScreen() {
-  const insets = useSafeAreaInsets();
   const router = useRouter();
+  const { businessId } = useAuth();
   const params = useLocalSearchParams<{
     title?: string;
     originalPrice?: string;
     discountedPrice?: string;
     quantityTotal?: string;
-    pickupStartLabel?: string;
-    pickupEndLabel?: string;
   }>();
 
   const isRelist = !!params.title;
 
   const [submitting, setSubmitting] = useState(false);
-
-  const [form, setForm] = useState<FormState>({
-    title: params.title ?? '',
-    description: '',
-    originalPrice: params.originalPrice ?? '',
-    discountedPrice: params.discountedPrice ?? '',
-    date: DATE_OPTIONS[0].value,
-    pickupStart: params.pickupStartLabel
-      ? TIME_SLOTS.find((s) => s.label === params.pickupStartLabel)?.value ?? ''
-      : '',
-    pickupEnd: params.pickupEndLabel
-      ? TIME_SLOTS.find((s) => s.label === params.pickupEndLabel)?.value ?? ''
-      : '',
-    quantityTotal: params.quantityTotal ? parseInt(params.quantityTotal, 10) : 5,
+  const [selectedSize, setSelectedSize] = useState<BagSizeType>('medium');
+  const [title, setTitle] = useState<string>(params.title ?? strings.bagForm.bagNameDefault);
+  const [description, setDescription] = useState<string>(strings.bagForm.bagDescriptionDefault);
+  const [value, setValue] = useState(params.originalPrice ?? String(BAG_SIZES.medium.value));
+  const [price, setPrice] = useState(params.discountedPrice ?? String(BAG_SIZES.medium.price));
+  const [quantity, setQuantity] = useState(params.quantityTotal ?? '3');
+  const [pendingPhotos, setPendingPhotos] = useState<PhotoItem[]>([]);
+  const [schedule, setSchedule] = useState<Record<string, DaySchedule>>(() => {
+    const state: Record<string, DaySchedule> = {};
+    DAYS_OF_WEEK.forEach((d) => {
+      // Default: weekdays active
+      const isWeekday = !['sat', 'sun'].includes(d.key);
+      state[d.key] = { active: isWeekday, startTime: '17:00', endTime: '18:00' };
+    });
+    return state;
   });
 
-  const set = (key: keyof FormState) => (val: string | number) =>
-    setForm((prev) => ({ ...prev, [key]: val }));
-
-  const setPrice = (key: 'originalPrice' | 'discountedPrice') => (raw: string) => {
-    // Strip everything except digits and decimal point, allow only one "."
-    const cleaned = raw.replace(/[^0-9.]/g, '');
-    const parts = cleaned.split('.');
-    const sanitized = parts.length > 2 ? parts[0] + '.' + parts.slice(1).join('') : cleaned;
-    set(key)(sanitized);
+  const handleSizeSelect = (size: BagSize) => {
+    setSelectedSize(size);
+    setValue(String(BAG_SIZES[size].value));
+    setPrice(String(BAG_SIZES[size].price));
   };
 
-  // ── Derived validation ──────────────────────────────────────────────────────
+  const handleToggleDay = (key: string) => {
+    setSchedule((prev) => ({
+      ...prev,
+      [key]: { ...prev[key], active: !prev[key].active },
+    }));
+  };
 
-  const origNum = parseFloat(form.originalPrice);
-  const discNum = parseFloat(form.discountedPrice);
+  const handleUpdateTime = (key: string, field: 'startTime' | 'endTime', val: string) => {
+    setSchedule((prev) => ({
+      ...prev,
+      [key]: { ...prev[key], [field]: val },
+    }));
+  };
 
-  const hasBothPrices =
-    form.originalPrice !== '' &&
-    form.discountedPrice !== '' &&
-    !isNaN(origNum) &&
-    !isNaN(discNum);
+  const handleEditAll = () => {
+    const firstActive = DAYS_OF_WEEK.find((d) => schedule[d.key].active);
+    if (!firstActive) return;
+    const { startTime, endTime } = schedule[firstActive.key];
+    setSchedule((prev) => {
+      const next = { ...prev };
+      DAYS_OF_WEEK.forEach((d) => {
+        if (next[d.key].active) {
+          next[d.key] = { ...next[d.key], startTime, endTime };
+        }
+      });
+      return next;
+    });
+  };
 
-  const pricingError: string | null = hasBothPrices
-    ? discNum >= origNum
-      ? 'El precio de venta debe ser menor que el precio original.'
-      : null
+  // Validation
+  const valueNum = parseFloat(value);
+  const priceNum = parseFloat(price);
+  const hasBothPrices = !isNaN(valueNum) && !isNaN(priceNum) && value !== '' && price !== '';
+  const pricingError = hasBothPrices && priceNum >= valueNum ? strings.bagForm.pricingError : null;
+  const discountPct = hasBothPrices && priceNum < valueNum
+    ? Math.round((1 - priceNum / valueNum) * 100)
     : null;
+  const canSubmit = title.trim() !== '' && hasBothPrices && !pricingError;
 
-  const timeError: string | null =
-    form.pickupStart && form.pickupEnd && form.pickupEnd <= form.pickupStart
-      ? 'La hora de finalización debe ser posterior a la hora de inicio.'
-      : null;
-
-  const discountPct =
-    hasBothPrices && discNum < origNum
-      ? Math.round((1 - discNum / origNum) * 100)
-      : null;
-
-  // A bag can be published only when all required fields are filled and no errors
-  const canPublish =
-    form.title.trim() !== '' &&
-    hasBothPrices &&
-    pricingError === null &&
-    form.pickupStart !== '' &&
-    form.pickupEnd !== '' &&
-    timeError === null;
-
-  const handlePublish = async () => {
-    if (!canPublish || submitting) return;
+  const handleSubmit = async (status: 'active' | 'draft') => {
+    if (!canSubmit || submitting || !businessId) return;
     setSubmitting(true);
     try {
-      await createBag(DEMO_BUSINESS_ID, {
-        title: form.title.trim(),
-        description: form.description.trim() || null,
-        originalPrice: origNum,
-        discountedPrice: discNum,
-        date: form.date,
-        pickupStartTime: form.pickupStart,
-        pickupEndTime: form.pickupEnd,
-        quantityTotal: form.quantityTotal,
+      const bag = await createSurplusBag({
+        businessId,
+        title: title.trim(),
+        description: description.trim() || undefined,
+        originalPrice: valueNum,
+        discountedPrice: priceNum,
+        value: valueNum,
+        bagSize: selectedSize,
+        quantityTotal: parseInt(quantity, 10) || 3,
+        pickupStartTime: '17:00',
+        pickupEndTime: '18:00',
+        status,
       });
+
+      const entries = scheduleToEntries(schedule);
+      const promises: Promise<unknown>[] = [];
+      if (entries.length > 0) {
+        promises.push(saveBagSchedule(bag.id, entries));
+      }
+      pendingPhotos.forEach((photo, i) => {
+        promises.push(uploadBagPhoto(bag.id, photo.url, i));
+      });
+      if (promises.length > 0) {
+        await Promise.all(promises);
+      }
+
       router.back();
     } catch (e) {
-      Alert.alert('Error', (e as Error).message);
+      Alert.alert(strings.common.error, (e as Error).message);
     } finally {
       setSubmitting(false);
     }
   };
 
   return (
-    <View style={[styles.container, { paddingTop: insets.top }]}>
-      {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
-          <Ionicons name="chevron-back" size={24} color={colors.text.primary} />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>{isRelist ? 'Volver a publicar bolsa' : 'Nueva bolsa'}</Text>
-        <View style={styles.headerRight} />
+    <ScreenShell
+      keyboardAvoiding
+      title={isRelist ? strings.bagForm.relistBag : strings.bagForm.newBag}
+      subtitle={strings.bagNameSetup.subtitle}
+      footer={
+        <View style={styles.footerRow}>
+          <Button
+            label={submitting ? strings.bagForm.savingDraft : strings.bagForm.saveDraft}
+            onPress={() => handleSubmit('draft')}
+            variant="outline"
+            size="lg"
+            loading={submitting}
+            disabled={!canSubmit}
+            style={styles.draftBtn}
+          />
+          <Button
+            label={submitting ? strings.bagForm.publishing : strings.bagForm.publish}
+            onPress={() => handleSubmit('active')}
+            size="lg"
+            loading={submitting}
+            disabled={!canSubmit}
+            style={styles.publishBtn}
+          />
+        </View>
+      }
+    >
+      {/* Size selection */}
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>{strings.bagForm.size}</Text>
+        <View style={styles.sizeRow}>
+          {SIZES.map((size) => {
+            const isSelected = selectedSize === size.key;
+            const sizeData = BAG_SIZES[size.key];
+            return (
+              <TouchableOpacity
+                key={size.key}
+                style={[styles.sizeCard, isSelected && styles.sizeCardSelected]}
+                onPress={() => handleSizeSelect(size.key)}
+                activeOpacity={0.7}
+              >
+                <RadioButton selected={isSelected} />
+                <Text style={[styles.sizeLabel, isSelected && styles.sizeLabelSelected]}>
+                  {size.label}
+                </Text>
+                <Text style={styles.sizeDetail}>
+                  {strings.bagForm.value}: ${sizeData.value.toFixed(2)}
+                </Text>
+                <Text style={styles.sizeDetail}>
+                  {strings.bagForm.priceInApp}: ${sizeData.price.toFixed(2)}
+                </Text>
+                {size.recommended && (
+                  <View style={styles.recommendedBadge}>
+                    <Ionicons name="star" size={10} color={colors.primary[500]} />
+                    <Text style={styles.recommendedText}>{strings.bagSizeSetup.recommendedForYou}</Text>
+                  </View>
+                )}
+              </TouchableOpacity>
+            );
+          })}
+        </View>
       </View>
 
-      <KeyboardAvoidingView
-        style={{ flex: 1 }}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        keyboardVerticalOffset={0}
-      >
-        <ScrollView
-          showsVerticalScrollIndicator={false}
-          contentContainerStyle={styles.scrollContent}
-          keyboardShouldPersistTaps="handled"
-        >
-          {/* Bag Details */}
-          <FormSection title="Detalles de la bolsa">
-            <FormLabel>Nombre de la bolsa *</FormLabel>
-            <TextInput
-              style={styles.input}
-              placeholder="e.g. Bolsa Sorpresa"
-              placeholderTextColor={colors.text.tertiary}
-              value={form.title}
-              onChangeText={set('title')}
-              returnKeyType="next"
-            />
+      {/* Bag details */}
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>{strings.bagForm.bagDetails}</Text>
+        <FormField
+          label={strings.bagForm.bagName}
+          value={title}
+          onChangeText={setTitle}
+          maxLength={200}
+          showCounter
+        />
+        <FormField
+          label={strings.bagForm.bagDescription}
+          value={description}
+          onChangeText={setDescription}
+          multiline
+          maxLength={450}
+          showCounter
+        />
+      </View>
 
-            <FormLabel>Descripción</FormLabel>
-            <TextInput
-              style={[styles.input, styles.inputMultiline]}
-              placeholder="Cuéntale a los clientes qué hay dentro…"
-              placeholderTextColor={colors.text.tertiary}
-              value={form.description}
-              onChangeText={set('description')}
-              multiline
-              numberOfLines={3}
-              textAlignVertical="top"
-            />
-          </FormSection>
-
-          {/* Pricing */}
-          <FormSection title="Precio">
-            <View style={styles.priceRow}>
-              <View style={styles.priceField}>
-                <FormLabel>Precio Original *</FormLabel>
-                <View style={styles.currencyInput}>
-                  <Text style={styles.currencySymbol}>$</Text>
-                  <TextInput
-                    style={styles.currencyTextInput}
-                    placeholder="0.00"
-                    placeholderTextColor={colors.text.tertiary}
-                    value={form.originalPrice}
-                    onChangeText={setPrice('originalPrice')}
-                    keyboardType="decimal-pad"
-                    returnKeyType="next"
-                  />
-                </View>
-              </View>
-
-              <View style={styles.priceField}>
-                <FormLabel>Precio de Venta *</FormLabel>
-                <View style={[styles.currencyInput, pricingError ? styles.inputErrorBorder : null]}>
-                  <Text style={[styles.currencySymbol, pricingError ? styles.errorText : null]}>$</Text>
-                  <TextInput
-                    style={styles.currencyTextInput}
-                    placeholder="0.00"
-                    placeholderTextColor={colors.text.tertiary}
-                    value={form.discountedPrice}
-                    onChangeText={setPrice('discountedPrice')}
-                    keyboardType="decimal-pad"
-                    returnKeyType="done"
-                  />
-                </View>
-              </View>
-            </View>
-
-            {pricingError ? (
-              <FieldError message={pricingError} />
-            ) : discountPct !== null && discountPct > 0 ? (
-              <View style={styles.savingsBanner}>
-                <Ionicons name="pricetag-outline" size={14} color="#2E7D32" />
-                <Text style={styles.savingsText}>
-                  Clientes ahorran {discountPct}% de descuento sobre el precio original
-                </Text>
-              </View>
-            ) : null}
-          </FormSection>
-
-          {/* Pickup */}
-          <FormSection title="Recolección">
-            <FormLabel>Fecha *</FormLabel>
-            <View style={styles.dateRow}>
-              {DATE_OPTIONS.map((opt) => (
-                <TouchableOpacity
-                  key={opt.value}
-                  style={[styles.datePill, form.date === opt.value && styles.datePillActive]}
-                  onPress={() => set('date')(opt.value)}
-                >
-                  <Text
-                    style={[
-                      styles.datePillText,
-                      form.date === opt.value && styles.datePillTextActive,
-                    ]}
-                  >
-                    {opt.label}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-
-            <View style={styles.timeRow}>
-              <View style={styles.timeField}>
-                <TimePicker
-                  label="Hora de Inicio *"
-                  value={form.pickupStart}
-                  onChange={(v) => set('pickupStart')(v)}
-                />
-              </View>
-              <View style={styles.timeSeparator}>
-                <Text style={styles.timeSeparatorText}>→</Text>
-              </View>
-              <View style={styles.timeField}>
-                <TimePicker
-                  label="Hora de Finalización *"
-                  value={form.pickupEnd}
-                  onChange={(v) => set('pickupEnd')(v)}
-                  error={!!timeError}
-                />
-              </View>
-            </View>
-
-            {timeError && <FieldError message={timeError} />}
-          </FormSection>
-
-          {/* Quantity */}
-          <FormSection title="Cantidad">
-            <FormLabel>Numero de bolsas disponibles *</FormLabel>
-            <QuantityStepper value={form.quantityTotal} onChange={(v) => set('quantityTotal')(v)} />
-          </FormSection>
-
-          <View style={{ height: spacing.xxxxl }} />
-        </ScrollView>
-
-        {/* Footer actions */}
-        <View style={[styles.footer, { paddingBottom: insets.bottom + spacing.md }]}>
-          <TouchableOpacity
-            style={[styles.publishBtn, (!canPublish || submitting) && styles.publishBtnDisabled]}
-            onPress={handlePublish}
-            disabled={!canPublish || submitting}
-          >
-            {submitting ? (
-              <ActivityIndicator size="small" color={colors.white} />
-            ) : (
-              <Ionicons name="checkmark-circle-outline" size={18} color={colors.white} />
-            )}
-            <Text style={styles.publishBtnText}>
-              {submitting ? 'Publicando…' : 'Publicar'}
-            </Text>
-          </TouchableOpacity>
+      {/* Pricing */}
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>{strings.bagForm.pricing}</Text>
+        <View style={styles.priceRow}>
+          <CurrencyInput label={strings.bagForm.value} value={value} onChangeText={setValue} />
+          <CurrencyInput label={strings.bagForm.priceInApp} value={price} onChangeText={setPrice} />
         </View>
-      </KeyboardAvoidingView>
-    </View>
+        {pricingError ? (
+          <View style={styles.errorRow}>
+            <Ionicons name="alert-circle" size={13} color={colors.error} />
+            <Text style={styles.errorText}>{pricingError}</Text>
+          </View>
+        ) : discountPct !== null && discountPct > 0 ? (
+          <View style={styles.savingsBanner}>
+            <Ionicons name="pricetag-outline" size={14} color="#2E7D32" />
+            <Text style={styles.savingsText}>
+              {strings.bagForm.savingsMessage.replace('{pct}', String(discountPct))}
+            </Text>
+          </View>
+        ) : null}
+      </View>
+
+      {/* Quantity */}
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>{strings.bagForm.quantity}</Text>
+        <FormField
+          label={strings.bagForm.quantityLabel}
+          value={quantity}
+          onChangeText={(t) => setQuantity(t.replace(/[^0-9]/g, ''))}
+          keyboardType="number-pad"
+        />
+      </View>
+
+      {/* Schedule */}
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>{strings.bagForm.schedule}</Text>
+        <DayScheduleEditor
+          schedule={schedule}
+          onToggleDay={handleToggleDay}
+          onUpdateTime={handleUpdateTime}
+          showEditAll
+          onEditAll={handleEditAll}
+          editAllLabel={strings.bagScheduleSetup.editForAllDays}
+        />
+      </View>
+
+      {/* Photos */}
+      <View style={styles.section}>
+        <ImagePickerSection
+          photos={pendingPhotos}
+          onAdd={(uri) => setPendingPhotos((prev) => [...prev, { id: `pending-${Date.now()}`, url: uri }])}
+          onRemove={(photo) => setPendingPhotos((prev) => prev.filter((p) => p.id !== photo.id))}
+        />
+      </View>
+    </ScreenShell>
   );
 }
 
-// ─── Styles ───────────────────────────────────────────────────────────────────
-
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: colors.background.secondary,
+  section: {
+    marginBottom: spacing.xxl,
   },
-
-  // Header
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.md,
-    backgroundColor: colors.background.primary,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.gray[200],
-  },
-  backBtn: {
-    width: 36,
-    height: 36,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  headerTitle: {
+  sectionTitle: {
     fontSize: typography.fontSize.md,
     fontWeight: typography.fontWeight.bold,
     color: colors.text.primary,
-  },
-  headerRight: {
-    width: 36,
+    marginBottom: spacing.md,
   },
 
-  // Scroll
-  scrollContent: {
-    padding: spacing.lg,
-    gap: spacing.lg,
-  },
-
-  // Section
-  section: {
-    backgroundColor: colors.background.primary,
-    borderRadius: borderRadius.lg,
-    padding: spacing.lg,
-    gap: spacing.sm,
-    ...shadows.sm,
-  },
-  sectionTitle: {
-    fontSize: typography.fontSize.base,
-    fontWeight: typography.fontWeight.bold,
-    color: colors.text.primary,
-    marginBottom: spacing.xs,
-  },
-
-  // Label
-  label: {
-    fontSize: typography.fontSize.sm,
-    fontWeight: typography.fontWeight.medium,
-    color: colors.text.secondary,
-    marginTop: spacing.xs,
-  },
-
-  // Inputs
-  input: {
-    backgroundColor: colors.background.secondary,
-    borderRadius: borderRadius.md,
-    borderWidth: 1,
-    borderColor: colors.gray[200],
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.md,
-    fontSize: typography.fontSize.base,
-    color: colors.text.primary,
-  },
-  inputMultiline: {
-    minHeight: 80,
-    paddingTop: spacing.md,
-  },
-  inputErrorBorder: {
-    borderColor: colors.error,
-    borderWidth: 1.5,
-  },
-  errorText: {
-    color: colors.error,
-  },
-
-  // Inline field error
-  fieldError: {
+  // Size cards
+  sizeRow: {
     flexDirection: 'row',
+    gap: spacing.sm,
+  },
+  sizeCard: {
+    flex: 1,
+    padding: spacing.md,
+    borderRadius: borderRadius.lg,
+    borderWidth: 1.5,
+    borderColor: colors.gray[200],
     alignItems: 'center',
     gap: spacing.xs,
+  },
+  sizeCardSelected: {
+    borderColor: colors.primary[500],
+    backgroundColor: colors.primary[50],
+  },
+  sizeLabel: {
+    fontSize: typography.fontSize.base,
+    fontWeight: typography.fontWeight.semibold,
+    color: colors.text.primary,
+  },
+  sizeLabelSelected: {
+    color: colors.primary[600],
+  },
+  sizeDetail: {
+    fontSize: typography.fontSize.xs,
+    color: colors.text.tertiary,
+  },
+  recommendedBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
     marginTop: spacing.xs,
   },
-  fieldErrorText: {
-    fontSize: typography.fontSize.xs,
-    color: colors.error,
+  recommendedText: {
+    fontSize: 10,
+    color: colors.primary[500],
     fontWeight: typography.fontWeight.medium,
-    flex: 1,
   },
 
-  // Price row
+  // Pricing
   priceRow: {
     flexDirection: 'row',
     gap: spacing.md,
   },
-  priceField: {
-    flex: 1,
-    gap: spacing.xs,
-  },
-  currencyInput: {
+  errorRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: colors.background.secondary,
-    borderRadius: borderRadius.md,
-    borderWidth: 1,
-    borderColor: colors.gray[200],
-    paddingHorizontal: spacing.md,
+    gap: spacing.xs,
+    marginTop: spacing.sm,
   },
-  currencySymbol: {
-    fontSize: typography.fontSize.base,
-    fontWeight: typography.fontWeight.semibold,
-    color: colors.text.secondary,
-    marginRight: 4,
-  },
-  currencyTextInput: {
+  errorText: {
+    fontSize: typography.fontSize.xs,
+    color: colors.error,
     flex: 1,
-    paddingVertical: spacing.md,
-    fontSize: typography.fontSize.base,
-    color: colors.text.primary,
   },
   savingsBanner: {
     flexDirection: 'row',
@@ -626,7 +353,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#E8F5E9',
     borderRadius: borderRadius.md,
     padding: spacing.sm,
-    marginTop: spacing.xs,
+    marginTop: spacing.sm,
   },
   savingsText: {
     fontSize: typography.fontSize.sm,
@@ -634,182 +361,15 @@ const styles = StyleSheet.create({
     fontWeight: typography.fontWeight.medium,
   },
 
-  // Date
-  dateRow: {
-    flexDirection: 'row',
-    gap: spacing.sm,
-  },
-  datePill: {
-    flex: 1,
-    paddingVertical: spacing.md,
-    borderRadius: borderRadius.md,
-    borderWidth: 1.5,
-    borderColor: colors.gray[200],
-    alignItems: 'center',
-    backgroundColor: colors.background.secondary,
-  },
-  datePillActive: {
-    borderColor: colors.primary[500],
-    backgroundColor: colors.primary[50],
-  },
-  datePillText: {
-    fontSize: typography.fontSize.base,
-    fontWeight: typography.fontWeight.medium,
-    color: colors.text.secondary,
-  },
-  datePillTextActive: {
-    color: colors.primary[600],
-    fontWeight: typography.fontWeight.semibold,
-  },
-
-  // Time row
-  timeRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-end',
-    gap: spacing.sm,
-    marginTop: spacing.xs,
-  },
-  timeField: {
-    flex: 1,
-  },
-  timeSeparator: {
-    paddingBottom: spacing.sm,
-  },
-  timeSeparatorText: {
-    fontSize: typography.fontSize.base,
-    color: colors.text.tertiary,
-  },
-
-  // Time picker
-  timePickerWrap: {
-    gap: spacing.xs,
-  },
-  timePickerBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-    backgroundColor: colors.background.secondary,
-    borderRadius: borderRadius.md,
-    borderWidth: 1,
-    borderColor: colors.gray[200],
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.md,
-  },
-  timePickerText: {
-    flex: 1,
-    fontSize: typography.fontSize.base,
-    color: colors.text.primary,
-  },
-  timePlaceholder: {
-    color: colors.text.tertiary,
-  },
-
-  // Time modal
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.4)',
-    justifyContent: 'flex-end',
-  },
-  modalSheet: {
-    backgroundColor: colors.background.primary,
-    borderTopLeftRadius: borderRadius.xl,
-    borderTopRightRadius: borderRadius.xl,
-    paddingTop: spacing.md,
-    maxHeight: '60%',
-  },
-  modalHandle: {
-    width: 36,
-    height: 4,
-    borderRadius: borderRadius.full,
-    backgroundColor: colors.gray[300],
-    alignSelf: 'center',
-    marginBottom: spacing.md,
-  },
-  modalTitle: {
-    fontSize: typography.fontSize.base,
-    fontWeight: typography.fontWeight.bold,
-    color: colors.text.primary,
-    paddingHorizontal: spacing.lg,
-    paddingBottom: spacing.sm,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.gray[200],
-  },
-  timeList: {
-    paddingVertical: spacing.sm,
-  },
-  timeOption: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.md,
-  },
-  timeOptionSelected: {
-    backgroundColor: colors.primary[50],
-  },
-  timeOptionText: {
-    fontSize: typography.fontSize.base,
-    color: colors.text.primary,
-  },
-  timeOptionTextSelected: {
-    fontWeight: typography.fontWeight.semibold,
-    color: colors.primary[600],
-  },
-
-  // Quantity stepper
-  stepper: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    alignSelf: 'flex-start',
-    borderWidth: 1,
-    borderColor: colors.gray[200],
-    borderRadius: borderRadius.md,
-    overflow: 'hidden',
-  },
-  stepperBtn: {
-    width: 44,
-    height: 44,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: colors.background.secondary,
-  },
-  stepperBtnDisabled: {
-    opacity: 0.4,
-  },
-  stepperValue: {
-    width: 52,
-    textAlign: 'center',
-    fontSize: typography.fontSize.md,
-    fontWeight: typography.fontWeight.bold,
-    color: colors.text.primary,
-  },
-
   // Footer
-  footer: {
+  footerRow: {
     flexDirection: 'row',
     gap: spacing.sm,
-    paddingHorizontal: spacing.lg,
-    paddingTop: spacing.md,
-    backgroundColor: colors.background.primary,
-    borderTopWidth: 1,
-    borderTopColor: colors.gray[200],
+  },
+  draftBtn: {
+    flex: 1,
   },
   publishBtn: {
     flex: 2,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: spacing.sm,
-    paddingVertical: spacing.md,
-    borderRadius: borderRadius.md,
-    backgroundColor: colors.primary[500],
-  },
-  publishBtnDisabled: {
-    backgroundColor: colors.gray[300],
-  },
-  publishBtnText: {
-    fontSize: typography.fontSize.base,
-    fontWeight: typography.fontWeight.semibold,
-    color: colors.white,
   },
 });

@@ -2,6 +2,7 @@ import { Tabs } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { Platform } from 'react-native';
 import { colors } from '../../src/theme';
+import { strings } from '../../src/constants/strings';
 
 type TabIconName = React.ComponentProps<typeof Ionicons>['name'];
 
@@ -27,9 +28,13 @@ export default function BusinessTabLayout() {
       }}
     >
       <Tabs.Screen
+        name="index"
+        options={{ href: null }}
+      />
+      <Tabs.Screen
         name="dashboard"
         options={{
-          title: 'Inicio',
+          title: strings.businessTabs.dashboard,
           tabBarIcon: ({ color, size }: { color: string; size: number }) => (
             <Ionicons name={'grid-outline' as TabIconName} size={size} color={color} />
           ),
@@ -38,7 +43,7 @@ export default function BusinessTabLayout() {
       <Tabs.Screen
         name="bags"
         options={{
-          title: 'Mis Bolsas',
+          title: strings.businessTabs.bags,
           tabBarIcon: ({ color, size }: { color: string; size: number }) => (
             <Ionicons name={'bag-outline' as TabIconName} size={size} color={color} />
           ),
@@ -47,7 +52,7 @@ export default function BusinessTabLayout() {
       <Tabs.Screen
         name="orders"
         options={{
-          title: 'Pedidos',
+          title: strings.businessTabs.orders,
           tabBarIcon: ({ color, size }: { color: string; size: number }) => (
             <Ionicons name={'receipt-outline' as TabIconName} size={size} color={color} />
           ),
@@ -56,7 +61,7 @@ export default function BusinessTabLayout() {
       <Tabs.Screen
         name="profile"
         options={{
-          title: 'Negocio',
+          title: strings.businessTabs.profile,
           tabBarIcon: ({ color, size }: { color: string; size: number }) => (
             <Ionicons name={'storefront-outline' as TabIconName} size={size} color={color} />
           ),

@@ -2,10 +2,6 @@ import { supabase } from '../lib/supabase';
 import { formatPickupWindow, formatTime } from '../utils/formatTime';
 import type { OrderStatus, BagStatus } from '../types';
 
-// ─── Constants ────────────────────────────────────────────────────────────────
-
-export const DEMO_BUSINESS_ID = 'b1000000-0000-0000-0000-000000000001';
-
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 export interface DashboardOrder {
@@ -27,6 +23,10 @@ export interface DashboardBag {
   available: number;
   total: number;
   price: number;
+  status: BagStatus;
+  photoUrl: string | null;
+  scheduleDays: string;
+  scheduleTime: string;
 }
 
 export interface BusinessDashboard {
@@ -63,25 +63,40 @@ function relativeTime(isoString: string): string {
 /**
  * Fetches all dashboard data for a business in two parallel round-trips.
  */
+const DAY_ABBREVS = ['dom.', 'lun.', 'mar.', 'mié.', 'jue.', 'vie.', 'sáb.'];
+
+function formatScheduleSummary(
+  scheduleRows: { day_of_week: number; start_time: string; end_time: string }[]
+): { days: string; time: string } {
+  if (scheduleRows.length === 0) return { days: '', time: '' };
+  const sorted = [...scheduleRows].sort((a, b) => a.day_of_week - b.day_of_week);
+  const days = sorted.map((s) => DAY_ABBREVS[s.day_of_week] ?? '').join(', ');
+  const time = formatPickupWindow(sorted[0].start_time, sorted[0].end_time);
+  return { days, time };
+}
+
 export async function getBusinessDashboard(businessId: string): Promise<BusinessDashboard> {
   const today = new Date().toISOString().split('T')[0];
 
-  // Round-trip 1: profile + active bags only (surplus_bags_date_status_idx)
-  const [{ data: business, error: bizError }, { data: activeBagsData, error: bagsError }] =
+  // Round-trip 1: profile + visible bags (active + draft)
+  const [{ data: business, error: bizError }, { data: visibleBagsData, error: bagsError }] =
     await Promise.all([
       supabase.from('businesses').select('name').eq('id', businessId).single(),
       supabase
         .from('surplus_bags')
-        .select('id, title, quantity_available, quantity_total, discounted_price')
+        .select('id, title, quantity_available, quantity_total, discounted_price, status, pickup_start_time, pickup_end_time')
         .eq('business_id', businessId)
-        .eq('status', 'active'),
+        .in('status', ['active', 'draft']),
     ]);
 
   if (bizError) throw new Error('No se pudo cargar el negocio: ' + bizError.message);
   if (bagsError) throw new Error('No se pudieron cargar las bolsas: ' + bagsError.message);
 
-  // Round-trip 2: today's stats + recent orders (reuses getBusinessOrders for consistent bag title logic)
-  const [todayRes, recentOrders] = await Promise.all([
+  const bags = visibleBagsData ?? [];
+  const bagIds = bags.map((b) => b.id);
+
+  // Round-trip 2: today's stats + recent orders + bag schedules + business photo
+  const [todayRes, recentOrders, scheduleRes, photoRes] = await Promise.all([
     supabase
       .from('orders')
       .select('total_price, status, surplus_bags!inner(business_id)')
@@ -89,29 +104,63 @@ export async function getBusinessDashboard(businessId: string): Promise<Business
       .eq('pickup_date', today)
       .neq('status', 'cancelled'),
     getBusinessOrders(businessId, 'all'),
+    bagIds.length > 0
+      ? supabase
+          .from('bag_pickup_schedule')
+          .select('bag_id, day_of_week, start_time, end_time')
+          .in('bag_id', bagIds)
+          .eq('is_active', true)
+      : Promise.resolve({ data: [], error: null }),
+    supabase
+      .from('business_photos')
+      .select('photo_url')
+      .eq('business_id', businessId)
+      .eq('is_selected', true)
+      .order('display_order')
+      .limit(1),
   ]);
 
   if (todayRes.error) throw new Error('No se pudieron cargar los pedidos: ' + todayRes.error.message);
 
   const todayOrders = todayRes.data ?? [];
+  const schedules = (scheduleRes.data ?? []) as { bag_id: string; day_of_week: number; start_time: string; end_time: string }[];
+  const businessPhoto = (photoRes.data ?? [])[0]?.photo_url ?? null;
+
+  // Group schedules by bag_id
+  const scheduleByBag = new Map<string, typeof schedules>();
+  for (const s of schedules) {
+    const arr = scheduleByBag.get(s.bag_id) ?? [];
+    arr.push(s);
+    scheduleByBag.set(s.bag_id, arr);
+  }
+
+  const activeBagsCount = bags.filter((b) => b.status === 'active').length;
 
   return {
     businessName: business?.name ?? 'Mi Negocio',
     stats: {
-      activeBags: (activeBagsData ?? []).length,
+      activeBags: activeBagsCount,
       ordersToday: todayOrders.length,
       revenueToday: todayOrders
         .filter((o) => o.status === 'collected')
         .reduce((sum, o) => sum + Number(o.total_price), 0),
     },
     recentOrders: recentOrders.slice(0, 10),
-    activeBags: (activeBagsData ?? []).map((b) => ({
-      id: b.id,
-      title: b.title,
-      available: b.quantity_available,
-      total: b.quantity_total,
-      price: Number(b.discounted_price),
-    })),
+    activeBags: bags.map((b) => {
+      const bagSchedule = scheduleByBag.get(b.id) ?? [];
+      const { days, time } = formatScheduleSummary(bagSchedule);
+      return {
+        id: b.id,
+        title: b.title,
+        available: b.quantity_available,
+        total: b.quantity_total,
+        price: Number(b.discounted_price),
+        status: b.status as BagStatus,
+        photoUrl: businessPhoto,
+        scheduleDays: days,
+        scheduleTime: time,
+      };
+    }),
   };
 }
 
@@ -332,4 +381,48 @@ export async function cancelBag(bagId: string): Promise<void> {
   ]);
   if (bagRes.error) throw new Error('No se pudo cancelar la bolsa: ' + bagRes.error.message);
   if (ordersRes.error) throw new Error('No se pudieron cancelar los pedidos: ' + ordersRes.error.message);
+}
+
+// ─── Business bag detail ──────────────────────────────────────────────────────
+
+export async function getBusinessBagById(bagId: string): Promise<{
+  bag: import('../types').SurplusBag;
+  schedule: import('../types').BagPickupSchedule[];
+  photos: import('../types').BagPhoto[];
+} | null> {
+  const { data: bag, error: bagError } = await supabase
+    .from('surplus_bags')
+    .select('*')
+    .eq('id', bagId)
+    .single();
+
+  if (bagError || !bag) return null;
+
+  const [scheduleRes, photosRes] = await Promise.all([
+    supabase
+      .from('bag_pickup_schedule')
+      .select('*')
+      .eq('bag_id', bagId)
+      .eq('is_active', true)
+      .order('day_of_week'),
+    supabase
+      .from('bag_photos')
+      .select('*')
+      .eq('bag_id', bagId)
+      .order('display_order'),
+  ]);
+
+  return {
+    bag: bag as import('../types').SurplusBag,
+    schedule: (scheduleRes.data ?? []) as import('../types').BagPickupSchedule[],
+    photos: (photosRes.data ?? []) as import('../types').BagPhoto[],
+  };
+}
+
+export async function updateBagStatus(bagId: string, status: BagStatus): Promise<void> {
+  const { error } = await supabase
+    .from('surplus_bags')
+    .update({ status, updated_at: new Date().toISOString() })
+    .eq('id', bagId);
+  if (error) throw new Error('No se pudo actualizar el estado: ' + error.message);
 }

@@ -14,32 +14,34 @@ import { useRouter, useFocusEffect } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, spacing, typography, borderRadius, shadows } from '../../src/theme';
+import { useAuth } from '../../src/context/AuthContext';
 import type { BagStatus } from '../../src/types';
 import {
   getBusinessBags,
   cancelBag,
-  DEMO_BUSINESS_ID,
   type BusinessBag,
 } from '../../src/data/business';
+import { strings } from '../../src/constants/strings';
 
 // ─── Filter config ────────────────────────────────────────────────────────────
 
-type FilterKey = 'all' | 'active' | 'sold_out' | 'expired' | 'cancelled';
+type FilterKey = 'all' | 'active' | 'draft' | 'sold_out' | 'expired' | 'cancelled';
 
 const FILTERS: { key: FilterKey; label: string }[] = [
-  { key: 'all',       label: 'Todos' },
-  { key: 'active',    label: 'Activos' },
-  { key: 'sold_out',  label: 'Agotados' },
-  { key: 'expired',   label: 'Expirados' },
-  { key: 'cancelled', label: 'Cancelados' },
+  { key: 'all',       label: strings.businessBags.filters.all },
+  { key: 'active',    label: strings.businessBags.filters.active },
+  { key: 'draft',     label: strings.businessBags.filters.draft },
+  { key: 'sold_out',  label: strings.businessBags.filters.sold_out },
+  { key: 'expired',   label: strings.businessBags.filters.expired },
+  { key: 'cancelled', label: strings.businessBags.filters.cancelled },
 ];
 
 const STATUS_CONFIG: Record<BagStatus, { label: string; bg: string; text: string }> = {
-  active:    { label: 'Activo',    bg: '#E8F5E9', text: '#2E7D32' },
-  draft:     { label: 'Borrador',  bg: '#F5F5F5', text: '#757575' },
-  sold_out:  { label: 'Agotado',   bg: '#FFF8E1', text: '#F57F17' },
-  expired:   { label: 'Expirado',  bg: '#FFEBEE', text: '#C62828' },
-  cancelled: { label: 'Cancelado', bg: '#F5F5F5', text: '#9E9E9E' },
+  active:    { label: strings.businessBags.statusLabels.active,    bg: '#E8F5E9', text: '#2E7D32' },
+  draft:     { label: strings.businessBags.statusLabels.draft,     bg: '#F5F5F5', text: '#757575' },
+  sold_out:  { label: strings.businessBags.statusLabels.sold_out,  bg: '#FFF8E1', text: '#F57F17' },
+  expired:   { label: strings.businessBags.statusLabels.expired,   bg: '#FFEBEE', text: '#C62828' },
+  cancelled: { label: strings.businessBags.statusLabels.cancelled, bg: '#F5F5F5', text: '#9E9E9E' },
 };
 
 // ─── Bag Card ─────────────────────────────────────────────────────────────────
@@ -48,10 +50,12 @@ function BagCard({
   bag,
   onCancel,
   onRelist,
+  onPress,
 }: {
   bag: BusinessBag;
   onCancel: (id: string) => void;
   onRelist: (bag: BusinessBag) => void;
+  onPress: () => void;
 }) {
   const swipeableRef = useRef<SwipeableMethods>(null);
   const cfg = STATUS_CONFIG[bag.status];
@@ -68,7 +72,7 @@ function BagCard({
       }}
     >
       <Ionicons name="close-circle-outline" size={20} color={colors.white} />
-      <Text style={styles.cancelActionText}>Cancelar</Text>
+      <Text style={styles.cancelActionText}>{strings.businessBags.cancelAction}</Text>
     </TouchableOpacity>
   );
 
@@ -81,53 +85,55 @@ function BagCard({
       }}
     >
       <Ionicons name="refresh-outline" size={20} color={colors.white} />
-      <Text style={styles.relistActionText}>Volver a publicar</Text>
+      <Text style={styles.relistActionText}>{strings.businessBags.relistAction}</Text>
     </TouchableOpacity>
   );
 
   const card = (
-    <View style={[styles.bagCard, shadows.sm]}>
-      {/* Title + status */}
-      <View style={styles.cardTopRow}>
-        <View style={styles.cardTitleWrap}>
-          <Text style={styles.cardTitle} numberOfLines={1}>{bag.title}</Text>
-        </View>
-        <View style={[styles.statusBadge, { backgroundColor: cfg.bg }]}>
-          <Text style={[styles.statusText, { color: cfg.text }]}>{cfg.label}</Text>
-        </View>
-      </View>
-
-      {/* Pricing + quantity */}
-      <View style={styles.cardMidRow}>
-        <View style={styles.priceGroup}>
-          <Text style={styles.discountedPrice}>${bag.discountedPrice.toFixed(2)}</Text>
-          <Text style={styles.originalPrice}>${bag.originalPrice.toFixed(2)}</Text>
-          <View style={styles.discountBadge}>
-            <Text style={styles.discountText}>-{discountPct}%</Text>
+    <TouchableOpacity activeOpacity={0.7} onPress={onPress}>
+      <View style={[styles.bagCard, shadows.sm]}>
+        {/* Title + status */}
+        <View style={styles.cardTopRow}>
+          <View style={styles.cardTitleWrap}>
+            <Text style={styles.cardTitle} numberOfLines={1}>{bag.title}</Text>
+          </View>
+          <View style={[styles.statusBadge, { backgroundColor: cfg.bg }]}>
+            <Text style={[styles.statusText, { color: cfg.text }]}>{cfg.label}</Text>
           </View>
         </View>
-        <View style={styles.qtyGroup}>
-          <Ionicons
-            name="people-outline"
-            size={14}
-            color={isAvailable ? colors.text.secondary : colors.error}
-          />
-          <Text style={[styles.qtyText, !isAvailable && styles.qtyEmpty]}>
-            {bag.quantityAvailable}/{bag.quantityTotal}
-          </Text>
-        </View>
-      </View>
 
-      {/* Pickup */}
-      <View style={styles.cardBottomRow}>
-        <View style={styles.pickupInfo}>
-          <Ionicons name="time-outline" size={13} color={colors.text.tertiary} />
-          <Text style={styles.pickupText}>
-            {bag.date} · {bag.pickupStart}–{bag.pickupEnd}
-          </Text>
+        {/* Pricing + quantity */}
+        <View style={styles.cardMidRow}>
+          <View style={styles.priceGroup}>
+            <Text style={styles.discountedPrice}>${bag.discountedPrice.toFixed(2)}</Text>
+            <Text style={styles.originalPrice}>${bag.originalPrice.toFixed(2)}</Text>
+            <View style={styles.discountBadge}>
+              <Text style={styles.discountText}>-{discountPct}%</Text>
+            </View>
+          </View>
+          <View style={styles.qtyGroup}>
+            <Ionicons
+              name="people-outline"
+              size={14}
+              color={isAvailable ? colors.text.secondary : colors.error}
+            />
+            <Text style={[styles.qtyText, !isAvailable && styles.qtyEmpty]}>
+              {bag.quantityAvailable}/{bag.quantityTotal}
+            </Text>
+          </View>
+        </View>
+
+        {/* Pickup */}
+        <View style={styles.cardBottomRow}>
+          <View style={styles.pickupInfo}>
+            <Ionicons name="time-outline" size={13} color={colors.text.tertiary} />
+            <Text style={styles.pickupText}>
+              {bag.date} · {bag.pickupStart}–{bag.pickupEnd}
+            </Text>
+          </View>
         </View>
       </View>
-    </View>
+    </TouchableOpacity>
   );
 
   if (bag.status === 'active') {
@@ -163,13 +169,14 @@ function BagCard({
 
 // ─── Empty State ──────────────────────────────────────────────────────────────
 
-function EmptyState({ filter }: { filter: FilterKey }) {
+function BagsEmptyState({ filter }: { filter: FilterKey }) {
   const messages: Record<FilterKey, string> = {
-    all:       "Aún no has creado ninguna bolsa.",
-    active:    'No hay bolsas activas en este momento.',
-    sold_out:  'No hay bolsas agotadas.',
-    expired:   'No hay bolsas vencidas.',
-    cancelled: 'No hay bolsas canceladas.',
+    all:       strings.businessBags.emptyMessages.all,
+    active:    strings.businessBags.emptyMessages.active,
+    draft:     strings.businessBags.emptyMessages.draft,
+    sold_out:  strings.businessBags.emptyMessages.sold_out,
+    expired:   strings.businessBags.emptyMessages.expired,
+    cancelled: strings.businessBags.emptyMessages.cancelled,
   };
   return (
     <View style={styles.emptyState}>
@@ -184,6 +191,7 @@ function EmptyState({ filter }: { filter: FilterKey }) {
 export default function BagsScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
+  const { businessId } = useAuth();
   const [activeFilter, setActiveFilter] = useState<FilterKey>('all');
   const [allBags, setAllBags] = useState<BusinessBag[]>([]);
   const [loading, setLoading] = useState(true);
@@ -196,17 +204,18 @@ export default function BagsScreen() {
   );
 
   const load = useCallback(async (isRefresh = false) => {
+    if (!businessId) return;
     isRefresh ? setRefreshing(true) : setLoading(true);
     setError(null);
     try {
-      const data = await getBusinessBags(DEMO_BUSINESS_ID);
+      const data = await getBusinessBags(businessId);
       setAllBags(data);
     } catch (e) {
       setError((e as Error).message);
     } finally {
       isRefresh ? setRefreshing(false) : setLoading(false);
     }
-  }, []);
+  }, [businessId]);
 
   // Reload each time the tab comes into focus
   useFocusEffect(
@@ -222,7 +231,6 @@ export default function BagsScreen() {
       );
     } catch (e) {
       // TODO: surface error to user
-      console.error(e);
     }
   };
   const handleRelist = (bag: BusinessBag) =>
@@ -252,7 +260,7 @@ export default function BagsScreen() {
         <Ionicons name="alert-circle-outline" size={40} color={colors.error} />
         <Text style={styles.errorText}>{error}</Text>
         <TouchableOpacity style={styles.retryBtn} onPress={() => load()}>
-          <Text style={styles.retryText}>Reintentar</Text>
+          <Text style={styles.retryText}>{strings.common.retry}</Text>
         </TouchableOpacity>
       </View>
     );
@@ -262,7 +270,7 @@ export default function BagsScreen() {
     <View style={[styles.container, { paddingTop: insets.top }]}>
       {/* Header */}
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>Mis Bolsos</Text>
+        <Text style={styles.headerTitle}>{strings.businessBags.headerTitle}</Text>
         <TouchableOpacity style={styles.addBtn} onPress={handleCreate}>
           <Ionicons name="add" size={20} color={colors.white} />
         </TouchableOpacity>
@@ -305,8 +313,8 @@ export default function BagsScreen() {
         keyExtractor={(item) => item.id}
         contentContainerStyle={styles.listContent}
         showsVerticalScrollIndicator={false}
-        renderItem={({ item }) => <BagCard bag={item} onCancel={handleCancel} onRelist={handleRelist} />}
-        ListEmptyComponent={<EmptyState filter={activeFilter} />}
+        renderItem={({ item }) => <BagCard bag={item} onCancel={handleCancel} onRelist={handleRelist} onPress={() => router.push(`/bag/edit/${item.id}`)} />}
+        ListEmptyComponent={<BagsEmptyState filter={activeFilter} />}
         ItemSeparatorComponent={() => <View style={{ height: spacing.md }} />}
         refreshControl={
           <RefreshControl

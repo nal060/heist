@@ -7,6 +7,7 @@ import {
   TouchableOpacity,
   Dimensions,
   ActivityIndicator,
+  FlatList,
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -37,6 +38,7 @@ export default function BagDetailScreen() {
   const [bag, setBag] = useState<BagWithBusiness | undefined>(undefined);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
+  const [activeImageIndex, setActiveImageIndex] = useState(0);
 
   const loadBag = useCallback(() => {
     setLoading(true);
@@ -78,6 +80,10 @@ export default function BagDetailScreen() {
   const favorite = isFavorite(bag.business_id);
   const discount = getDiscountPercentage(bag.original_price, bag.discounted_price);
   const isAvailable = bag.status === 'active' && bag.quantity_available > 0;
+
+  const heroImages = bag.photos && bag.photos.length > 0
+    ? bag.photos.map((p) => p.photo_url)
+    : [bag.business?.photo_url ?? 'https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=800&h=600&fit=crop'];
   const reviewBars = [
     { label: strings.bagDetail.ratingCategories.pickup, value: 0.85 },
     { label: strings.bagDetail.ratingCategories.quality, value: 0.78 },
@@ -88,13 +94,26 @@ export default function BagDetailScreen() {
   return (
     <View style={styles.container}>
       <ScrollView showsVerticalScrollIndicator={false} bounces={false}>
-        {/* Hero Image */}
+        {/* Hero Image(s) */}
         <View style={styles.heroContainer}>
-          <Image
-            source={{ uri: bag.business?.photo_url ?? 'https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=800&h=600&fit=crop' }}
-            style={styles.heroImage}
-            contentFit="cover"
-            transition={300}
+          <FlatList
+            data={heroImages}
+            horizontal
+            pagingEnabled
+            showsHorizontalScrollIndicator={false}
+            onMomentumScrollEnd={(e) => {
+              const index = Math.round(e.nativeEvent.contentOffset.x / SCREEN_WIDTH);
+              setActiveImageIndex(index);
+            }}
+            keyExtractor={(_, i) => String(i)}
+            renderItem={({ item }) => (
+              <Image
+                source={{ uri: item }}
+                style={styles.heroImage}
+                contentFit="cover"
+                transition={300}
+              />
+            )}
           />
           <View style={styles.heroOverlay} />
 
@@ -120,6 +139,14 @@ export default function BagDetailScreen() {
           {discount > 0 && (
             <View style={styles.discountBadgeContainer}>
               <Badge text={`-${discount}%`} variant="discount" />
+            </View>
+          )}
+
+          {heroImages.length > 1 && (
+            <View style={styles.dotContainer}>
+              {heroImages.map((_, i) => (
+                <View key={i} style={[styles.dot, i === activeImageIndex && styles.dotActive]} />
+              ))}
             </View>
           )}
         </View>
@@ -268,8 +295,8 @@ const styles = StyleSheet.create({
     position: 'relative',
   },
   heroImage: {
-    width: '100%',
-    height: '100%',
+    width: SCREEN_WIDTH,
+    height: IMAGE_HEIGHT,
   },
   heroOverlay: {
     position: 'absolute',
@@ -299,6 +326,22 @@ const styles = StyleSheet.create({
     position: 'absolute',
     bottom: spacing.md,
     left: spacing.lg,
+  },
+  dotContainer: {
+    position: 'absolute',
+    bottom: spacing.sm,
+    alignSelf: 'center',
+    flexDirection: 'row',
+    gap: 6,
+  },
+  dot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: 'rgba(255,255,255,0.5)',
+  },
+  dotActive: {
+    backgroundColor: colors.white,
   },
   businessSection: {
     flexDirection: 'row',

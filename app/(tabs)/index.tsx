@@ -15,8 +15,9 @@ import SectionHeader from '../../src/components/ui/SectionHeader';
 import BagCardHorizontal from '../../src/components/bags/BagCardHorizontal';
 import { colors, spacing } from '../../src/theme';
 import { strings } from '../../src/constants/strings';
-import { getNearbyBags, getCategories } from '../../src/data';
+import { getNearbyBags, getRecommendedBags, getCategories } from '../../src/data';
 import ErrorState from '../../src/components/ui/ErrorState';
+import EmptyState from '../../src/components/ui/EmptyState';
 
 import { useFavorites } from '../../src/context/FavoritesContext';
 import { useLocation } from '../../src/context/LocationContext';
@@ -30,6 +31,7 @@ export default function DiscoverScreen() {
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
   const [allBags, setAllBags] = useState<BagWithBusiness[]>([]);
+  const [recommended, setRecommended] = useState<BagWithBusiness[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
@@ -41,11 +43,13 @@ export default function DiscoverScreen() {
     try {
       setLoading(true);
       setError(false);
-      const [bags, cats] = await Promise.all([
-        getNearbyBags(lat, lon),
+      const [bags, recs, cats] = await Promise.all([
+        getNearbyBags(lat, lon).catch(() => [] as BagWithBusiness[]),
+        getRecommendedBags(),
         getCategories(),
       ]);
       setAllBags(bags);
+      setRecommended(recs);
       setCategories(cats);
     } catch {
       setError(true);
@@ -66,7 +70,11 @@ export default function DiscoverScreen() {
     : activeBags;
 
   const nearbyBags = filteredBags.slice(0, 8);
-  const recommendedBags = filteredBags.slice(4, 12);
+
+  const filteredRecommended = selectedCategory
+    ? recommended.filter((b) => b.category?.id === selectedCategory)
+    : recommended;
+  const recommendedBags = filteredRecommended.slice(0, 12);
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
@@ -142,18 +150,26 @@ export default function DiscoverScreen() {
         <SectionHeader
           title={strings.discover.nearbyOffers}
           actionText={strings.discover.seeAll}
-          onActionPress={() => router.push('/(tabs)/browse')}
+          onActionPress={nearbyBags.length > 0 ? () => router.push('/(tabs)/browse') : undefined}
         />
-        <FlatList
-          data={nearbyBags}
-          renderItem={renderBagCard}
-          keyExtractor={(item) => item.id}
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.carouselContainer}
-          ItemSeparatorComponent={() => <View style={styles.carouselSeparator} />}
-          scrollEnabled
-        />
+        {nearbyBags.length > 0 ? (
+          <FlatList
+            data={nearbyBags}
+            renderItem={renderBagCard}
+            keyExtractor={(item) => item.id}
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.carouselContainer}
+            ItemSeparatorComponent={() => <View style={styles.carouselSeparator} />}
+            scrollEnabled
+          />
+        ) : (
+          <EmptyState
+            icon="location-outline"
+            title={strings.discover.noNearbyTitle}
+            subtitle={strings.discover.noNearbySubtitle}
+          />
+        )}
 
         {/* Recommended */}
         <SectionHeader

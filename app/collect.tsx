@@ -10,32 +10,34 @@ import {
   Pressable,
   ActivityIndicator,
 } from 'react-native';
-import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, spacing, typography, borderRadius, shadows } from '../src/theme';
+import { strings } from '../src/constants/strings';
+import ScreenHeader from '../src/components/ui/ScreenHeader';
+import NoticeCard from '../src/components/ui/NoticeCard';
+import { useAuth } from '../src/context/AuthContext';
 import {
   getOrderByCode,
   collectOrder,
-  DEMO_BUSINESS_ID,
   type DashboardOrder,
 } from '../src/data/business';
 
 type LookupState = 'idle' | 'loading' | 'found' | 'not_found' | 'already_collected' | 'success' | 'error';
 
-const CODE_LENGTH = 4;
+const CODE_LENGTH = 6;
 
-function slotColor(state: LookupState): { border: string; bg: string; text: string } {
-  if (state === 'found')             return { border: '#2E7D32', bg: '#F1F8E9', text: '#2E7D32' };
-  if (state === 'not_found')         return { border: colors.error, bg: '#FFEBEE', text: colors.error };
-  if (state === 'already_collected') return { border: '#F57F17', bg: '#FFF8E1', text: '#F57F17' };
-  if (state === 'error')             return { border: colors.error, bg: '#FFEBEE', text: colors.error };
-  return { border: colors.gray[300], bg: colors.background.primary, text: colors.text.primary };
+function slotColor(state: LookupState): { border: string; text: string } {
+  if (state === 'found')             return { border: '#2E7D32', text: '#2E7D32' };
+  if (state === 'not_found')         return { border: colors.error, text: colors.error };
+  if (state === 'already_collected') return { border: '#F57F17', text: '#F57F17' };
+  if (state === 'error')             return { border: colors.error, text: colors.error };
+  return { border: colors.gray[300], text: colors.text.primary };
 }
 
 export default function CollectScreen() {
-  const router = useRouter();
   const insets = useSafeAreaInsets();
+  const { businessId } = useAuth();
   const inputRef = useRef<TextInput>(null);
   const [code, setCode] = useState('');
   const [lookupState, setLookupState] = useState<LookupState>('idle');
@@ -56,7 +58,8 @@ export default function CollectScreen() {
     setLookupState('loading');
     setPreviewOrder(null);
     try {
-      const order = await getOrderByCode(DEMO_BUSINESS_ID, upper);
+      if (!businessId) return;
+      const order = await getOrderByCode(businessId, upper);
       if (!order) {
         setLookupState('not_found');
       } else if (order.status !== 'reserved') {
@@ -104,17 +107,10 @@ export default function CollectScreen() {
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
       <View style={[styles.container, { paddingTop: insets.top }]}>
-        {/* Header */}
-        <View style={styles.header}>
-          <TouchableOpacity style={styles.backBtn} onPress={() => router.back()}>
-            <Ionicons name="arrow-back" size={24} color={colors.text.primary} />
-          </TouchableOpacity>
-          <Text style={styles.headerTitle}>Recoger Pedido</Text>
-          <View style={styles.backBtn} />
-        </View>
+        <ScreenHeader title={strings.collect.title} />
 
         <View style={styles.body}>
-          <Text style={styles.label}>Introduce el código de recogida</Text>
+          <Text style={styles.label}>{strings.collect.enterCode}</Text>
 
           {/* Slot display — tapping focuses the hidden input */}
           <Pressable style={styles.slotsRow} onPress={() => inputRef.current?.focus()}>
@@ -168,7 +164,7 @@ export default function CollectScreen() {
               </View>
               <View style={styles.previewMeta}>
                 <Ionicons name="people-outline" size={13} color={colors.text.tertiary} />
-                <Text style={styles.previewMetaText}>× {previewOrder.quantity}</Text>
+                <Text style={styles.previewMetaText}>{'\u00d7'} {previewOrder.quantity}</Text>
                 <View style={styles.metaDot} />
                 <Ionicons name="calendar-outline" size={13} color={colors.text.tertiary} />
                 <Text style={styles.previewMetaText}>{previewOrder.pickupDate}</Text>
@@ -181,54 +177,38 @@ export default function CollectScreen() {
 
           {/* Outside pickup window warning */}
           {lookupState === 'found' && previewOrder?.isOutsideWindow && (
-            <View style={[styles.notice, styles.noticeWarn]}>
-              <Ionicons name="warning-outline" size={16} color="#F57F17" />
-              <Text style={[styles.noticeText, { color: '#F57F17' }]}>
-                Este pedido está fuera de la ventana de recogida ({previewOrder.pickupDate}, {previewOrder.pickupWindow}).
-              </Text>
-            </View>
+            <NoticeCard
+              variant="warning"
+              message={`${strings.collect.outsideWindow} (${previewOrder.pickupDate}, ${previewOrder.pickupWindow}).`}
+            />
           )}
 
           {/* Notices */}
           {lookupState === 'not_found' && (
-            <View style={[styles.notice, styles.noticeError]}>
-              <Ionicons name="alert-circle-outline" size={16} color={colors.error} />
-              <Text style={[styles.noticeText, { color: colors.error }]}>
-                No se encontró ningún pedido para este código.
-              </Text>
-            </View>
+            <NoticeCard variant="error" message={strings.collect.notFound} />
           )}
 
           {lookupState === 'already_collected' && previewOrder && (
-            <View style={[styles.notice, styles.noticeWarn]}>
-              <Ionicons name="information-circle-outline" size={16} color="#F57F17" />
-              <Text style={[styles.noticeText, { color: '#F57F17' }]}>
-                {previewOrder.bagTitle} ya ha sido recogido.
-              </Text>
-            </View>
+            <NoticeCard
+              variant="warning"
+              message={`${previewOrder.bagTitle} ${strings.collect.alreadyCollected}`}
+              icon="information-circle-outline"
+            />
           )}
 
           {lookupState === 'success' && (
-            <View style={[styles.notice, styles.noticeSuccess]}>
-              <Ionicons name="checkmark-circle-outline" size={16} color="#2E7D32" />
-              <Text style={[styles.noticeText, { color: '#2E7D32' }]}>
-                ¡Listo! Introduce otro código para continuar.
-              </Text>
-            </View>
+            <NoticeCard variant="success" message={strings.collect.success} />
           )}
 
           {lookupState === 'error' && (
-            <View style={[styles.notice, styles.noticeError]}>
-              <Ionicons name="alert-circle-outline" size={16} color={colors.error} />
-              <Text style={[styles.noticeText, { color: colors.error }]}>{errorMsg}</Text>
-            </View>
+            <NoticeCard variant="error" message={errorMsg} />
           )}
 
           {/* Actions */}
           <View style={styles.actions}>
             {(lookupState === 'found' || lookupState === 'not_found' || lookupState === 'already_collected' || lookupState === 'error') && (
               <TouchableOpacity style={styles.clearBtn} onPress={handleReset}>
-                <Text style={styles.clearBtnText}>Borrar</Text>
+                <Text style={styles.clearBtnText}>{strings.collect.clear}</Text>
               </TouchableOpacity>
             )}
             <TouchableOpacity
@@ -240,7 +220,7 @@ export default function CollectScreen() {
                 ? <ActivityIndicator size="small" color={colors.white} />
                 : <Ionicons name="bag-check-outline" size={18} color={colors.white} />
               }
-              <Text style={styles.collectBtnText}>Confirmar Recogida</Text>
+              <Text style={styles.collectBtnText}>{strings.collect.confirmPickup}</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -257,27 +237,6 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.md,
-    backgroundColor: colors.background.primary,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.gray[200],
-  },
-  backBtn: {
-    width: 40,
-    height: 40,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  headerTitle: {
-    fontSize: typography.fontSize.md,
-    fontWeight: typography.fontWeight.bold,
-    color: colors.text.primary,
-  },
   body: {
     flex: 1,
     padding: spacing.lg,
@@ -292,7 +251,7 @@ const styles = StyleSheet.create({
   // Slots
   slotsRow: {
     flexDirection: 'row',
-    gap: spacing.xl,
+    gap: spacing.md,
     justifyContent: 'center',
   },
   slot: {
@@ -362,24 +321,6 @@ const styles = StyleSheet.create({
     borderRadius: 1.5,
     backgroundColor: colors.gray[300],
     marginHorizontal: 2,
-  },
-
-  // Notices
-  notice: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-    borderRadius: borderRadius.md,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-  },
-  noticeSuccess: { backgroundColor: '#E8F5E9' },
-  noticeError:   { backgroundColor: '#FFEBEE' },
-  noticeWarn:    { backgroundColor: '#FFF8E1' },
-  noticeText: {
-    fontSize: typography.fontSize.sm,
-    fontWeight: typography.fontWeight.medium,
-    flex: 1,
   },
 
   // Actions

@@ -5,7 +5,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, spacing, typography, borderRadius } from '../../src/theme';
 import { strings } from '../../src/constants/strings';
-import { getUser, getOrderHistory } from '../../src/data';
+import { getOrderHistory } from '../../src/data';
+import { useAuth } from '../../src/context/AuthContext';
 import ErrorState from '../../src/components/ui/ErrorState';
 import Divider from '../../src/components/ui/Divider';
 import type { OrderWithDetails } from '../../src/types';
@@ -13,7 +14,8 @@ import type { OrderWithDetails } from '../../src/types';
 export default function ProfileScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const user = getUser();
+  const { user: authUser } = useAuth();
+  const userName = authUser?.email?.split('@')[0] || 'Usuario';
   const [orders, setOrders] = useState<OrderWithDetails[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
@@ -84,11 +86,15 @@ export default function ProfileScreen() {
         {/* User Info */}
         <View style={styles.userCard}>
           <View style={styles.avatar}>
-            <Text style={styles.avatarText}>{user.name.charAt(0).toUpperCase()}</Text>
+            <Text style={styles.avatarText}>{userName.charAt(0).toUpperCase()}</Text>
           </View>
           <View style={styles.userInfo}>
-            <Text style={styles.userName}>{user.name}</Text>
-            <Text style={styles.userJoined}>Miembro desde 2024</Text>
+            <Text style={styles.userName}>{userName}</Text>
+            <Text style={styles.userJoined}>
+              {authUser?.created_at
+                ? `Miembro desde ${new Date(authUser.created_at).toLocaleDateString('es-PA', { month: 'long', year: 'numeric' })}`
+                : ''}
+            </Text>
           </View>
         </View>
 

@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   View,
   ScrollView,
@@ -12,28 +12,32 @@ import { useRouter, useFocusEffect } from 'expo-router';
 import { useNavigation } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+import { Image } from 'expo-image';
+import ReanimatedSwipeable, { type SwipeableMethods } from 'react-native-gesture-handler/ReanimatedSwipeable';
 import { colors, spacing, typography, borderRadius, shadows } from '../../src/theme';
+import { strings } from '../../src/constants/strings';
+import { useAuth } from '../../src/context/AuthContext';
 import {
   getBusinessDashboard,
-  DEMO_BUSINESS_ID,
+  updateBagStatus,
   type DashboardOrder,
   type DashboardBag,
 } from '../../src/data/business';
-import type { OrderStatus } from '../../src/types';
+import type { OrderStatus, BagStatus } from '../../src/types';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 const STATUS_CONFIG: Record<OrderStatus, { label: string; bg: string; text: string }> = {
-  reserved:  { label: 'Reservado',  bg: '#FFF8E1', text: '#F57F17' },
-  collected: { label: 'Recogido',   bg: '#E8F5E9', text: '#2E7D32' },
-  cancelled: { label: 'Cancelado',  bg: '#F5F5F5', text: '#9E9E9E' },
+  reserved:  { label: strings.businessDashboard.orderStatus.reserved,  bg: '#FFF8E1', text: '#F57F17' },
+  collected: { label: strings.businessDashboard.orderStatus.collected, bg: '#E8F5E9', text: '#2E7D32' },
+  cancelled: { label: strings.businessDashboard.orderStatus.cancelled, bg: '#F5F5F5', text: '#9E9E9E' },
 };
 
 function getGreeting() {
   const hour = new Date().getHours();
-  if (hour < 12) return 'Buenos días';
-  if (hour < 17) return 'Buenas tardes';
-  return 'Buenas noches';
+  if (hour < 12) return strings.businessDashboard.greetingMorning;
+  if (hour < 17) return strings.businessDashboard.greetingAfternoon;
+  return strings.businessDashboard.greetingEvening;
 }
 
 // ─── Sub-components ───────────────────────────────────────────────────────────
@@ -43,13 +47,15 @@ function StatCard({
   value,
   label,
   color,
+  onPress,
 }: {
   icon: React.ComponentProps<typeof Ionicons>['name'];
   value: string;
   label: string;
   color: string;
+  onPress?: () => void;
 }) {
-  return (
+  const content = (
     <View style={[styles.statCard, shadows.sm]}>
       <View style={[styles.statIconWrap, { backgroundColor: color + '18' }]}>
         <Ionicons name={icon} size={22} color={color} />
@@ -58,7 +64,19 @@ function StatCard({
       <Text style={styles.statLabel}>{label}</Text>
     </View>
   );
+  if (onPress) {
+    return <TouchableOpacity activeOpacity={0.7} onPress={onPress} style={{ flex: 1 }}>{content}</TouchableOpacity>;
+  }
+  return content;
 }
+
+const BAG_STATUS_CONFIG: Record<BagStatus, { label: string; bg: string; text: string }> = {
+  active:    { label: strings.businessBags.status.active,    bg: '#E8F5E9', text: '#2E7D32' },
+  draft:     { label: strings.businessBags.status.draft,     bg: '#FFF8E1', text: '#F57F17' },
+  sold_out:  { label: strings.businessBags.status.sold_out,  bg: '#FFF8E1', text: '#F57F17' },
+  expired:   { label: strings.businessBags.status.expired,   bg: '#FFEBEE', text: '#C62828' },
+  cancelled: { label: strings.businessBags.status.cancelled, bg: '#F5F5F5', text: '#9E9E9E' },
+};
 
 function OrderRow({ order }: { order: DashboardOrder }) {
   const cfg = STATUS_CONFIG[order.status];
@@ -87,30 +105,72 @@ function OrderRow({ order }: { order: DashboardOrder }) {
   );
 }
 
-function ActiveBagRow({ bag }: { bag: DashboardBag }) {
-  const pctLeft = bag.available / bag.total;
+function ActiveBagCard({ bag, onPress, onDeactivate }: { bag: DashboardBag; onPress: () => void; onDeactivate: () => void }) {
+  const swipeableRef = useRef<SwipeableMethods>(null);
+  const pctLeft = bag.total > 0 ? bag.available / bag.total : 0;
   const barColor =
     pctLeft > 0.5 ? '#4CAF50' : pctLeft > 0.2 ? '#FF9800' : colors.error;
+  const statusCfg = BAG_STATUS_CONFIG[bag.status];
+
+  const renderLeftActions = () => (
+    <TouchableOpacity
+      style={styles.deactivateAction}
+      onPress={() => {
+        swipeableRef.current?.close();
+        onDeactivate();
+      }}
+    >
+      <Ionicons name="pause-circle-outline" size={20} color={colors.white} />
+      <Text style={styles.deactivateActionText}>{strings.bagForm.deactivate}</Text>
+    </TouchableOpacity>
+  );
 
   return (
-    <View style={styles.bagRow}>
-      <View style={styles.bagInfo}>
-        <Text style={styles.bagTitle} numberOfLines={1}>
-          {bag.title}
-        </Text>
-        <View style={styles.progressWrap}>
-          <View style={styles.progressTrack}>
-            <View
-              style={[styles.progressFill, { width: `${pctLeft * 100}%`, backgroundColor: barColor }]}
+    <ReanimatedSwipeable ref={swipeableRef} renderLeftActions={bag.status === 'active' ? renderLeftActions : undefined}>
+      <TouchableOpacity activeOpacity={0.7} onPress={onPress}>
+        <View style={styles.bagCard}>
+          {bag.photoUrl && (
+            <Image
+              source={{ uri: bag.photoUrl }}
+              style={styles.bagCardImage}
+              contentFit="cover"
+              transition={200}
             />
+          )}
+          <View style={styles.bagCardBody}>
+            <View style={styles.bagCardTopRow}>
+              <Text style={styles.bagTitle} numberOfLines={1}>{bag.title}</Text>
+              <View style={[styles.bagStatusBadge, { backgroundColor: statusCfg.bg }]}>
+                <Text style={[styles.bagStatusText, { color: statusCfg.text }]}>{statusCfg.label}</Text>
+              </View>
+            </View>
+
+            {(bag.scheduleDays || bag.scheduleTime) ? (
+              <View style={styles.bagScheduleRow}>
+                <Ionicons name="calendar-outline" size={13} color={colors.text.tertiary} />
+                <Text style={styles.bagScheduleText}>
+                  {bag.scheduleDays}{bag.scheduleDays && bag.scheduleTime ? ' · ' : ''}{bag.scheduleTime}
+                </Text>
+              </View>
+            ) : null}
+
+            <View style={styles.bagCardBottomRow}>
+              <View style={styles.progressWrap}>
+                <View style={styles.progressTrack}>
+                  <View
+                    style={[styles.progressFill, { width: `${pctLeft * 100}%`, backgroundColor: barColor }]}
+                  />
+                </View>
+                <Text style={styles.bagAvailText}>
+                  {bag.available}/{bag.total}
+                </Text>
+              </View>
+              <Text style={styles.bagPrice}>${bag.price.toFixed(2)}</Text>
+            </View>
           </View>
-          <Text style={styles.bagAvailText}>
-            {bag.available}/{bag.total}
-          </Text>
         </View>
-      </View>
-      <Text style={styles.bagPrice}>${bag.price.toFixed(2)}</Text>
-    </View>
+      </TouchableOpacity>
+    </ReanimatedSwipeable>
   );
 }
 
@@ -119,6 +179,7 @@ function ActiveBagRow({ bag }: { bag: DashboardBag }) {
 export default function DashboardScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
+  const { businessId } = useAuth();
   const [data, setData] = useState<Awaited<ReturnType<typeof getBusinessDashboard>> | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -127,17 +188,18 @@ export default function DashboardScreen() {
   const navigation = useNavigation();
 
   const load = useCallback((isRefresh = false) => {
+    if (!businessId) return;
     if (isRefresh) setRefreshing(true);
     else setLoading(true);
     setError(null);
-    getBusinessDashboard(DEMO_BUSINESS_ID)
+    getBusinessDashboard(businessId)
       .then(setData)
       .catch((e: Error) => setError(e.message))
       .finally(() => {
         setLoading(false);
         setRefreshing(false);
       });
-  }, []);
+  }, [businessId]);
 
   // Reload when navigating to this tab
   useFocusEffect(useCallback(() => { load(true); }, [load]));
@@ -161,9 +223,9 @@ export default function DashboardScreen() {
     return (
       <View style={[styles.container, styles.centered, { paddingTop: insets.top }]}>
         <Ionicons name="cloud-offline-outline" size={40} color={colors.text.tertiary} />
-        <Text style={styles.errorText}>No se pudo cargar el panel</Text>
+        <Text style={styles.errorText}>{strings.businessDashboard.errorLoading}</Text>
         <TouchableOpacity style={styles.retryBtn} onPress={() => load()}>
-          <Text style={styles.retryText}>Reintentar</Text>
+          <Text style={styles.retryText}>{strings.common.retry}</Text>
         </TouchableOpacity>
       </View>
     );
@@ -194,24 +256,26 @@ export default function DashboardScreen() {
         </View>
 
         {/* Stats */}
-        <Text style={styles.sectionTitle}>Resumen de hoy</Text>
+        <Text style={styles.sectionTitle}>{strings.businessDashboard.todaySummary}</Text>
         <View style={styles.statsRow}>
           <StatCard
             icon="bag-handle-outline"
             value={String(data.stats.activeBags)}
-            label="Bolsas activas"
+            label={strings.businessDashboard.activeBags}
             color={colors.primary[500]}
+            onPress={() => router.push('/(business-tabs)/bags')}
           />
           <StatCard
             icon="receipt-outline"
             value={String(data.stats.ordersToday)}
-            label="Pedidos hoy"
+            label={strings.businessOrders.title}
             color="#FF9800"
+            onPress={() => router.push('/(business-tabs)/orders')}
           />
           <StatCard
             icon="cash-outline"
             value={`$${data.stats.revenueToday.toFixed(0)}`}
-            label="Ingresos"
+            label={strings.businessDashboard.totalEarnings}
             color="#4CAF50"
           />
         </View>
@@ -223,20 +287,20 @@ export default function DashboardScreen() {
             onPress={() => router.push('/collect')}
           >
             <Ionicons name="bag-check-outline" size={18} color={colors.white} />
-            <Text style={styles.actionBtnPrimaryText}>Recoger</Text>
+            <Text style={styles.actionBtnPrimaryText}>{strings.businessDashboard.collectAction}</Text>
           </TouchableOpacity>
         </View>
 
         {/* Recent Pickups */}
         <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>Recolecciones recientes</Text>
+          <Text style={styles.sectionTitle}>{strings.businessDashboard.recentPickups}</Text>
           <TouchableOpacity onPress={() => router.push('/(business-tabs)/orders')}>
-            <Text style={styles.seeAll}>Ver todo</Text>
+            <Text style={styles.seeAll}>{strings.discover.seeAll}</Text>
           </TouchableOpacity>
         </View>
         <View style={[styles.card, shadows.sm]}>
           {collectedOrders.length === 0 ? (
-            <Text style={styles.emptyText}>Sin recolecciones aún</Text>
+            <Text style={styles.emptyText}>{strings.businessDashboard.noPickupsYet}</Text>
           ) : (
             collectedOrders.map((order, idx, arr) => (
               <React.Fragment key={order.id}>
@@ -249,23 +313,36 @@ export default function DashboardScreen() {
 
         {/* Active Bags */}
         <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>Bolsas activas</Text>
+          <Text style={styles.sectionTitle}>{strings.businessDashboard.activeBags}</Text>
           <TouchableOpacity onPress={() => router.push('/(business-tabs)/bags')}>
-            <Text style={styles.seeAll}>Gestionar</Text>
+            <Text style={styles.seeAll}>{strings.discover.seeAll}</Text>
           </TouchableOpacity>
         </View>
-        <View style={[styles.card, shadows.sm]}>
-          {data.activeBags.length === 0 ? (
-            <Text style={styles.emptyText}>No hay bolsas activas</Text>
-          ) : (
-            data.activeBags.map((bag, idx) => (
-              <React.Fragment key={bag.id}>
-                <ActiveBagRow bag={bag} />
-                {idx < data.activeBags.length - 1 && <View style={styles.divider} />}
-              </React.Fragment>
-            ))
-          )}
-        </View>
+        {data.activeBags.length === 0 ? (
+          <View style={[styles.card, shadows.sm]}>
+            <View style={styles.emptyBagsState}>
+              <Ionicons name="bag-outline" size={36} color={colors.gray[300]} />
+              <Text style={styles.emptyText}>{strings.businessDashboard.noBags}</Text>
+              <Text style={styles.emptySubText}>{strings.businessDashboard.noBagsSubtitle}</Text>
+            </View>
+          </View>
+        ) : (
+          <View style={styles.bagsListContainer}>
+            {data.activeBags.map((bag) => (
+              <ActiveBagCard
+                key={bag.id}
+                bag={bag}
+                onPress={() => router.push(`/bag/edit/${bag.id}`)}
+                onDeactivate={async () => {
+                  try {
+                    await updateBagStatus(bag.id, 'draft');
+                    load(true);
+                  } catch {}
+                }}
+              />
+            ))}
+          </View>
+        )}
 
         <View style={{ height: spacing.xxxxl }} />
       </ScrollView>
@@ -496,25 +573,64 @@ const styles = StyleSheet.create({
     color: colors.text.primary,
   },
 
-  // Active bag row
-  bagRow: {
+  // Active bag card
+  bagsListContainer: {
+    paddingHorizontal: spacing.lg,
+    marginBottom: spacing.xxl,
+    gap: spacing.md,
+  },
+  bagCard: {
+    backgroundColor: colors.background.primary,
+    borderRadius: borderRadius.lg,
+    overflow: 'hidden',
+    ...shadows.sm,
+  },
+  bagCardImage: {
+    width: '100%',
+    height: 120,
+  },
+  bagCardBody: {
+    padding: spacing.md,
+    gap: spacing.xs,
+  },
+  bagCardTopRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.md,
-  },
-  bagInfo: {
-    flex: 1,
-    marginRight: spacing.lg,
   },
   bagTitle: {
+    flex: 1,
     fontSize: typography.fontSize.base,
-    fontWeight: typography.fontWeight.medium,
+    fontWeight: typography.fontWeight.bold,
     color: colors.text.primary,
-    marginBottom: spacing.xs,
+    marginRight: spacing.sm,
+  },
+  bagStatusBadge: {
+    borderRadius: borderRadius.full,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 3,
+  },
+  bagStatusText: {
+    fontSize: typography.fontSize.xs,
+    fontWeight: typography.fontWeight.semibold,
+  },
+  bagScheduleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  bagScheduleText: {
+    fontSize: typography.fontSize.xs,
+    color: colors.text.tertiary,
+  },
+  bagCardBottomRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: spacing.md,
   },
   progressWrap: {
+    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.sm,
@@ -538,6 +654,30 @@ const styles = StyleSheet.create({
   bagPrice: {
     fontSize: typography.fontSize.base,
     fontWeight: typography.fontWeight.bold,
-    color: colors.text.primary,
+    color: colors.primary[500],
+  },
+  emptyBagsState: {
+    alignItems: 'center',
+    gap: spacing.sm,
+    paddingVertical: spacing.xl,
+  },
+  emptySubText: {
+    fontSize: typography.fontSize.xs,
+    color: colors.text.tertiary,
+    textAlign: 'center',
+  },
+  deactivateAction: {
+    backgroundColor: '#FF9800',
+    borderRadius: borderRadius.lg,
+    marginRight: spacing.sm,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: spacing.lg,
+    gap: 4,
+  },
+  deactivateActionText: {
+    fontSize: typography.fontSize.xs,
+    fontWeight: typography.fontWeight.semibold,
+    color: colors.white,
   },
 });

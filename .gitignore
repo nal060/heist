@@ -46,3 +46,9 @@ inspo/
 
 # Internal docs (local only)
 docs/
+
+# Local notes
+future-ideas.txt
+
+# Supabase CLI cache
+supabase/.temp/

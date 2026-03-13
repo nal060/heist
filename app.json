@@ -1,9 +1,9 @@
 {
   "expo": {
-    "name": "Heist",
-    "slug": "heist",
+    "name": "MONCH",
+    "slug": "monch",
     "version": "1.0.0",
-    "scheme": "heist",
+    "scheme": "monch",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",

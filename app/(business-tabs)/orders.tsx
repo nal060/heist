@@ -15,30 +15,31 @@ import { useNavigation } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, spacing, typography, borderRadius, shadows } from '../../src/theme';
+import { useAuth } from '../../src/context/AuthContext';
 import type { OrderStatus } from '../../src/types';
 import {
   getBusinessOrders,
   cancelOrder,
   collectOrder,
-  DEMO_BUSINESS_ID,
   type DashboardOrder,
 } from '../../src/data/business';
+import { strings } from '../../src/constants/strings';
 
 // ─── Filter config ────────────────────────────────────────────────────────────
 
 type FilterKey = 'all' | OrderStatus;
 
 const FILTERS: { key: FilterKey; label: string }[] = [
-  { key: 'all',       label: 'Todo' },
-  { key: 'reserved',  label: 'Reservado' },
-  { key: 'collected', label: 'Recogido' },
-  { key: 'cancelled', label: 'Cancelado' },
+  { key: 'all',       label: strings.businessOrders.filters.all },
+  { key: 'reserved',  label: strings.businessOrders.filters.reserved },
+  { key: 'collected', label: strings.businessOrders.filters.collected },
+  { key: 'cancelled', label: strings.businessOrders.filters.cancelled },
 ];
 
 const STATUS_CONFIG: Record<OrderStatus, { label: string; bg: string; text: string }> = {
-  reserved:  { label: 'Reservado',  bg: '#FFF8E1', text: '#F57F17' },
-  collected: { label: 'Recogido',   bg: '#E8F5E9', text: '#2E7D32' },
-  cancelled: { label: 'Cancelado',  bg: '#F5F5F5', text: '#9E9E9E' },
+  reserved:  { label: strings.businessOrders.statusLabels.reserved,  bg: '#FFF8E1', text: '#F57F17' },
+  collected: { label: strings.businessOrders.statusLabels.collected, bg: '#E8F5E9', text: '#2E7D32' },
+  cancelled: { label: strings.businessOrders.statusLabels.cancelled, bg: '#F5F5F5', text: '#9E9E9E' },
 };
 
 // ─── Order Card ───────────────────────────────────────────────────────────────
@@ -64,7 +65,7 @@ function OrderCard({
       }}
     >
       <Ionicons name="close-circle-outline" size={20} color={colors.white} />
-      <Text style={styles.cancelActionText}>Cancelar</Text>
+      <Text style={styles.cancelActionText}>{strings.businessOrders.cancelAction}</Text>
     </TouchableOpacity>
   );
 
@@ -77,7 +78,7 @@ function OrderCard({
       }}
     >
       <Ionicons name="bag-check-outline" size={20} color={colors.white} />
-      <Text style={styles.collectActionText}>Recogido</Text>
+      <Text style={styles.collectActionText}>{strings.businessOrders.collectAction}</Text>
     </TouchableOpacity>
   );
 
@@ -86,7 +87,7 @@ function OrderCard({
       {/* Top row: code + status */}
       <View style={styles.cardTop}>
         <View style={styles.codeWrap}>
-          <Text style={styles.codeLabel}>CÓDIGO</Text>
+          <Text style={styles.codeLabel}>{strings.businessOrders.codeLabel}</Text>
           <Text style={styles.codeValue}>{order.pickupCode}</Text>
         </View>
         <View style={[styles.statusBadge, { backgroundColor: cfg.bg }]}>
@@ -148,19 +149,19 @@ function SummaryBar({ orders }: { orders: DashboardOrder[] }) {
     <View style={styles.summaryBar}>
       <View style={styles.summaryItem}>
         <Text style={styles.summaryValue}>{reserved}</Text>
-        <Text style={styles.summaryLabel}>Reservado</Text>
+        <Text style={styles.summaryLabel}>{strings.businessOrders.summaryReserved}</Text>
       </View>
       <View style={styles.summaryDivider} />
       <View style={styles.summaryItem}>
         <Text style={[styles.summaryValue, collected > 0 && styles.summaryValueGreen]}>
           {collected}
         </Text>
-        <Text style={styles.summaryLabel}>Recogido</Text>
+        <Text style={styles.summaryLabel}>{strings.businessOrders.summaryCollected}</Text>
       </View>
       <View style={styles.summaryDivider} />
       <View style={styles.summaryItem}>
         <Text style={styles.summaryValue}>${revenue.toFixed(2)}</Text>
-        <Text style={styles.summaryLabel}>Ingresos</Text>
+        <Text style={styles.summaryLabel}>{strings.businessOrders.summaryRevenue}</Text>
       </View>
     </View>
   );
@@ -168,12 +169,12 @@ function SummaryBar({ orders }: { orders: DashboardOrder[] }) {
 
 // ─── Empty State ──────────────────────────────────────────────────────────────
 
-function EmptyState({ filter }: { filter: FilterKey }) {
+function OrdersEmptyState({ filter }: { filter: FilterKey }) {
   const messages: Record<FilterKey, string> = {
-    all:       'Aún no hay pedidos hoy.',
-    reserved:  'No hay pedidos reservados en este momento.',
-    collected: 'Aún no hay pedidos recogidos.',
-    cancelled: 'No hay pedidos cancelados.',
+    all:       strings.businessOrders.emptyMessages.all,
+    reserved:  strings.businessOrders.emptyMessages.reserved,
+    collected: strings.businessOrders.emptyMessages.collected,
+    cancelled: strings.businessOrders.emptyMessages.cancelled,
   };
   return (
     <View style={styles.emptyState}>
@@ -188,6 +189,7 @@ function EmptyState({ filter }: { filter: FilterKey }) {
 export default function OrdersScreen() {
   const insets = useSafeAreaInsets();
   const navigation = useNavigation();
+  const { businessId } = useAuth();
   const [activeFilter, setActiveFilter] = useState<FilterKey>('all');
   const [dateFilter, setDateFilter] = useState<'today' | 'all'>('today');
   const dateFilterRef = useRef<'today' | 'all'>('today');
@@ -201,17 +203,18 @@ export default function OrdersScreen() {
   );
 
   const load = useCallback(async (isRefresh = false) => {
+    if (!businessId) return;
     isRefresh ? setRefreshing(true) : setLoading(true);
     setError(null);
     try {
-      const data = await getBusinessOrders(DEMO_BUSINESS_ID, dateFilterRef.current);
+      const data = await getBusinessOrders(businessId, dateFilterRef.current);
       setAllOrders(data);
     } catch (e) {
       setError((e as Error).message);
     } finally {
       isRefresh ? setRefreshing(false) : setLoading(false);
     }
-  }, []);
+  }, [businessId]);
 
   const handleDateFilter = (f: 'today' | 'all') => {
     dateFilterRef.current = f;
@@ -236,7 +239,7 @@ export default function OrdersScreen() {
         prev.map((o) => (o.id === id ? { ...o, status: 'cancelled' as OrderStatus } : o))
       );
     } catch (e) {
-      console.error(e);
+      // TODO: surface error to user
     }
   };
 
@@ -247,7 +250,7 @@ export default function OrdersScreen() {
         prev.map((o) => (o.id === id ? { ...o, status: 'collected' as OrderStatus } : o))
       );
     } catch (e) {
-      console.error(e);
+      // TODO: surface error to user
     }
   };
 
@@ -265,7 +268,7 @@ export default function OrdersScreen() {
         <Ionicons name="alert-circle-outline" size={40} color={colors.error} />
         <Text style={styles.errorText}>{error}</Text>
         <TouchableOpacity style={styles.retryBtn} onPress={() => load()}>
-          <Text style={styles.retryText}>Reintentar</Text>
+          <Text style={styles.retryText}>{strings.common.retry}</Text>
         </TouchableOpacity>
       </View>
     );
@@ -275,7 +278,7 @@ export default function OrdersScreen() {
     <View style={[styles.container, { paddingTop: insets.top }]}>
       {/* Header */}
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>Pedidos</Text>
+        <Text style={styles.headerTitle}>{strings.businessOrders.title}</Text>
         <View style={styles.dateToggle}>
           {(['today', 'all'] as const).map((f) => (
             <TouchableOpacity
@@ -284,7 +287,7 @@ export default function OrdersScreen() {
               onPress={() => handleDateFilter(f)}
             >
               <Text style={[styles.dateToggleText, dateFilter === f && styles.dateToggleTextActive]}>
-                {f === 'today' ? 'Hoy' : 'Total'}
+                {f === 'today' ? strings.businessOrders.dateFilterToday : strings.businessOrders.dateFilterAll}
               </Text>
             </TouchableOpacity>
           ))}
@@ -334,7 +337,7 @@ export default function OrdersScreen() {
         renderItem={({ item }) => (
           <OrderCard order={item} onCancel={handleCancel} onCollect={handleCollect} />
         )}
-        ListEmptyComponent={<EmptyState filter={activeFilter} />}
+        ListEmptyComponent={<OrdersEmptyState filter={activeFilter} />}
         ItemSeparatorComponent={() => <View style={{ height: spacing.md }} />}
         refreshControl={
           <RefreshControl

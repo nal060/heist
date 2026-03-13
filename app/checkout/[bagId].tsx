@@ -6,14 +6,17 @@ import {
   Text,
   TouchableOpacity,
   ActivityIndicator,
+  Alert,
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, spacing, typography, borderRadius, shadows } from '../../src/theme';
 import { strings } from '../../src/constants/strings';
-import { getBagById } from '../../src/data';
+import { getBagById, createOrder } from '../../src/data';
 import ErrorState from '../../src/components/ui/ErrorState';
+import ScreenHeader from '../../src/components/ui/ScreenHeader';
+import QuantityStepper from '../../src/components/ui/QuantityStepper';
 import BusinessLogo from '../../src/components/business/BusinessLogo';
 import Divider from '../../src/components/ui/Divider';
 import { formatCurrency } from '../../src/utils/formatCurrency';
@@ -28,6 +31,7 @@ export default function CheckoutScreen() {
   const [bag, setBag] = useState<BagWithBusiness | undefined>(undefined);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
+  const [paying, setPaying] = useState(false);
 
   const loadBag = useCallback(() => {
     setLoading(true);
@@ -70,23 +74,29 @@ export default function CheckoutScreen() {
   const tax = subtotal * 0.07;
   const total = subtotal + tax;
 
-  const handlePay = () => {
-    const orderId = `order-${Date.now()}`;
-    router.replace(`/order-confirmation/${orderId}`);
+  const handlePay = async () => {
+    if (paying) return;
+    setPaying(true);
+    try {
+      const order = await createOrder({
+        bagId: bag.id,
+        quantity,
+        subtotal,
+        tax,
+        total,
+      });
+      router.replace(`/order-confirmation/${order.id}`);
+    } catch (e) {
+      Alert.alert(strings.common.error, (e as Error).message);
+      setPaying(false);
+    }
   };
 
   const maxQuantity = Math.min(bag.quantity_available, 5);
 
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
-      {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-          <Ionicons name="arrow-back" size={24} color={colors.text.primary} />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>{strings.checkout.title}</Text>
-        <View style={styles.backButton} />
-      </View>
+      <ScreenHeader title={strings.checkout.title} />
 
       <ScrollView showsVerticalScrollIndicator={false}>
         {/* Business & Bag Info */}
@@ -114,31 +124,7 @@ export default function CheckoutScreen() {
         {/* Quantity Selector */}
         <View style={styles.card}>
           <Text style={styles.sectionLabel}>{strings.checkout.quantity}</Text>
-          <View style={styles.quantityRow}>
-            <TouchableOpacity
-              style={[styles.quantityButton, quantity <= 1 && styles.quantityButtonDisabled]}
-              onPress={() => setQuantity(Math.max(1, quantity - 1))}
-              disabled={quantity <= 1}
-            >
-              <Ionicons
-                name="remove"
-                size={20}
-                color={quantity <= 1 ? colors.gray[400] : colors.primary[500]}
-              />
-            </TouchableOpacity>
-            <Text style={styles.quantityText}>{quantity}</Text>
-            <TouchableOpacity
-              style={[styles.quantityButton, quantity >= maxQuantity && styles.quantityButtonDisabled]}
-              onPress={() => setQuantity(Math.min(maxQuantity, quantity + 1))}
-              disabled={quantity >= maxQuantity}
-            >
-              <Ionicons
-                name="add"
-                size={20}
-                color={quantity >= maxQuantity ? colors.gray[400] : colors.primary[500]}
-              />
-            </TouchableOpacity>
-          </View>
+          <QuantityStepper value={quantity} onChange={setQuantity} min={1} max={maxQuantity} />
         </View>
 
         {/* Payment Method */}
@@ -178,10 +164,18 @@ export default function CheckoutScreen() {
 
       {/* Pay Button */}
       <View style={[styles.bottomBar, { paddingBottom: insets.bottom + spacing.md }]}>
-        <TouchableOpacity style={styles.payButton} onPress={handlePay}>
-          <Text style={styles.payButtonText}>
-            {strings.checkout.pay} {formatCurrency(total)}
-          </Text>
+        <TouchableOpacity
+          style={[styles.payButton, paying && styles.payButtonDisabled]}
+          onPress={handlePay}
+          disabled={paying}
+        >
+          {paying ? (
+            <ActivityIndicator color={colors.white} />
+          ) : (
+            <Text style={styles.payButtonText}>
+              {strings.checkout.pay} {formatCurrency(total)}
+            </Text>
+          )}
         </TouchableOpacity>
       </View>
     </View>
@@ -196,27 +190,6 @@ const styles = StyleSheet.create({
   centered: {
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.md,
-    backgroundColor: colors.white,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.gray[200],
-  },
-  backButton: {
-    width: 40,
-    height: 40,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  headerTitle: {
-    fontSize: typography.fontSize.md,
-    fontWeight: typography.fontWeight.bold,
-    color: colors.text.primary,
   },
   card: {
     backgroundColor: colors.white,
@@ -264,31 +237,6 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase',
     letterSpacing: 0.5,
     marginBottom: spacing.md,
-  },
-  quantityRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: spacing.xxl,
-  },
-  quantityButton: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    borderWidth: 1.5,
-    borderColor: colors.primary[500],
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  quantityButtonDisabled: {
-    borderColor: colors.gray[300],
-  },
-  quantityText: {
-    fontSize: typography.fontSize.xl,
-    fontWeight: typography.fontWeight.bold,
-    color: colors.text.primary,
-    minWidth: 40,
-    textAlign: 'center',
   },
   paymentMethodRow: {
     flexDirection: 'row',
@@ -351,6 +299,9 @@ const styles = StyleSheet.create({
     borderRadius: borderRadius.md,
     paddingVertical: spacing.lg,
     alignItems: 'center',
+  },
+  payButtonDisabled: {
+    opacity: 0.7,
   },
   payButtonText: {
     fontSize: typography.fontSize.md,

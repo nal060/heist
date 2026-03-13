@@ -1,9 +1,11 @@
 // Enums matching DB schema
 export type BagStatus = 'draft' | 'active' | 'sold_out' | 'expired' | 'cancelled';
+export type BagSizeType = 'small' | 'medium' | 'large';
 export type OrderStatus = 'reserved' | 'collected' | 'cancelled';
 export type PaymentStatus = 'pending' | 'completed' | 'failed' | 'refunded';
 export type PaymentMethod = 'credit_card' | 'debit_card' | 'apple_pay' | 'cash';
 export type DiscountType = 'percentage' | 'fixed';
+export type PreferenceType = 'what_brings_you' | 'pickup_times';
 
 // Core entities
 export interface Business {
@@ -19,6 +21,8 @@ export interface Business {
   rating: number;
   total_reviews: number;
   is_active: boolean;
+  country_id: string | null;
+  google_place_id: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -30,6 +34,8 @@ export interface SurplusBag {
   description: string | null;
   original_price: number;
   discounted_price: number;
+  value: number | null;
+  bag_size: BagSizeType;
   date: string;
   quantity_total: number;
   quantity_available: number;
@@ -61,10 +67,57 @@ export interface BusinessHours {
   is_closed: boolean;
 }
 
+export interface Country {
+  id: string;
+  name: string;
+  code: string;
+  flag_emoji: string;
+  is_active: boolean;
+  created_at: string;
+}
+
+export interface UserPreference {
+  id: string;
+  user_id: string;
+  preference_type: PreferenceType;
+  preference_values: string[];
+  created_at: string;
+  updated_at: string;
+}
+
+export interface BagPickupSchedule {
+  id: string;
+  bag_id: string;
+  day_of_week: number;
+  start_time: string;
+  end_time: string;
+  is_active: boolean;
+  created_at: string;
+}
+
+export interface BusinessPhoto {
+  id: string;
+  business_id: string;
+  photo_url: string;
+  source: string;
+  is_selected: boolean;
+  display_order: number;
+  created_at: string;
+}
+
+export interface BagPhoto {
+  id: string;
+  bag_id: string;
+  photo_url: string;
+  display_order: number;
+  created_at: string;
+}
+
 export interface ConsumerProfile {
   id: string;
   user_id: string;
   name: string;
+  country_id: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -146,10 +199,16 @@ export interface BagWithBusiness extends SurplusBag {
   business: Business;
   category: Category | null;
   isFavorite: boolean;
+  photos?: BagPhoto[];
 }
 
 export interface OrderWithDetails extends Order {
   business: Business;
   bag: SurplusBag;
   payment: Payment | null;
+}
+
+export interface BusinessBagDetail extends SurplusBag {
+  schedule: BagPickupSchedule[];
+  photos: BagPhoto[];
 }

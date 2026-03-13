@@ -1,17 +1,36 @@
-import React from 'react';
-import { View, StyleSheet, Text } from 'react-native';
-import { useRouter } from 'expo-router';
+import React, { useState, useEffect } from 'react';
+import { View, StyleSheet, Text, ActivityIndicator } from 'react-native';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, spacing, typography, borderRadius } from '../../src/theme';
 import { strings } from '../../src/constants/strings';
+import { getOrderById } from '../../src/data';
+import { formatPickupWindow } from '../../src/utils/formatTime';
 import Button from '../../src/components/ui/Button';
+import type { OrderWithDetails } from '../../src/types';
 
 export default function OrderConfirmationScreen() {
+  const { orderId } = useLocalSearchParams<{ orderId: string }>();
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const [order, setOrder] = useState<OrderWithDetails | null>(null);
+  const [loading, setLoading] = useState(true);
 
-  const pickupCode = Math.random().toString(36).substring(2, 8).toUpperCase();
+  useEffect(() => {
+    if (!orderId) return;
+    getOrderById(orderId)
+      .then(setOrder)
+      .finally(() => setLoading(false));
+  }, [orderId]);
+
+  if (loading) {
+    return (
+      <View style={[styles.container, styles.centered, { paddingTop: insets.top }]}>
+        <ActivityIndicator size="large" color={colors.primary[500]} />
+      </View>
+    );
+  }
 
   return (
     <View style={[styles.container, { paddingTop: insets.top, paddingBottom: insets.bottom }]}>
@@ -30,8 +49,24 @@ export default function OrderConfirmationScreen() {
         {/* Pickup Code */}
         <View style={styles.codeCard}>
           <Text style={styles.codeLabel}>{strings.orderConfirmation.pickupCode}</Text>
-          <Text style={styles.codeValue}>{pickupCode}</Text>
+          <Text style={styles.codeValue}>{order?.pickup_code ?? '------'}</Text>
         </View>
+
+        {/* Order details */}
+        {order && (
+          <View style={styles.detailsCard}>
+            <Text style={styles.detailBusiness}>{order.business?.name}</Text>
+            <Text style={styles.detailBag}>{order.bag?.title}</Text>
+            {order.pickup_start_time && order.pickup_end_time && (
+              <View style={styles.detailRow}>
+                <Ionicons name="time-outline" size={16} color={colors.primary[500]} />
+                <Text style={styles.detailText}>
+                  {formatPickupWindow(order.pickup_start_time, order.pickup_end_time)}
+                </Text>
+              </View>
+            )}
+          </View>
+        )}
 
         {/* Reminder */}
         <View style={styles.reminderCard}>
@@ -69,6 +104,10 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: colors.background.primary,
     justifyContent: 'space-between',
+  },
+  centered: {
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   content: {
     flex: 1,
@@ -118,6 +157,34 @@ const styles = StyleSheet.create({
     fontWeight: typography.fontWeight.bold,
     color: colors.text.primary,
     letterSpacing: 4,
+  },
+  detailsCard: {
+    backgroundColor: colors.background.secondary,
+    borderRadius: borderRadius.md,
+    padding: spacing.md,
+    alignItems: 'center',
+    marginBottom: spacing.xl,
+    width: '100%',
+    gap: spacing.xs,
+  },
+  detailBusiness: {
+    fontSize: typography.fontSize.base,
+    fontWeight: typography.fontWeight.semibold,
+    color: colors.text.primary,
+  },
+  detailBag: {
+    fontSize: typography.fontSize.sm,
+    color: colors.text.secondary,
+  },
+  detailRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+    marginTop: spacing.xs,
+  },
+  detailText: {
+    fontSize: typography.fontSize.sm,
+    color: colors.text.secondary,
   },
   reminderCard: {
     flexDirection: 'row',

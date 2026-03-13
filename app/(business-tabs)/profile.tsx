@@ -1,319 +1,305 @@
-import React from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
+  Image,
+  StyleSheet,
   ScrollView,
   TouchableOpacity,
-  StyleSheet,
+  ActivityIndicator,
+  Alert,
 } from 'react-native';
-import { Image } from 'expo-image';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { colors, spacing, typography, borderRadius, shadows } from '../../src/theme';
-
-// ─── Mock Data ────────────────────────────────────────────────────────────────
-
-const MOCK_BUSINESS = {
-  name: 'Negocio Demo',
-  description: 'Comida Rica',
-  address: 'Camino de cruces, Panama',
-  phone: '6513413',
-  photo_url: null as string | null,
-  rating: 4.7,
-  totalReviews: 134,
-  isActive: true,
-  memberSince: 'Marzo 2024',
-};
-
-function InfoRow({
-  icon,
-  label,
-  value,
-}: {
-  icon: React.ComponentProps<typeof Ionicons>['name'];
-  label: string;
-  value: string;
-}) {
-  return (
-    <View style={styles.infoRow}>
-      <View style={styles.infoIconWrap}>
-        <Ionicons name={icon} size={18} color={colors.text.secondary} />
-      </View>
-      <View style={styles.infoContent}>
-        <Text style={styles.infoLabel}>{label}</Text>
-        <Text style={styles.infoValue}>{value}</Text>
-      </View>
-    </View>
-  );
-}
-
-function SettingRow({
-  icon,
-  label,
-  onPress,
-  destructive,
-}: {
-  icon: React.ComponentProps<typeof Ionicons>['name'];
-  label: string;
-  onPress: () => void;
-  destructive?: boolean;
-}) {
-  const textColor = destructive ? colors.error : colors.text.primary;
-  const iconColor = destructive ? colors.error : colors.text.secondary;
-  return (
-    <TouchableOpacity style={styles.settingRow} onPress={onPress} activeOpacity={0.6}>
-      <Ionicons name={icon} size={20} color={iconColor} />
-      <Text style={[styles.settingLabel, { color: textColor }]}>{label}</Text>
-      {!destructive && (
-        <Ionicons name="chevron-forward" size={16} color={colors.text.tertiary} style={styles.chevron} />
-      )}
-    </TouchableOpacity>
-  );
-}
-
-// ─── Main Screen ──────────────────────────────────────────────────────────────
+import { colors, typography, spacing, borderRadius } from '../../src/theme';
+import { sharedStyles } from '../../src/styles/shared';
+import { strings } from '../../src/constants/strings';
+import { useAuth } from '../../src/context/AuthContext';
+import { getBusinessForUser, getBusinessPhotos } from '../../src/data/auth';
+import type { Business } from '../../src/types';
+import ErrorState from '../../src/components/ui/ErrorState';
 
 export default function BusinessProfileScreen() {
   const insets = useSafeAreaInsets();
+  const router = useRouter();
+  const { user, signOut, deleteAccount } = useAuth();
+
+  const [business, setBusiness] = useState<Business | null>(null);
+  const [photoUrl, setPhotoUrl] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  const loadProfile = useCallback(async () => {
+    if (!user) return;
+    setError(null);
+
+    try {
+      const biz = await getBusinessForUser(user.id);
+      setBusiness(biz);
+
+      if (biz) {
+        const photos = await getBusinessPhotos(biz.id);
+        if (photos.length > 0) {
+          setPhotoUrl(photos[0].photo_url);
+        }
+      }
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : strings.common.error;
+      setError(message);
+    } finally {
+      setLoading(false);
+    }
+  }, [user]);
+
+  useEffect(() => {
+    loadProfile();
+  }, [loadProfile]);
+
+  const handleLogout = () => {
+    Alert.alert(
+      strings.businessProfile.logout,
+      '',
+      [
+        { text: strings.common.cancel, style: 'cancel' },
+        {
+          text: strings.common.confirm,
+          style: 'destructive',
+          onPress: signOut,
+        },
+      ],
+    );
+  };
+
+  const handleDeleteAccount = () => {
+    Alert.alert(
+      strings.common.deleteAccountTitle,
+      strings.common.deleteAccountMessage,
+      [
+        { text: strings.common.cancel, style: 'cancel' },
+        {
+          text: strings.common.deleteAccountConfirm,
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await deleteAccount();
+            } catch (err: unknown) {
+              const message = err instanceof Error ? err.message : strings.common.error;
+              Alert.alert(strings.common.error, message);
+            }
+          },
+        },
+      ],
+    );
+  };
+
+  const menuItems = [
+    {
+      icon: 'information-circle-outline',
+      label: strings.businessProfile.businessInfo,
+      onPress: () => router.push('/business-edit-profile'),
+    },
+    {
+      icon: 'calendar-outline',
+      label: strings.businessProfile.calendar,
+      onPress: () => router.push('/business-calendar'),
+    },
+    {
+      icon: 'wallet-outline',
+      label: strings.businessProfile.payoutSettings,
+      onPress: () => {},
+    },
+    {
+      icon: 'help-circle-outline',
+      label: strings.businessProfile.help,
+      onPress: () => {},
+    },
+  ] as const;
+
+  if (loading) {
+    return (
+      <View style={[styles.container, styles.center, { paddingTop: insets.top }]}>
+        <ActivityIndicator size="large" color={colors.primary[500]} />
+      </View>
+    );
+  }
+
+  if (error) {
+    return (
+      <View style={[styles.container, styles.center, { paddingTop: insets.top }]}>
+        <ErrorState message={error} onRetry={loadProfile} />
+      </View>
+    );
+  }
 
   return (
-    <View style={[styles.container, { paddingTop: insets.top }]}>
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scroll}>
+    <ScrollView
+      style={[styles.container, { paddingTop: insets.top + spacing.lg }]}
+      contentContainerStyle={styles.scrollContent}
+    >
+      <Text style={styles.title}>{strings.businessProfile.title}</Text>
 
-        {/* Header */}
-        <View style={styles.header}>
-          <Text style={styles.screenTitle}>Perfil</Text>
-        </View>
-
-        {/* Identity card */}
-        <View style={[styles.card, shadows.sm, styles.identityCard]}>
-          {/* Cover photo */}
-          <View style={styles.coverWrap}>
-            {MOCK_BUSINESS.photo_url ? (
-              <Image
-                source={{ uri: MOCK_BUSINESS.photo_url }}
-                style={styles.coverImage}
-                contentFit="cover"
-                transition={300}
-              />
-            ) : (
-              <View style={[styles.coverImage, styles.coverPlaceholder]}>
-                <Ionicons name="storefront-outline" size={40} color={colors.gray[300]} />
-              </View>
-            )}
-            <TouchableOpacity style={styles.editBtn}>
-              <Ionicons name="pencil-outline" size={16} color={colors.white} />
-            </TouchableOpacity>
+      {/* Business card */}
+      <View style={styles.businessCard}>
+        {photoUrl ? (
+          <Image source={{ uri: photoUrl }} style={styles.avatarImage} />
+        ) : (
+          <View style={styles.avatarCircle}>
+            <Ionicons name="storefront" size={32} color={colors.primary[500]} />
           </View>
-
-          {/* Info below cover */}
-          <View style={styles.identityInfo}>
-            <Text style={styles.businessName}>{MOCK_BUSINESS.name}</Text>
-            <View style={styles.ratingRow}>
-              <Ionicons name="star" size={14} color="#F9A825" />
-              <Text style={styles.ratingText}>
-                {MOCK_BUSINESS.rating.toFixed(1)} · {MOCK_BUSINESS.totalReviews} reseñas
-              </Text>
-            </View>
-            <View style={[styles.statusBadge, MOCK_BUSINESS.isActive ? styles.statusActive : styles.statusInactive]}>
-              <View style={[styles.statusDot, { backgroundColor: MOCK_BUSINESS.isActive ? '#4CAF50' : colors.text.tertiary }]} />
-              <Text style={[styles.statusText, { color: MOCK_BUSINESS.isActive ? '#2E7D32' : colors.text.tertiary }]}>
-                {MOCK_BUSINESS.isActive ? 'Activo' : 'Inactivo'}
-              </Text>
-            </View>
-          </View>
+        )}
+        <View style={styles.businessInfo}>
+          <Text style={styles.businessName}>{business?.name}</Text>
+          <Text style={styles.businessAddress} numberOfLines={1}>
+            {business?.address}
+          </Text>
+          {business?.phone ? (
+            <Text style={styles.businessPhone}>{business.phone}</Text>
+          ) : null}
         </View>
+        <TouchableOpacity
+          onPress={() => router.push('/business-edit-profile')}
+          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+        >
+          <Ionicons name="create-outline" size={20} color={colors.primary[500]} />
+        </TouchableOpacity>
+      </View>
 
-        {/* Business Info */}
-        <Text style={styles.sectionTitle}>Información Comercial</Text>
-        <View style={[styles.card, shadows.sm]}>
-          <InfoRow icon="document-text-outline" label="Descripción" value={MOCK_BUSINESS.description} />
-          <View style={styles.divider} />
-          <InfoRow icon="location-outline" label="Dirección" value={MOCK_BUSINESS.address} />
-          <View style={styles.divider} />
-          <InfoRow icon="call-outline" label="Teléfono" value={MOCK_BUSINESS.phone} />
-          <View style={styles.divider} />
-          <InfoRow icon="calendar-outline" label="Miembro Desde" value={MOCK_BUSINESS.memberSince} />
-        </View>
+      {/* Menu items */}
+      <View style={styles.menu}>
+        {menuItems.map((item) => (
+          <TouchableOpacity
+            key={item.label}
+            style={styles.menuItem}
+            activeOpacity={0.6}
+            onPress={item.onPress}
+          >
+            <Ionicons
+              name={item.icon as React.ComponentProps<typeof Ionicons>['name']}
+              size={22}
+              color={colors.text.primary}
+            />
+            <Text style={styles.menuLabel}>{item.label}</Text>
+            <Ionicons name="chevron-forward" size={18} color={colors.gray[400]} />
+          </TouchableOpacity>
+        ))}
+      </View>
 
-        {/* Settings */}
-        <Text style={styles.sectionTitle}>Ajustes</Text>
-        <View style={[styles.card, shadows.sm]}>
-          <SettingRow icon="time-outline" label="Horario Comercial" onPress={() => {}} />
-          <View style={styles.divider} />
-          <SettingRow icon="notifications-outline" label="Notificaciones" onPress={() => {}} />
-          <View style={styles.divider} />
-          <SettingRow icon="help-circle-outline" label="Ayuda y Apoyo" onPress={() => {}} />
-        </View>
+      {/* Logout */}
+      <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
+        <Ionicons name="log-out-outline" size={22} color={colors.error} />
+        <Text style={styles.logoutText}>{strings.businessProfile.logout}</Text>
+      </TouchableOpacity>
 
-        {/* Account */}
-        <Text style={styles.sectionTitle}>Cuenta</Text>
-        <View style={[styles.card, shadows.sm]}>
-          <SettingRow icon="log-out-outline" label="Cerrar Sesión" onPress={() => {}} destructive />
-        </View>
+      {/* Delete account */}
+      <TouchableOpacity style={styles.deleteButton} onPress={handleDeleteAccount}>
+        <Ionicons name="trash-outline" size={22} color={colors.error} />
+        <Text style={styles.deleteText}>{strings.common.deleteAccount}</Text>
+      </TouchableOpacity>
 
-        <View style={{ height: spacing.xxxxl }} />
-      </ScrollView>
-    </View>
+      {/* Email */}
+      <Text style={styles.email}>{user?.email}</Text>
+    </ScrollView>
   );
 }
 
-// ─── Styles ───────────────────────────────────────────────────────────────────
-
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: colors.background.secondary,
-  },
-  scroll: {
+  container: sharedStyles.containerNoPadding,
+  center: sharedStyles.center,
+  scrollContent: {
+    paddingHorizontal: spacing.xxl,
     paddingBottom: spacing.xxxxl,
   },
-
-  // Header
-  header: {
-    paddingHorizontal: spacing.lg,
-    paddingTop: spacing.lg,
-    paddingBottom: spacing.lg,
-    backgroundColor: colors.background.primary,
-  },
-  screenTitle: {
-    fontSize: typography.fontSize.xxl,
+  title: {
+    fontSize: typography.fontSize.xl,
     fontWeight: typography.fontWeight.bold,
     color: colors.text.primary,
+    marginBottom: spacing.xxl,
   },
-
-  // Section title
-  sectionTitle: {
+  businessCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.background.secondary,
+    borderRadius: borderRadius.lg,
+    padding: spacing.lg,
+    marginBottom: spacing.xxl,
+  },
+  avatarCircle: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    backgroundColor: colors.primary[50],
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: spacing.lg,
+  },
+  avatarImage: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    marginRight: spacing.lg,
+  },
+  businessInfo: {
+    flex: 1,
+  },
+  businessName: {
     fontSize: typography.fontSize.md,
     fontWeight: typography.fontWeight.bold,
     color: colors.text.primary,
-    paddingHorizontal: spacing.lg,
-    marginTop: spacing.xxl,
-    marginBottom: spacing.sm,
+    marginBottom: spacing.xs,
   },
-
-  // Card
-  card: {
-    backgroundColor: colors.background.primary,
-    borderRadius: borderRadius.lg,
-    marginHorizontal: spacing.lg,
-    overflow: 'hidden',
+  businessAddress: {
+    fontSize: typography.fontSize.sm,
+    color: colors.text.secondary,
+    marginBottom: spacing.xs,
   },
-  divider: {
-    height: 1,
-    backgroundColor: colors.gray[200],
-    marginHorizontal: spacing.lg,
-  },
-
-  // Identity card
-  identityCard: {
-    marginTop: spacing.lg,
-  },
-  coverWrap: {
-    position: 'relative',
-  },
-  coverImage: {
-    width: '100%',
-    height: 180,
-  },
-  coverPlaceholder: {
-    backgroundColor: colors.gray[100],
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  editBtn: {
-    position: 'absolute',
-    top: spacing.sm,
-    right: spacing.sm,
-    width: 32,
-    height: 32,
-    borderRadius: borderRadius.full,
-    backgroundColor: 'rgba(0,0,0,0.45)',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  identityInfo: {
-    padding: spacing.lg,
-    gap: 4,
-  },
-  businessName: {
-    fontSize: typography.fontSize.lg,
-    fontWeight: typography.fontWeight.bold,
-    color: colors.text.primary,
-  },
-  ratingRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-  },
-  ratingText: {
+  businessPhone: {
     fontSize: typography.fontSize.sm,
     color: colors.text.secondary,
   },
-  statusBadge: {
+  menu: {
+    marginBottom: spacing.xxl,
+  },
+  menuItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 5,
-    alignSelf: 'flex-start',
-    paddingHorizontal: spacing.sm,
-    paddingVertical: 3,
-    borderRadius: borderRadius.full,
-    marginTop: 2,
+    paddingVertical: spacing.lg,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.gray[100],
   },
-  statusActive: {
-    backgroundColor: '#E8F5E9',
-  },
-  statusInactive: {
-    backgroundColor: colors.gray[100],
-  },
-  statusDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-  },
-  statusText: {
-    fontSize: typography.fontSize.xs,
-    fontWeight: typography.fontWeight.semibold,
-  },
-
-  // Info rows
-  infoRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.md,
-    gap: spacing.md,
-  },
-  infoIconWrap: {
-    marginTop: 2,
-  },
-  infoContent: {
+  menuLabel: {
     flex: 1,
-  },
-  infoLabel: {
-    fontSize: typography.fontSize.xs,
-    color: colors.text.tertiary,
-    marginBottom: 2,
-  },
-  infoValue: {
     fontSize: typography.fontSize.base,
     color: colors.text.primary,
-    lineHeight: 20,
+    marginLeft: spacing.lg,
   },
-
-  // Setting rows
-  settingRow: {
+  logoutButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.md,
-    gap: spacing.md,
+    paddingVertical: spacing.lg,
+    marginBottom: spacing.lg,
   },
-  settingLabel: {
-    flex: 1,
+  logoutText: {
     fontSize: typography.fontSize.base,
+    color: colors.error,
+    marginLeft: spacing.lg,
+    fontWeight: typography.fontWeight.medium,
   },
-  chevron: {
-    marginLeft: 'auto',
+  deleteButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: spacing.lg,
+    marginBottom: spacing.lg,
+  },
+  deleteText: {
+    fontSize: typography.fontSize.base,
+    color: colors.error,
+    marginLeft: spacing.lg,
+    fontWeight: typography.fontWeight.medium,
+  },
+  email: {
+    fontSize: typography.fontSize.sm,
+    color: colors.text.tertiary,
+    textAlign: 'center',
   },
 });
