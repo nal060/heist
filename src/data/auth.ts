@@ -11,6 +11,20 @@ import type {
 
 export type UserRole = 'consumer' | 'business';
 
+let cachedPanamaId: string | null = null;
+
+async function getPanamaCountryId(): Promise<string> {
+  if (cachedPanamaId) return cachedPanamaId;
+  const { data, error } = await supabase
+    .from('countries')
+    .select('id')
+    .eq('code', 'PA')
+    .single();
+  if (error || !data) throw new Error('Could not find Panama country record');
+  cachedPanamaId = data.id;
+  return data.id;
+}
+
 interface UserRoleResult {
   role: UserRole | null;
   profile: ConsumerProfile | Business | null;
@@ -46,9 +60,10 @@ export async function createConsumerProfile(
   userId: string,
   name: string,
 ): Promise<ConsumerProfile> {
+  const countryId = await getPanamaCountryId();
   const { data, error } = await supabase
     .from('consumer_profiles')
-    .insert({ user_id: userId, name, country_id: 'pa' })
+    .insert({ user_id: userId, name, country_id: countryId })
     .select()
     .single();
 
@@ -117,7 +132,7 @@ export async function createBusiness(input: CreateBusinessInput): Promise<Busine
       longitude: input.longitude,
       phone: input.phone || null,
       photo_url: input.photoUrl || null,
-      country_id: 'pa',
+      country_id: await getPanamaCountryId(),
       google_place_id: input.googlePlaceId || null,
     })
     .select()

@@ -52,7 +52,7 @@ export default function BagReviewScreen() {
   });
 
   const handleConfirm = async (status: 'active' | 'draft') => {
-    if (!user) return;
+    if (!user || loading) return;
     setLoading(true);
     setError('');
 
