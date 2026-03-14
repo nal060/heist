@@ -76,6 +76,7 @@ export default function BusinessManualScreen() {
         onChangeText={(t) => updateField('name', t)}
         placeholder={strings.businessManualEntry.namePlaceholder}
         error={errors.name}
+        autoCapitalize="words"
       />
       <FormField
         label={strings.businessManualEntry.addressLabel}
@@ -83,12 +84,14 @@ export default function BusinessManualScreen() {
         onChangeText={(t) => updateField('address', t)}
         placeholder={strings.businessManualEntry.addressPlaceholder}
         error={errors.address}
+        autoCapitalize="words"
       />
       <FormField
         label={strings.businessManualEntry.cityLabel}
         value={form.city}
         onChangeText={(t) => updateField('city', t)}
         placeholder={strings.businessManualEntry.cityPlaceholder}
+        autoCapitalize="words"
       />
       <FormField
         label={strings.businessManualEntry.phoneLabel}
