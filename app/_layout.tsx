@@ -4,6 +4,7 @@ import { StatusBar } from 'expo-status-bar';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { BottomSheetModalProvider } from '@gorhom/bottom-sheet';
 import { StyleSheet, ActivityIndicator, View, AppState } from 'react-native';
+import { BottomSheetModalProvider } from '@gorhom/bottom-sheet';
 import { FavoritesProvider } from '../src/context/FavoritesContext';
 import { LocationProvider, useLocation } from '../src/context/LocationContext';
 import { AuthProvider, useAuth } from '../src/context/AuthContext';
