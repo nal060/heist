@@ -31,7 +31,7 @@ export default function UserLocationScreen() {
     try {
       const emailName = user.email?.split('@')[0] || 'Usuario';
       await createConsumerProfile(user.id, emailName);
-      await setLocation({ name, latitude: lat, longitude: lon });
+      await setLocation({ name: strings.discover.defaultLocation, latitude: lat, longitude: lon });
       setOnboarded();
       router.replace('/(tabs)');
     } catch (err: unknown) {

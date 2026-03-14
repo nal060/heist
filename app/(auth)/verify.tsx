@@ -56,18 +56,6 @@ export default function VerifyScreen() {
       setLoading(true);
       try {
         await verifyOtp(email!, cleaned);
-
-        // Check if user already has a profile (existing user)
-        const { data: { user: authUser } } = await supabase.auth.getUser();
-        if (authUser) {
-          const { role: existingRole } = await getUserRole(authUser.id);
-          if (existingRole) {
-            // User already exists — let root layout redirect to the right tabs
-            return;
-          }
-        }
-
-        // New user — continue onboarding based on selected role
         const nextScreen = role === 'business' ? '/(auth)/business-search' : '/(auth)/user-preferences';
         router.replace(nextScreen);
         return;
