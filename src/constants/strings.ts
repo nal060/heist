@@ -95,8 +95,40 @@ export const strings = {
   // Favorites
   favorites: {
     title: 'Favoritos',
+    tabBags: 'Bolsas',
+    tabStores: 'Tiendas',
     emptyTitle: 'Aun no tienes favoritos',
     emptySubtitle: 'Guarda tus bolsas favoritas tocando el corazon',
+    emptyBagsTitle: 'Aun no tienes bolsas guardadas',
+    emptyBagsSubtitle: 'Guarda bolsas individuales tocando el corazon',
+    emptyStoresTitle: 'Aun no tienes tiendas guardadas',
+    emptyStoresSubtitle: 'Guarda tiendas completas para ver todas sus bolsas',
+  },
+
+  // Favorite bottom sheet
+  favoriteSheet: {
+    title: 'Elige que quieres guardar',
+    subtitle: 'Puedes quitar de favoritos en cualquier momento',
+    saveBag: 'Guardar esta bolsa',
+    saveStore: 'Guardar esta tienda',
+    notifyBag: 'Notificarme sobre esta bolsa',
+    notifyStore: 'Notificarme sobre esta tienda',
+    save: 'Guardar',
+  },
+
+  // Consumer-facing business profile
+  consumerBusinessProfile: {
+    activeBags: 'bolsas activas',
+    directions: 'Direcciones',
+    getDirections: 'Obtener direcciones',
+    googleMaps: 'Google Maps',
+    appleMaps: 'Apple Maps',
+    copyAddress: 'Copiar direccion',
+    addressCopied: 'Direccion copiada',
+    selectNavApp: 'Selecciona app de navegacion',
+    noBagsTitle: 'Sin bolsas activas',
+    noBagsSubtitle: 'Esta tienda no tiene bolsas disponibles en este momento',
+    activeBagsSection: 'Bolsas activas',
   },
 
   // Profile

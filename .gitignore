@@ -3,6 +3,9 @@
 # dependencies
 node_modules/
 
+# Claude Code
+.claude/
+
 # Expo
 .expo/
 dist/
