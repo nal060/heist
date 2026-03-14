@@ -129,6 +129,26 @@ export interface Favorite {
   created_at: string;
 }
 
+export interface FavoriteBag {
+  id: string;
+  user_id: string;
+  bag_id: string;
+  created_at: string;
+}
+
+export interface NotificationPreference {
+  id: string;
+  user_id: string;
+  target_type: 'bag' | 'business';
+  target_id: string;
+  enabled: boolean;
+  created_at: string;
+}
+
+export interface BusinessWithBags extends Business {
+  activeBagCount: number;
+}
+
 export interface Order {
   id: string;
   user_id: string;
