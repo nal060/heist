@@ -63,7 +63,7 @@ export async function createConsumerProfile(
   const countryId = await getPanamaCountryId();
   const { data, error } = await supabase
     .from('consumer_profiles')
-    .insert({ user_id: userId, name, country_id: countryId })
+    .insert({ user_id: userId, name, country_id: 'pa' })
     .select()
     .single();
 
@@ -132,7 +132,7 @@ export async function createBusiness(input: CreateBusinessInput): Promise<Busine
       longitude: input.longitude,
       phone: input.phone || null,
       photo_url: input.photoUrl || null,
-      country_id: await getPanamaCountryId(),
+      country_id: 'pa',
       google_place_id: input.googlePlaceId || null,
     })
     .select()
