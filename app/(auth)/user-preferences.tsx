@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { StyleSheet, Text } from 'react-native';
-import { useRouter, useLocalSearchParams } from 'expo-router';
+import { useRouter } from 'expo-router';
 import { colors, typography, spacing } from '../../src/theme';
 import { strings } from '../../src/constants/strings';
 import { useAuth } from '../../src/context/AuthContext';
@@ -22,8 +22,6 @@ const OPTIONS = [
 export default function UserPreferencesScreen() {
   const router = useRouter();
   const { user } = useAuth();
-  const { countryId } = useLocalSearchParams<{ countryId: string }>();
-
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [saving, setSaving] = useState(false);
 
@@ -47,7 +45,7 @@ export default function UserPreferencesScreen() {
       // Continue even if save fails
     } finally {
       setSaving(false);
-      router.push({ pathname: '/(auth)/pickup-preferences', params: { countryId } });
+      router.push('/(auth)/pickup-preferences');
     }
   };
 

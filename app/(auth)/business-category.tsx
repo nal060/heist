@@ -33,7 +33,6 @@ export default function BusinessCategoryScreen() {
     latitude: string;
     longitude: string;
     googlePlaceId: string;
-    countryId: string;
     photoRefs: string;
   }>();
 

@@ -5,7 +5,7 @@ import {
   StyleSheet,
   ActivityIndicator,
 } from 'react-native';
-import { useRouter, useLocalSearchParams } from 'expo-router';
+import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import * as Location from 'expo-location';
@@ -22,8 +22,6 @@ export default function UserLocationScreen() {
   const insets = useSafeAreaInsets();
   const { user, setOnboarded } = useAuth();
   const { setLocation } = useLocation();
-  const { countryId } = useLocalSearchParams<{ countryId: string }>();
-
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
@@ -32,7 +30,7 @@ export default function UserLocationScreen() {
 
     try {
       const emailName = user.email?.split('@')[0] || 'Usuario';
-      await createConsumerProfile(user.id, emailName, countryId);
+      await createConsumerProfile(user.id, emailName);
       await setLocation({ name: strings.discover.defaultLocation, latitude: lat, longitude: lon });
       setOnboarded();
       router.replace('/(tabs)');

@@ -54,10 +54,8 @@ export default function VerifyScreen() {
       setLoading(true);
       try {
         await verifyOtp(email!, cleaned);
-        router.replace({
-          pathname: '/(auth)/country-select',
-          params: { role: role || '' },
-        });
+        const nextScreen = role === 'business' ? '/(auth)/business-search' : '/(auth)/user-preferences';
+        router.replace(nextScreen);
         return;
       } catch (err: unknown) {
         const message = err instanceof Error ? err.message : '';

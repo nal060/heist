@@ -8,7 +8,7 @@ import {
   FlatList,
   ActivityIndicator,
 } from 'react-native';
-import { useRouter, useLocalSearchParams } from 'expo-router';
+import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, typography, spacing, borderRadius } from '../../src/theme';
 import { strings } from '../../src/constants/strings';
@@ -23,11 +23,6 @@ interface PlaceResult {
 
 export default function BusinessSearchScreen() {
   const router = useRouter();
-  const { countryId, countryCode } = useLocalSearchParams<{
-    countryId: string;
-    countryCode: string;
-  }>();
-
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<PlaceResult[]>([]);
   const [searching, setSearching] = useState(false);
@@ -44,7 +39,7 @@ export default function BusinessSearchScreen() {
 
       setSearching(true);
       try {
-        const places = await searchPlaces(text, countryCode || 'pa');
+        const places = await searchPlaces(text, 'pa');
         setResults(places);
         setHasSearched(true);
       } catch {
@@ -54,7 +49,7 @@ export default function BusinessSearchScreen() {
         setSearching(false);
       }
     },
-    [countryCode],
+    [],
   );
 
   const handleSelectPlace = (place: PlaceResult) => {
@@ -64,7 +59,6 @@ export default function BusinessSearchScreen() {
         placeId: place.placeId,
         placeName: place.name,
         placeAddress: place.address,
-        countryId,
       },
     });
   };
@@ -72,7 +66,6 @@ export default function BusinessSearchScreen() {
   const handleManualEntry = () => {
     router.push({
       pathname: '/(auth)/business-manual',
-      params: { countryId },
     });
   };
 

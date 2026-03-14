@@ -29,7 +29,6 @@ export default function BagReviewScreen() {
     latitude: string;
     longitude: string;
     googlePlaceId: string;
-    countryId: string;
     categoryId: string;
     photoRefs: string;
     bagTitle: string;
@@ -66,7 +65,6 @@ export default function BagReviewScreen() {
         latitude: parseFloat(params.latitude || '8.953'),
         longitude: parseFloat(params.longitude || '-79.534'),
         phone: params.phone || undefined,
-        countryId: params.countryId || undefined,
         googlePlaceId: params.googlePlaceId || undefined,
       });
 

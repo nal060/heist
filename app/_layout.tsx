@@ -2,7 +2,7 @@ import { useEffect } from 'react';
 import { Stack, useRouter, useSegments } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
-import { StyleSheet, ActivityIndicator, View } from 'react-native';
+import { StyleSheet, ActivityIndicator, View, AppState } from 'react-native';
 import { FavoritesProvider } from '../src/context/FavoritesContext';
 import { LocationProvider } from '../src/context/LocationContext';
 import { AuthProvider, useAuth } from '../src/context/AuthContext';
@@ -24,10 +24,9 @@ function RootNavigator() {
         router.replace('/(auth)/welcome');
       }
     } else if (!isOnboarded) {
-      // Signed in but hasn't completed onboarding
-      // Let them stay in auth group to finish onboarding flow
+      // Signed in but hasn't completed onboarding — restart from welcome
       if (!inAuthGroup) {
-        router.replace('/(auth)/country-select');
+        router.replace('/(auth)/welcome');
       }
     } else if (userRole === 'business') {
       // Business user — go to business tabs
@@ -41,6 +40,15 @@ function RootNavigator() {
       }
     }
   }, [session, userRole, isLoading, isOnboarded, segments, router]);
+
+  useEffect(() => {
+    const subscription = AppState.addEventListener('change', (nextState) => {
+      if (nextState === 'background' && !session && !isLoading) {
+        router.replace('/(auth)/welcome');
+      }
+    });
+    return () => subscription.remove();
+  }, [session, isLoading, router]);
 
   if (isLoading) {
     return (

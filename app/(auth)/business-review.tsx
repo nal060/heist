@@ -15,11 +15,10 @@ import Button from '../../src/components/ui/Button';
 
 export default function BusinessReviewScreen() {
   const router = useRouter();
-  const { placeId, placeName, placeAddress, countryId } = useLocalSearchParams<{
+  const { placeId, placeName, placeAddress } = useLocalSearchParams<{
     placeId: string;
     placeName: string;
     placeAddress: string;
-    countryId: string;
   }>();
 
   const [details, setDetails] = useState<{
@@ -67,7 +66,6 @@ export default function BusinessReviewScreen() {
         latitude: String(details.latitude),
         longitude: String(details.longitude),
         googlePlaceId: placeId || '',
-        countryId,
         photoRefs: JSON.stringify(details.photoReferences),
       },
     });
@@ -77,7 +75,6 @@ export default function BusinessReviewScreen() {
     router.push({
       pathname: '/(auth)/business-manual',
       params: {
-        countryId,
         prefillName: details?.name || '',
         prefillAddress: details?.address || '',
         prefillPhone: details?.phone || '',

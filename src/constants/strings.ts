@@ -227,18 +227,6 @@ export const strings = {
     expiredCode: 'El codigo ha expirado. Solicita uno nuevo.',
   },
 
-  // Auth - Country selection (after OTP, for BOTH users and businesses)
-  countrySelect: {
-    title: 'Comencemos',
-    chooseCountry: 'Selecciona tu pais',
-    termsPrefix: 'Acepto los ',
-    termsLink: 'terminos y condiciones',
-    termsMiddle: ' y la ',
-    privacyLink: 'politica de privacidad',
-    signMeUp: 'Registrarme',
-    noCountries: 'No hay paises disponibles',
-  },
-
   // User onboarding - What brings you here
   userPreferences: {
     whatBringsTitle: 'QUE TE TRAE POR AQUI?',

@@ -3,7 +3,6 @@ import type {
   Business,
   ConsumerProfile,
   Category,
-  Country,
   UserPreference,
   PreferenceType,
   BagPickupSchedule,
@@ -41,29 +40,15 @@ export async function getUserRole(userId: string): Promise<UserRoleResult> {
   return { role: null, profile: null };
 }
 
-// --- Countries ---
-
-export async function getActiveCountries(): Promise<Country[]> {
-  const { data, error } = await supabase
-    .from('countries')
-    .select('*')
-    .eq('is_active', true)
-    .order('name');
-
-  if (error) throw new Error(`Error al obtener paises: ${error.message}`);
-  return data;
-}
-
 // --- Consumer Profile ---
 
 export async function createConsumerProfile(
   userId: string,
   name: string,
-  countryId?: string,
 ): Promise<ConsumerProfile> {
   const { data, error } = await supabase
     .from('consumer_profiles')
-    .insert({ user_id: userId, name, country_id: countryId || null })
+    .insert({ user_id: userId, name, country_id: 'pa' })
     .select()
     .single();
 
@@ -117,7 +102,6 @@ interface CreateBusinessInput {
   longitude: number;
   phone?: string;
   photoUrl?: string;
-  countryId?: string;
   googlePlaceId?: string;
 }
 
@@ -133,7 +117,7 @@ export async function createBusiness(input: CreateBusinessInput): Promise<Busine
       longitude: input.longitude,
       phone: input.phone || null,
       photo_url: input.photoUrl || null,
-      country_id: input.countryId || null,
+      country_id: 'pa',
       google_place_id: input.googlePlaceId || null,
     })
     .select()

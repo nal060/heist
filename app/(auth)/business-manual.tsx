@@ -18,7 +18,6 @@ export default function BusinessManualScreen() {
     name?: string;
     address?: string;
     phone?: string;
-    countryId?: string;
     categoryId?: string;
   }>();
 
