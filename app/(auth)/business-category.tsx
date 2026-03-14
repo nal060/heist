@@ -14,14 +14,6 @@ import ScreenShell from '../../src/components/ui/ScreenShell';
 import RadioButton from '../../src/components/ui/RadioButton';
 import Button from '../../src/components/ui/Button';
 
-const CATEGORY_COLORS: Record<string, { bg: string; icon: string }> = {
-  'Comidas': { bg: '#E8F5E9', icon: '#2E7D32' },
-  'Panaderia': { bg: '#FFF3E0', icon: '#E65100' },
-  'Supermercado': { bg: '#E3F2FD', icon: '#1565C0' },
-  'Cafe': { bg: '#FBE9E7', icon: '#BF360C' },
-  'Restaurante': { bg: '#F3E5F5', icon: '#6A1B9A' },
-  'Otros': { bg: '#F5F5F5', icon: '#616161' },
-};
 
 export default function BusinessCategoryScreen() {
   const router = useRouter();
@@ -42,7 +34,11 @@ export default function BusinessCategoryScreen() {
 
   useEffect(() => {
     getAllCategories()
-      .then(setCategories)
+      .then((cats) => {
+        const otros = cats.filter((c) => c.name.toLowerCase() === 'otros');
+        const rest = cats.filter((c) => c.name.toLowerCase() !== 'otros');
+        setCategories([...rest, ...otros]);
+      })
       .catch(() => {})
       .finally(() => setLoading(false));
   }, []);
@@ -74,19 +70,18 @@ export default function BusinessCategoryScreen() {
       <View style={styles.optionsList}>
         {categories.map((cat) => {
           const isSelected = selectedId === cat.id;
-          const catColors = CATEGORY_COLORS[cat.name] || CATEGORY_COLORS['Otros'];
 
           return (
             <TouchableOpacity
               key={cat.id}
               style={[
                 styles.optionRow,
-                isSelected && { borderColor: catColors.icon, backgroundColor: catColors.bg },
+                isSelected && { borderColor: colors.primary[500], backgroundColor: colors.primary[50] },
               ]}
               onPress={() => setSelectedId(cat.id)}
               activeOpacity={0.7}
             >
-              <RadioButton selected={isSelected} color={catColors.icon} />
+              <RadioButton selected={isSelected} color={colors.primary[500]} />
               <Text style={[styles.optionText, isSelected && { fontWeight: typography.fontWeight.semibold }]}>
                 {cat.name}
               </Text>

@@ -96,6 +96,7 @@ export default function BusinessManualScreen() {
         onChangeText={(t) => updateField('phone', t)}
         placeholder={strings.businessManualEntry.phonePlaceholder}
         keyboardType="phone-pad"
+        maxLength={8}
       />
     </ScreenShell>
   );
