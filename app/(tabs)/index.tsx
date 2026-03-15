@@ -21,12 +21,15 @@ import EmptyState from '../../src/components/ui/EmptyState';
 
 import { useFavorites } from '../../src/context/FavoritesContext';
 import { useLocation } from '../../src/context/LocationContext';
+import useFavoriteSheet from '../../src/hooks/useFavoriteSheet';
+import FavoriteBottomSheet from '../../src/components/favorites/FavoriteBottomSheet';
 import type { BagWithBusiness, Category } from '../../src/types';
 
 export default function DiscoverScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { isFavorite, toggleFavorite } = useFavorites();
+  const { isItemFavorited } = useFavorites();
+  const { sheetRef, sheetData, openSheet } = useFavoriteSheet();
   const { location, isLoaded } = useLocation();
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
@@ -90,9 +93,9 @@ export default function DiscoverScreen() {
 
   const renderBagCard = ({ item }: { item: BagWithBusiness }) => (
     <BagCardHorizontal
-      bag={{ ...item, isFavorite: isFavorite(item.business_id) }}
+      bag={{ ...item, isFavorite: isItemFavorited(item.id, item.business_id) }}
       onPress={() => handleBagPress(item)}
-      onToggleFavorite={() => toggleFavorite(item.business_id)}
+      onToggleFavorite={() => openSheet(item.id, item.business_id, item.title, item.business.name)}
     />
   );
 
@@ -190,6 +193,7 @@ export default function DiscoverScreen() {
 
         <View style={styles.bottomPadding} />
       </ScrollView>
+      <FavoriteBottomSheet ref={sheetRef} data={sheetData} />
     </View>
   );
 }

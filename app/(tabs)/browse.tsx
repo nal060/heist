@@ -21,6 +21,8 @@ import { strings } from '../../src/constants/strings';
 import { getAllActiveBags, getCategories } from '../../src/data';
 import ErrorState from '../../src/components/ui/ErrorState';
 import { useFavorites } from '../../src/context/FavoritesContext';
+import useFavoriteSheet from '../../src/hooks/useFavoriteSheet';
+import FavoriteBottomSheet from '../../src/components/favorites/FavoriteBottomSheet';
 import type { BagWithBusiness, Category } from '../../src/types';
 
 type SortOption = 'relevance' | 'price' | 'rating';
@@ -34,7 +36,8 @@ const SORT_OPTIONS: { key: SortOption; label: string }[] = [
 export default function BrowseScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { isFavorite, toggleFavorite } = useFavorites();
+  const { isItemFavorited } = useFavorites();
+  const { sheetRef, sheetData, openSheet } = useFavoriteSheet();
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [sortBy, setSortBy] = useState<SortOption>('relevance');
@@ -137,9 +140,9 @@ export default function BrowseScreen() {
         data={filteredBags}
         renderItem={({ item }) => (
           <BagCardVertical
-            bag={{ ...item, isFavorite: isFavorite(item.business_id) }}
+            bag={{ ...item, isFavorite: isItemFavorited(item.id, item.business_id) }}
             onPress={() => router.push(`/bag/${item.id}`)}
-            onToggleFavorite={() => toggleFavorite(item.business_id)}
+            onToggleFavorite={() => openSheet(item.id, item.business_id, item.title, item.business.name)}
           />
         )}
         keyExtractor={(item) => item.id}
@@ -216,6 +219,7 @@ export default function BrowseScreen() {
           />
         }
       />
+      <FavoriteBottomSheet ref={sheetRef} data={sheetData} />
     </View>
   );
 }

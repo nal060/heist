@@ -18,6 +18,8 @@ import { strings } from '../../src/constants/strings';
 import { getBagById } from '../../src/data';
 import ErrorState from '../../src/components/ui/ErrorState';
 import { useFavorites } from '../../src/context/FavoritesContext';
+import useFavoriteSheet from '../../src/hooks/useFavoriteSheet';
+import FavoriteBottomSheet from '../../src/components/favorites/FavoriteBottomSheet';
 import PriceDisplay from '../../src/components/ui/PriceDisplay';
 import Badge from '../../src/components/ui/Badge';
 import RatingBadge from '../../src/components/ui/RatingBadge';
@@ -34,7 +36,8 @@ export default function BagDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { isFavorite, toggleFavorite } = useFavorites();
+  const { isItemFavorited } = useFavorites();
+  const { sheetRef, sheetData, openSheet } = useFavoriteSheet();
   const [bag, setBag] = useState<BagWithBusiness | undefined>(undefined);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
@@ -77,7 +80,7 @@ export default function BagDetailScreen() {
     );
   }
 
-  const favorite = isFavorite(bag.business_id);
+  const favorite = isItemFavorited(bag.id, bag.business_id);
   const discount = getDiscountPercentage(bag.original_price, bag.discounted_price);
   const isAvailable = bag.status === 'active' && bag.quantity_available > 0;
 
@@ -126,7 +129,7 @@ export default function BagDetailScreen() {
             </TouchableOpacity>
             <TouchableOpacity
               style={styles.circleButton}
-              onPress={() => toggleFavorite(bag.business_id)}
+              onPress={() => openSheet(bag.id, bag.business_id, bag.title, bag.business.name)}
             >
               <Ionicons
                 name={favorite ? 'heart' : 'heart-outline'}
@@ -272,6 +275,7 @@ export default function BagDetailScreen() {
           </Text>
         </TouchableOpacity>
       </View>
+      <FavoriteBottomSheet ref={sheetRef} data={sheetData} />
     </View>
   );
 }
