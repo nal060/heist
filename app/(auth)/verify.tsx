@@ -12,6 +12,8 @@ import { useRouter } from 'expo-router';
 import { colors, typography, spacing, borderRadius } from '../../src/theme';
 import { strings } from '../../src/constants/strings';
 import { useAuth } from '../../src/context/AuthContext';
+import { getUserRole } from '../../src/data/auth';
+import { supabase } from '../../src/lib/supabase';
 import ScreenShell from '../../src/components/ui/ScreenShell';
 
 const CODE_LENGTH = 6;
@@ -54,6 +56,18 @@ export default function VerifyScreen() {
       setLoading(true);
       try {
         await verifyOtp(email!, cleaned);
+
+        // Check if user already has a profile (existing user)
+        const { data: { user: authUser } } = await supabase.auth.getUser();
+        if (authUser) {
+          const { role: existingRole } = await getUserRole(authUser.id);
+          if (existingRole) {
+            // User already exists — let root layout redirect to the right tabs
+            return;
+          }
+        }
+
+        // New user — continue onboarding based on selected role
         const nextScreen = role === 'business' ? '/(auth)/business-search' : '/(auth)/user-preferences';
         router.replace(nextScreen);
         return;
