@@ -35,7 +35,7 @@ export async function getUserRole(userId: string): Promise<UserRoleResult> {
     .from('consumer_profiles')
     .select('*')
     .eq('user_id', userId)
-    .single();
+    .maybeSingle();
 
   if (consumer) {
     return { role: 'consumer', profile: consumer };
@@ -45,7 +45,7 @@ export async function getUserRole(userId: string): Promise<UserRoleResult> {
     .from('businesses')
     .select('*')
     .eq('user_id', userId)
-    .single();
+    .maybeSingle();
 
   if (business) {
     return { role: 'business', profile: business };
