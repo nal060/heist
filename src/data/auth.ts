@@ -31,21 +31,33 @@ interface UserRoleResult {
 }
 
 export async function getUserRole(userId: string): Promise<UserRoleResult> {
-  const { data: consumer } = await supabase
+  // Force a token refresh so subsequent queries use a valid access token.
+  // On cold start the persisted JWT is often expired; getUser() refreshes it.
+  await supabase.auth.getUser();
+
+  const { data: consumer, error: consumerError } = await supabase
     .from('consumer_profiles')
     .select('*')
     .eq('user_id', userId)
     .maybeSingle();
 
+  if (consumerError) {
+    throw new Error(`consumer_profiles lookup failed: ${consumerError.message}`);
+  }
+
   if (consumer) {
     return { role: 'consumer', profile: consumer };
   }
 
-  const { data: business } = await supabase
+  const { data: business, error: businessError } = await supabase
     .from('businesses')
     .select('*')
     .eq('user_id', userId)
     .maybeSingle();
+
+  if (businessError) {
+    throw new Error(`businesses lookup failed: ${businessError.message}`);
+  }
 
   if (business) {
     return { role: 'business', profile: business };

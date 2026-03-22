@@ -23,7 +23,8 @@ export default function ProfileScreen() {
   const loadOrders = () => {
     setLoading(true);
     setError(false);
-    getOrderHistory()
+    if (!authUser) { setLoading(false); return; }
+    getOrderHistory(authUser.id)
       .then((data) => setOrders(data))
       .catch(() => setError(true))
       .finally(() => setLoading(false));

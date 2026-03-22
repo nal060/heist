@@ -325,10 +325,7 @@ export async function getAllActiveBags(): Promise<BagWithBusiness[]> {
     total: number;
   }
 
-  export async function createOrder(input: CreateOrderInput): Promise<Order> {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) throw new Error('No se encontró la sesión del usuario.');
-
+  export async function createOrder(userId: string, input: CreateOrderInput): Promise<Order> {
     // Fetch bag to get pickup times
     const { data: bag, error: bagError } = await supabase
       .from('surplus_bags')
@@ -346,7 +343,7 @@ export async function getAllActiveBags(): Promise<BagWithBusiness[]> {
     const { data: order, error: orderError } = await supabase
       .from('orders')
       .insert({
-        user_id: user.id,
+        user_id: userId,
         surplus_bag_id: input.bagId,
         quantity: input.quantity,
         total_price: input.total,
@@ -409,10 +406,7 @@ export async function getAllActiveBags(): Promise<BagWithBusiness[]> {
   /**
    * Returns order history with full details.
    */
-  export async function getOrderHistory(): Promise<OrderWithDetails[]> {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return [];
-
+  export async function getOrderHistory(userId: string): Promise<OrderWithDetails[]> {
     const { data, error } = await supabase
       .from('orders')
       .select(`
@@ -420,7 +414,7 @@ export async function getAllActiveBags(): Promise<BagWithBusiness[]> {
         bag:surplus_bags(*, business:businesses(*)),
         payment:payments(*)
       `)
-      .eq('user_id', user.id)
+      .eq('user_id', userId)
       .order('created_at', { ascending: false });
 
     if (error) {
@@ -440,59 +434,47 @@ export async function getAllActiveBags(): Promise<BagWithBusiness[]> {
 
   // ─── Favorites ──────────────────────────────────────────────────────────────
 
-  export async function getFavoriteBagIds(): Promise<string[]> {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return [];
+  export async function getFavoriteBagIds(userId: string): Promise<string[]> {
     const { data } = await supabase
       .from('favorite_bags')
       .select('bag_id')
-      .eq('user_id', user.id);
+      .eq('user_id', userId);
     return (data ?? []).map((r) => r.bag_id);
   }
 
-  export async function getFavoriteBusinessIds(): Promise<string[]> {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return [];
+  export async function getFavoriteBusinessIds(userId: string): Promise<string[]> {
     const { data } = await supabase
       .from('favorites')
       .select('business_id')
-      .eq('user_id', user.id);
+      .eq('user_id', userId);
     return (data ?? []).map((r) => r.business_id);
   }
 
-  export async function addFavoriteBag(bagId: string): Promise<void> {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) throw new Error('Not authenticated');
+  export async function addFavoriteBag(userId: string, bagId: string): Promise<void> {
     await supabase
       .from('favorite_bags')
-      .upsert({ user_id: user.id, bag_id: bagId }, { onConflict: 'user_id,bag_id' });
+      .upsert({ user_id: userId, bag_id: bagId }, { onConflict: 'user_id,bag_id' });
   }
 
-  export async function removeFavoriteBag(bagId: string): Promise<void> {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
+  export async function removeFavoriteBag(userId: string, bagId: string): Promise<void> {
     await supabase
       .from('favorite_bags')
       .delete()
-      .eq('user_id', user.id)
+      .eq('user_id', userId)
       .eq('bag_id', bagId);
   }
 
-  export async function addFavoriteBusiness(businessId: string): Promise<void> {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) throw new Error('Not authenticated');
+  export async function addFavoriteBusiness(userId: string, businessId: string): Promise<void> {
     await supabase
       .from('favorites')
-      .upsert({ user_id: user.id, business_id: businessId }, { onConflict: 'user_id,business_id' });
+      .upsert({ user_id: userId, business_id: businessId }, { onConflict: 'user_id,business_id' });
   }
 
-  export async function removeFavoriteBusiness(businessId: string): Promise<void> {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
+  export async function removeFavoriteBusiness(userId: string, businessId: string): Promise<void> {
     await supabase
       .from('favorites')
       .delete()
-      .eq('user_id', user.id)
+      .eq('user_id', userId)
       .eq('business_id', businessId);
   }
 
@@ -566,36 +548,33 @@ export async function getAllActiveBags(): Promise<BagWithBusiness[]> {
   // ─── Notification Preferences ───────────────────────────────────────────────
 
   export async function setNotificationPreference(
+    userId: string,
     targetType: 'bag' | 'business',
     targetId: string,
     enabled: boolean,
   ): Promise<void> {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
     if (enabled) {
       await supabase
         .from('notification_preferences')
         .upsert(
-          { user_id: user.id, target_type: targetType, target_id: targetId, enabled: true },
+          { user_id: userId, target_type: targetType, target_id: targetId, enabled: true },
           { onConflict: 'user_id,target_type,target_id' },
         );
     } else {
       await supabase
         .from('notification_preferences')
         .delete()
-        .eq('user_id', user.id)
+        .eq('user_id', userId)
         .eq('target_type', targetType)
         .eq('target_id', targetId);
     }
   }
 
-  export async function getNotificationPreferences(): Promise<Map<string, boolean>> {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return new Map();
+  export async function getNotificationPreferences(userId: string): Promise<Map<string, boolean>> {
     const { data } = await supabase
       .from('notification_preferences')
       .select('target_type, target_id, enabled')
-      .eq('user_id', user.id);
+      .eq('user_id', userId);
     const map = new Map<string, boolean>();
     (data ?? []).forEach((row) => {
       map.set(`${row.target_type}:${row.target_id}`, row.enabled);

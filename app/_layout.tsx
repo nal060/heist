@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { Stack, useRouter, useSegments } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
@@ -18,38 +18,39 @@ function RootNavigator() {
     if (isLoading) return;
 
     const inAuthGroup = segments[0] === '(auth)';
+    const inConsumerTabs = segments[0] === '(tabs)';
+    const inBusinessTabs = segments[0] === '(business-tabs)';
 
     if (!session) {
-      // Not signed in — go to auth
       if (!inAuthGroup) {
         router.replace('/(auth)/welcome');
       }
     } else if (!isOnboarded) {
-      // Signed in but hasn't completed onboarding — restart from welcome
       if (!inAuthGroup) {
         router.replace('/(auth)/welcome');
       }
     } else if (userRole === 'business') {
-      // Business user — go to business tabs
-      if (inAuthGroup) {
+      if (inAuthGroup || inConsumerTabs) {
         router.replace('/(business-tabs)');
       }
     } else {
-      // Consumer user — go to consumer tabs
-      if (inAuthGroup) {
+      if (inAuthGroup || inBusinessTabs) {
         router.replace('/(tabs)');
       }
     }
   }, [session, userRole, isLoading, isOnboarded, segments, router]);
 
+  const sessionRef = useRef(session);
+  sessionRef.current = session;
+
   useEffect(() => {
     const subscription = AppState.addEventListener('change', (nextState) => {
-      if (nextState === 'background' && !session && !isLoading) {
+      if (nextState === 'background' && !sessionRef.current) {
         router.replace('/(auth)/welcome');
       }
     });
     return () => subscription.remove();
-  }, [session, isLoading, router]);
+  }, [router]);
 
   if (isLoading) {
     return (

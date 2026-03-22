@@ -14,6 +14,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { colors, spacing, typography, borderRadius, shadows } from '../../src/theme';
 import { strings } from '../../src/constants/strings';
 import { getBagById, createOrder } from '../../src/data';
+import { useAuth } from '../../src/context/AuthContext';
 import ErrorState from '../../src/components/ui/ErrorState';
 import ScreenHeader from '../../src/components/ui/ScreenHeader';
 import QuantityStepper from '../../src/components/ui/QuantityStepper';
@@ -27,6 +28,7 @@ export default function CheckoutScreen() {
   const { bagId } = useLocalSearchParams<{ bagId: string }>();
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const { user } = useAuth();
   const [quantity, setQuantity] = useState(1);
   const [bag, setBag] = useState<BagWithBusiness | undefined>(undefined);
   const [loading, setLoading] = useState(true);
@@ -78,7 +80,8 @@ export default function CheckoutScreen() {
     if (paying) return;
     setPaying(true);
     try {
-      const order = await createOrder({
+      if (!user) throw new Error('No se encontró la sesión del usuario.');
+      const order = await createOrder(user.id, {
         bagId: bag.id,
         quantity,
         subtotal,
