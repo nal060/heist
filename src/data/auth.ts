@@ -121,6 +121,7 @@ interface CreateBusinessInput {
 }
 
 export async function createBusiness(input: CreateBusinessInput): Promise<Business> {
+  const countryId = await getPanamaCountryId();
   const { data, error } = await supabase
     .from('businesses')
     .insert({
@@ -132,7 +133,7 @@ export async function createBusiness(input: CreateBusinessInput): Promise<Busine
       longitude: input.longitude,
       phone: input.phone || null,
       photo_url: input.photoUrl || null,
-      country_id: 'pa',
+      country_id: countryId,
       google_place_id: input.googlePlaceId || null,
     })
     .select()
