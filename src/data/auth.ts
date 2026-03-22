@@ -63,7 +63,7 @@ export async function createConsumerProfile(
   const countryId = await getPanamaCountryId();
   const { data, error } = await supabase
     .from('consumer_profiles')
-    .insert({ user_id: userId, name, country_id: 'pa' })
+    .insert({ user_id: userId, name, country_id: countryId })
     .select()
     .single();
 
