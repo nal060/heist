@@ -327,7 +327,7 @@ export async function getAllActiveBags(): Promise<BagWithBusiness[]> {
 
   export async function createOrder(input: CreateOrderInput): Promise<Order> {
     const { data: { user } } = await supabase.auth.getUser();
-    if (!user) throw new Error('No se encontro la sesion del usuario.');
+    if (!user) throw new Error('No se encontró la sesión del usuario.');
 
     // Fetch bag to get pickup times
     const { data: bag, error: bagError } = await supabase

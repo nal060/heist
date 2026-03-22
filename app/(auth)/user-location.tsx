@@ -47,7 +47,7 @@ export default function UserLocationScreen() {
     try {
       const { status } = await Location.requestForegroundPermissionsAsync();
       if (status !== 'granted') {
-        setError('Necesitamos acceso a tu ubicacion para mostrarte tiendas cercanas.');
+        setError('Necesitamos acceso a tu ubicación para mostrarte tiendas cercanas.');
         setLoading(false);
         return;
       }

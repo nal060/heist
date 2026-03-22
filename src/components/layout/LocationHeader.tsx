@@ -26,7 +26,7 @@ export default function LocationHeader({
             hitSlop={8}
             activeOpacity={0.7}
             accessibilityRole="button"
-            accessibilityLabel="Cambiar ubicacion"
+            accessibilityLabel="Cambiar ubicación"
           >
           <Ionicons
             name="location-sharp"
@@ -38,7 +38,7 @@ export default function LocationHeader({
         )}
 
         <View style={styles.textWrapper}>
-          <Text style={styles.label}>Ubicacion actual</Text>
+          <Text style={styles.label}>Ubicación actual</Text>
           <Text style={styles.location} numberOfLines={1}>
             {location}
           </Text>
