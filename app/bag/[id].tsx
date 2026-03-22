@@ -141,7 +141,7 @@ export default function BagDetailScreen() {
 
           {discount > 0 && (
             <View style={styles.discountBadgeContainer}>
-              <Badge text={`-${discount}%`} variant="discount" />
+              <Badge text={String(discount)} variant="discount" />
             </View>
           )}
 
