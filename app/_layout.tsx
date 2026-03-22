@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { Stack, useRouter, useSegments } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
@@ -45,6 +45,18 @@ function RootNavigator() {
       }
     }
   }, [session, userRole, isLoading, isOnboarded, location, locationLoaded, segments, router]);
+
+  const sessionRef = useRef(session);
+  sessionRef.current = session;
+
+  useEffect(() => {
+    const subscription = AppState.addEventListener('change', (nextState) => {
+      if (nextState === 'background' && !sessionRef.current) {
+        router.replace('/(auth)/welcome');
+      }
+    });
+    return () => subscription.remove();
+  }, [router]);
 
   if (isLoading) {
     return (
