@@ -4,7 +4,6 @@ import { StatusBar } from 'expo-status-bar';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { BottomSheetModalProvider } from '@gorhom/bottom-sheet';
 import { StyleSheet, ActivityIndicator, View, AppState } from 'react-native';
-import { BottomSheetModalProvider } from '@gorhom/bottom-sheet';
 import { FavoritesProvider } from '../src/context/FavoritesContext';
 import { LocationProvider, useLocation } from '../src/context/LocationContext';
 import { AuthProvider, useAuth } from '../src/context/AuthContext';
@@ -46,15 +45,6 @@ function RootNavigator() {
       }
     }
   }, [session, userRole, isLoading, isOnboarded, location, locationLoaded, segments, router]);
-
-  useEffect(() => {
-    const subscription = AppState.addEventListener('change', (nextState) => {
-      if (nextState === 'background' && !session && !isLoading) {
-        router.replace('/(auth)/welcome');
-      }
-    });
-    return () => subscription.remove();
-  }, [session, isLoading, router]);
 
   if (isLoading) {
     return (
