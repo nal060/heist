@@ -1,8 +1,8 @@
-import { useEffect, useRef } from 'react';
+import { useEffect } from 'react';
 import { Stack, useRouter, useSegments } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
-import { StyleSheet, ActivityIndicator, View, AppState } from 'react-native';
+import { StyleSheet, ActivityIndicator, View } from 'react-native';
 import { BottomSheetModalProvider } from '@gorhom/bottom-sheet';
 import { FavoritesProvider } from '../src/context/FavoritesContext';
 import { LocationProvider, useLocation } from '../src/context/LocationContext';
