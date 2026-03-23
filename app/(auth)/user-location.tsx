@@ -25,13 +25,13 @@ export default function UserLocationScreen() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
-  const finishOnboarding = async (lat: number, lon: number) => {
+  const finishOnboarding = async (name: string, lat: number, lon: number) => {
     if (!user) return;
 
     try {
       const emailName = user.email?.split('@')[0] || 'Usuario';
       await createConsumerProfile(user.id, emailName);
-      await setLocation({ name: strings.discover.defaultLocation, latitude: lat, longitude: lon });
+      await setLocation({ name, latitude: lat, longitude: lon });
       setOnboarded();
       router.replace('/(tabs)');
     } catch (err: unknown) {
@@ -52,19 +52,45 @@ export default function UserLocationScreen() {
         return;
       }
 
-      const location = await Location.getCurrentPositionAsync({});
-      await finishOnboarding(location.coords.latitude, location.coords.longitude);
+      const loc = await Location.getCurrentPositionAsync({});
+      const { latitude, longitude } = loc.coords;
+
+      // Reverse-geocode to get a meaningful location name
+      let name: string = strings.changeLocation.myCurrentLocation;
+      try {
+        const [place] = await Location.reverseGeocodeAsync({ latitude, longitude });
+        if (place) {
+          name = [place.city, place.region].filter(Boolean).join(', ') || name;
+        }
+      } catch {
+        // Keep default name if reverse geocode fails
+      }
+
+      await finishOnboarding(name, latitude, longitude);
     } catch {
-      await finishOnboarding(strings.discover.latitude, strings.discover.longitude);
+      await finishOnboarding(strings.discover.defaultLocation, strings.discover.latitude, strings.discover.longitude);
     } finally {
       setLoading(false);
     }
   };
 
-  const handleSelectLocation = async () => {
+  const handleSelectLocation = () => {
+    // Create the profile first, then route to the full location picker
+    if (!user) return;
     setLoading(true);
-    await finishOnboarding(strings.discover.latitude, strings.discover.longitude);
-    setLoading(false);
+    setError('');
+
+    const emailName = user.email?.split('@')[0] || 'Usuario';
+    createConsumerProfile(user.id, emailName)
+      .then(() => {
+        setOnboarded();
+        router.replace('/change-location');
+      })
+      .catch((err: unknown) => {
+        const message = err instanceof Error ? err.message : strings.common.error;
+        setError(message);
+      })
+      .finally(() => setLoading(false));
   };
 
   return (
