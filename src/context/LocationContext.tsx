@@ -12,6 +12,7 @@ export interface UserLocation {
 interface LocationContextValue {
   location: UserLocation | null;
   setLocation: (loc: UserLocation) => Promise<void>;
+  clearLocation: () => Promise<void>;
   isLoaded: boolean;
 }
 
@@ -37,8 +38,13 @@ export function LocationProvider({ children }: { children: React.ReactNode }) {
     await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(loc));
   }, []);
 
+  const clearLocation = useCallback(async () => {
+    setLocationState(null);
+    await AsyncStorage.removeItem(STORAGE_KEY);
+  }, []);
+
   return (
-    <LocationContext.Provider value={{ location, setLocation, isLoaded }}>
+    <LocationContext.Provider value={{ location, setLocation, clearLocation, isLoaded }}>
       {children}
     </LocationContext.Provider>
   );

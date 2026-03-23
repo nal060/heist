@@ -74,23 +74,23 @@ export default function UserLocationScreen() {
     }
   };
 
-  const handleSelectLocation = () => {
-    // Create the profile first, then route to the full location picker
+  const handleSelectLocation = async () => {
     if (!user) return;
     setLoading(true);
     setError('');
 
-    const emailName = user.email?.split('@')[0] || 'Usuario';
-    createConsumerProfile(user.id, emailName)
-      .then(() => {
-        setOnboarded();
-        router.replace('/change-location');
-      })
-      .catch((err: unknown) => {
-        const message = err instanceof Error ? err.message : strings.common.error;
-        setError(message);
-      })
-      .finally(() => setLoading(false));
+    try {
+      const emailName = user.email?.split('@')[0] || 'Usuario';
+      await createConsumerProfile(user.id, emailName);
+      // Mark onboarded without setting a location — the nav guard in _layout
+      // will redirect to /change-location since no location is set.
+      setOnboarded();
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : strings.common.error;
+      setError(message);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (

@@ -16,6 +16,7 @@ import { colors, typography, spacing, borderRadius } from '../../src/theme';
 import { sharedStyles } from '../../src/styles/shared';
 import { strings } from '../../src/constants/strings';
 import { useAuth } from '../../src/context/AuthContext';
+import { useLocation } from '../../src/context/LocationContext';
 import { getBusinessForUser, getBusinessPhotos } from '../../src/data/auth';
 import type { Business } from '../../src/types';
 import ErrorState from '../../src/components/ui/ErrorState';
@@ -24,6 +25,7 @@ export default function BusinessProfileScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const { user, signOut } = useAuth();
+  const { clearLocation } = useLocation();
 
   const [business, setBusiness] = useState<Business | null>(null);
   const [photoUrl, setPhotoUrl] = useState<string | null>(null);
@@ -65,7 +67,7 @@ export default function BusinessProfileScreen() {
         {
           text: strings.common.confirm,
           style: 'destructive',
-          onPress: signOut,
+          onPress: async () => { await clearLocation(); await signOut(); },
         },
       ],
     );

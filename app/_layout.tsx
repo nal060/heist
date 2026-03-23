@@ -1,25 +1,27 @@
-import { useEffect, useRef } from 'react';
+import { useEffect } from 'react';
 import { Stack, useRouter, useSegments } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
-import { StyleSheet, ActivityIndicator, View, AppState } from 'react-native';
+import { StyleSheet, ActivityIndicator, View } from 'react-native';
 import { BottomSheetModalProvider } from '@gorhom/bottom-sheet';
 import { FavoritesProvider } from '../src/context/FavoritesContext';
-import { LocationProvider } from '../src/context/LocationContext';
+import { LocationProvider, useLocation } from '../src/context/LocationContext';
 import { AuthProvider, useAuth } from '../src/context/AuthContext';
 import { colors } from '../src/theme';
 
 function RootNavigator() {
   const { session, userRole, isLoading, isOnboarded } = useAuth();
+  const { location, isLoaded: locationLoaded } = useLocation();
   const segments = useSegments() as string[];
   const router = useRouter();
 
   useEffect(() => {
-    if (isLoading) return;
+    if (isLoading || !locationLoaded) return;
 
     const inAuthGroup = segments[0] === '(auth)';
     const inConsumerTabs = segments[0] === '(tabs)';
     const inBusinessTabs = segments[0] === '(business-tabs)';
+    const onChangeLocation = segments[0] === 'change-location';
 
     if (!session) {
       if (!inAuthGroup) {
@@ -29,6 +31,9 @@ function RootNavigator() {
       if (!inAuthGroup) {
         router.replace('/(auth)/welcome');
       }
+    } else if (userRole === 'consumer' && !location && !onChangeLocation) {
+      // Consumer finished onboarding but has no location set — send to picker
+      router.replace('/change-location');
     } else if (userRole === 'business') {
       if (inAuthGroup || inConsumerTabs) {
         router.replace('/(business-tabs)');
@@ -38,19 +43,7 @@ function RootNavigator() {
         router.replace('/(tabs)');
       }
     }
-  }, [session, userRole, isLoading, isOnboarded, segments, router]);
-
-  const sessionRef = useRef(session);
-  sessionRef.current = session;
-
-  useEffect(() => {
-    const subscription = AppState.addEventListener('change', (nextState) => {
-      if (nextState === 'background' && !sessionRef.current) {
-        router.replace('/(auth)/welcome');
-      }
-    });
-    return () => subscription.remove();
-  }, [router]);
+  }, [session, userRole, isLoading, isOnboarded, location, locationLoaded, segments, router]);
 
   if (isLoading) {
     return (

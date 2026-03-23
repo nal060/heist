@@ -4,6 +4,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors, spacing, typography } from '../src/theme';
 import { strings } from '../src/constants/strings';
 import { useAuth } from '../src/context/AuthContext';
+import { useLocation } from '../src/context/LocationContext';
 import Divider from '../src/components/ui/Divider';
 import ScreenHeader from '../src/components/ui/ScreenHeader';
 import SettingsRow from '../src/components/ui/SettingsRow';
@@ -21,6 +22,7 @@ const SETTINGS_ITEMS: { icon: IoniconsName; label: string }[] = [
 export default function SettingsScreen() {
   const insets = useSafeAreaInsets();
   const { signOut } = useAuth();
+  const { clearLocation } = useLocation();
 
   const handleLogout = () => {
     Alert.alert(
@@ -28,7 +30,7 @@ export default function SettingsScreen() {
       '',
       [
         { text: strings.common.cancel, style: 'cancel' },
-        { text: strings.common.confirm, style: 'destructive', onPress: signOut },
+        { text: strings.common.confirm, style: 'destructive', onPress: async () => { await clearLocation(); await signOut(); } },
       ],
     );
   };
