@@ -320,6 +320,7 @@ export const strings = {
     cityPlaceholder: 'Ej: Ciudad de Panamá',
     phoneLabel: 'Teléfono',
     phonePlaceholder: '+507 ',
+    addressNotFound: 'No se pudo verificar la dirección. Intenta con otra.',
     continue: 'Continuar',
   },
 
