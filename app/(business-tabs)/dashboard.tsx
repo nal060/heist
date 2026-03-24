@@ -234,7 +234,8 @@ export default function DashboardScreen() {
   const collectedOrders = data.recentOrders.filter((o) => o.status === 'collected');
 
   return (
-    <View style={[styles.container, { paddingTop: insets.top }]}>
+    <View style={styles.container}>
+      <View style={{ height: insets.top, backgroundColor: colors.background.primary }} />
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.scroll}
