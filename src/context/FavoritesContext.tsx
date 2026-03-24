@@ -137,6 +137,15 @@ export function FavoritesProvider({ children }: { children: React.ReactNode }) {
     }
   }, [state.favoriteBusinessIds, addFavorites, removeBusinessFavorite]);
 
+  // Backward compat: toggle business favorite
+  const toggleFavorite = useCallback((businessId: string) => {
+    if (state.favoriteBusinessIds.has(businessId)) {
+      removeBusinessFavorite(businessId);
+    } else {
+      addFavorites(null, businessId);
+    }
+  }, [state.favoriteBusinessIds, addFavorites, removeBusinessFavorite]);
+
   return (
     <FavoritesContext.Provider
       value={{
