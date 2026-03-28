@@ -201,13 +201,13 @@ export default function DashboardScreen() {
       });
   }, [businessId]);
 
-  // Reload when navigating to this tab
-  useFocusEffect(useCallback(() => { load(true); }, [load]));
+  // Reload when navigating to this tab (silently, no pull-to-refresh indicator)
+  useFocusEffect(useCallback(() => { load(); }, [load]));
 
   // Reload when tapping the already-active tab
   useEffect(() => {
     return navigation.addListener('tabPress' as any, () => {
-      if (navigation.isFocused()) load(true);
+      if (navigation.isFocused()) load();
     });
   }, [navigation, load]);
 
@@ -234,8 +234,7 @@ export default function DashboardScreen() {
   const collectedOrders = data.recentOrders.filter((o) => o.status === 'collected');
 
   return (
-    <View style={styles.container}>
-      <View style={{ height: insets.top, backgroundColor: colors.background.primary }} />
+    <View style={[styles.container, { paddingTop: insets.top }]}>
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.scroll}
