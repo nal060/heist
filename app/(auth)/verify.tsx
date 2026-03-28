@@ -12,6 +12,8 @@ import { useRouter } from 'expo-router';
 import { colors, typography, spacing, borderRadius } from '../../src/theme';
 import { strings } from '../../src/constants/strings';
 import { useAuth } from '../../src/context/AuthContext';
+import { getUserRole } from '../../src/data/auth';
+import { supabase } from '../../src/lib/supabase';
 import ScreenShell from '../../src/components/ui/ScreenShell';
 
 const CODE_LENGTH = 6;
@@ -52,8 +54,22 @@ export default function VerifyScreen() {
 
     if (cleaned.length === CODE_LENGTH) {
       setLoading(true);
+      let existingUser = false;
       try {
         await verifyOtp(email!, cleaned);
+
+        // Check if the user already has a profile (returning user).
+        // If so, skip onboarding — RootNavigator will redirect once
+        // AuthContext picks up the session via onAuthStateChange.
+        const { data: { user: currentUser } } = await supabase.auth.getUser();
+        if (currentUser) {
+          const { role: existingRole } = await getUserRole(currentUser.id);
+          if (existingRole) {
+            existingUser = true;
+            return;
+          }
+        }
+
         const nextScreen = role === 'business' ? '/(auth)/business-search' : '/(auth)/user-preferences';
         router.replace(nextScreen);
         return;
@@ -65,7 +81,9 @@ export default function VerifyScreen() {
         setCode('');
         inputRef.current?.focus();
       } finally {
-        setLoading(false);
+        // Keep the loading spinner visible for existing users so the
+        // screen stays stable until RootNavigator redirects.
+        if (!existingUser) setLoading(false);
       }
     }
   };
