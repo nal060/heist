@@ -67,7 +67,7 @@ export default function BusinessProfileScreen() {
         {
           text: strings.common.confirm,
           style: 'destructive',
-          onPress: async () => { await clearLocation(); await signOut(); },
+          onPress: async () => { await signOut(); await clearLocation(); },
         },
       ],
     );

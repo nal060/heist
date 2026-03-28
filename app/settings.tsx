@@ -30,7 +30,7 @@ export default function SettingsScreen() {
       '',
       [
         { text: strings.common.cancel, style: 'cancel' },
-        { text: strings.common.confirm, style: 'destructive', onPress: async () => { await clearLocation(); await signOut(); } },
+        { text: strings.common.confirm, style: 'destructive', onPress: async () => { await signOut(); await clearLocation(); } },
       ],
     );
   };
