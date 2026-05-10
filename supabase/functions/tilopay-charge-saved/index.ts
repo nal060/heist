@@ -77,16 +77,32 @@ serve(async (req) => {
       })
     }
 
+    // Fix 3: Guard against double-charge
+    if (payment.payment_status === 'completed') {
+      return new Response(JSON.stringify({ error: 'This order has already been paid' }), {
+        status: 409,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      })
+    }
+
     // Fetch Tilopay business account via the order → bag → business chain
     const { data: orderRow, error: orderError } = await supabase
       .from('orders')
-      .select('surplus_bag_id')
+      .select('surplus_bag_id, user_id')
       .eq('id', order_id)
       .single()
 
     if (orderError || !orderRow) {
       return new Response(JSON.stringify({ error: 'Order not found' }), {
         status: 404,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      })
+    }
+
+    // Fix 2: Ensure the authenticated user owns this order
+    if (orderRow.user_id !== user.id) {
+      return new Response(JSON.stringify({ error: 'Forbidden' }), {
+        status: 403,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       })
     }
@@ -132,16 +148,16 @@ serve(async (req) => {
         updated_at: new Date().toISOString(),
       }).eq('order_id', order_id)
 
-      await supabase.from('tilopay_payment_events').insert({
+      const { error: eventInsertError } = await supabase.from('tilopay_payment_events').insert({
         payment_id: payment.id,
         tilopay_order_id: mockTilopayOrderId,
         event_type: 'process_cof',
-        event_status: 'success',
+        parsed_status: 'approved',
         http_endpoint: '/api/v1/process_cof',
         raw_payload: { mock: true, order_id, tilopay_order_id: mockTilopayOrderId },
-        response_body: { mock: true },
         source: 'edge_function',
       })
+      if (eventInsertError) console.error('Failed to insert tilopay_payment_events (mock):', eventInsertError.message)
 
       return new Response(JSON.stringify({ success: true, tilopay_order_id: mockTilopayOrderId }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -193,16 +209,16 @@ serve(async (req) => {
         updated_at: new Date().toISOString(),
       }).eq('order_id', order_id)
 
-      await supabase.from('tilopay_payment_events').insert({
+      const { error: eventInsertError } = await supabase.from('tilopay_payment_events').insert({
         payment_id: payment.id,
         tilopay_order_id: tilopayOrderId ?? null,
         event_type: 'process_cof',
-        event_status: 'success',
+        parsed_status: 'approved',
         http_endpoint: '/api/v1/process_cof',
         raw_payload: tilopayResponse,
-        response_body: tilopayResponse,
         source: 'edge_function',
       })
+      if (eventInsertError) console.error('Failed to insert tilopay_payment_events (success):', eventInsertError.message)
 
       return new Response(JSON.stringify({ success: true, tilopay_order_id: tilopayOrderId }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -213,16 +229,16 @@ serve(async (req) => {
         updated_at: new Date().toISOString(),
       }).eq('order_id', order_id)
 
-      await supabase.from('tilopay_payment_events').insert({
+      const { error: eventInsertError } = await supabase.from('tilopay_payment_events').insert({
         payment_id: payment.id,
         tilopay_order_id: tilopayOrderId ?? null,
         event_type: 'process_cof',
-        event_status: 'failed',
+        parsed_status: 'declined',
         http_endpoint: '/api/v1/process_cof',
         raw_payload: tilopayResponse,
-        response_body: tilopayResponse,
         source: 'edge_function',
       })
+      if (eventInsertError) console.error('Failed to insert tilopay_payment_events (failed):', eventInsertError.message)
 
       const errorMsg = (tilopayResponse.message ?? tilopayResponse.error ?? 'Charge failed') as string
 

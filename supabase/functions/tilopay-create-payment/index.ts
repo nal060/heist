@@ -125,11 +125,6 @@ serve(async (req) => {
     // platform_fee_bps: 500 = 5%. Tilopay expects a decimal percentage (e.g. 5.00)
     const platformFeePercent = (feeBps / 100).toFixed(2)
 
-    // ─── Persist order number to payments row ──────────────────────────────────
-    await supabase.from('payments').update({
-      tilopay_order_id: orderNumber,
-    }).eq('order_id', order_id)
-
     // ─── Mock fast-path ────────────────────────────────────────────────────────
     if (IS_MOCK) {
       return new Response(
@@ -183,16 +178,16 @@ serve(async (req) => {
         updated_at: new Date().toISOString(),
       }).eq('order_id', order_id)
 
-      await supabase.from('tilopay_payment_events').insert({
+      const { error: eventInsertError } = await supabase.from('tilopay_payment_events').insert({
         payment_id: payment.id,
         tilopay_order_id: tilopayOrderId ?? null,
         event_type: 'order_created',
-        event_status: 'success',
+        parsed_status: 'approved',
         http_endpoint: '/api/v1/processPayment',
         raw_payload: tilopayResponse,
-        response_body: tilopayResponse,
         source: 'edge_function',
       })
+      if (eventInsertError) console.error('Failed to insert tilopay_payment_events (success):', eventInsertError.message)
 
       return new Response(
         JSON.stringify({ url: redirectUrl }),
@@ -204,16 +199,16 @@ serve(async (req) => {
         updated_at: new Date().toISOString(),
       }).eq('order_id', order_id)
 
-      await supabase.from('tilopay_payment_events').insert({
+      const { error: eventInsertError } = await supabase.from('tilopay_payment_events').insert({
         payment_id: payment.id,
         tilopay_order_id: tilopayOrderId ?? null,
         event_type: 'order_created',
-        event_status: 'failed',
+        parsed_status: 'declined',
         http_endpoint: '/api/v1/processPayment',
         raw_payload: tilopayResponse,
-        response_body: tilopayResponse,
         source: 'edge_function',
       })
+      if (eventInsertError) console.error('Failed to insert tilopay_payment_events (failed):', eventInsertError.message)
 
       const errorMsg = (tilopayResponse.message ?? tilopayResponse.error ?? 'Payment creation failed') as string
 

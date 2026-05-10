@@ -61,15 +61,15 @@ serve(async (req) => {
     }
 
     if (!IS_MOCK) {
-      const token = await getTilopayToken()
+      const bearerToken = await getTilopayToken()
 
       const res = await fetch(`${TILOPAY_BASE}/api/v1/user/card-remove`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
+          'Authorization': `Bearer ${bearerToken}`,
         },
-        body: JSON.stringify({ token, card_token: paymentMethod.card_token }),
+        body: JSON.stringify({ token: bearerToken, card_token: paymentMethod.card_token }),
       })
 
       // Log but don't hard-fail on Tilopay API errors — we still soft-delete locally
