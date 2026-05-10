@@ -13,6 +13,7 @@ module.exports = [
       'ios/**',
       'android/**',
       'eslint.config.js',
+      'supabase/functions/**',
     ],
   },
   {
