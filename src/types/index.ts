@@ -3,7 +3,7 @@ export type BagStatus = 'draft' | 'active' | 'sold_out' | 'expired' | 'cancelled
 export type BagSizeType = 'small' | 'medium' | 'large';
 export type OrderStatus = 'reserved' | 'collected' | 'cancelled';
 export type PaymentStatus = 'pending' | 'completed' | 'failed' | 'refunded';
-export type PaymentMethod = 'credit_card' | 'debit_card' | 'apple_pay' | 'cash';
+export type PaymentMethodType = 'credit_card' | 'debit_card' | 'apple_pay' | 'cash';
 export type DiscountType = 'percentage' | 'fixed';
 export type PreferenceType = 'what_brings_you' | 'pickup_times';
 
@@ -172,13 +172,31 @@ export interface Payment {
   order_id: string;
   total: number;
   subtotal: number | null;
-  payment_method: string;
+  payment_method: PaymentMethodType;
   payment_status: string;
   payment_id: string | null;
   paid_at: string | null;
   breakdown: Record<string, unknown> | null;
   created_at: string;
 }
+
+export interface PaymentMethod {
+  id: string;
+  user_id: string;
+  // card_token is intentionally OMITTED — never exposed to client, only used server-side
+  card_last_four: string;
+  card_brand: 'visa' | 'mastercard' | 'amex' | 'discover' | 'diners' | 'other';
+  card_holder_name: string | null;
+  card_expiry_month: number;
+  card_expiry_year: number;
+  is_default: boolean;
+  is_active: boolean;
+  nickname: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export type CardBrand = PaymentMethod['card_brand'];
 
 export interface Review {
   id: string;
