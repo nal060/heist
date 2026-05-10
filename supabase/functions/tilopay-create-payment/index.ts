@@ -9,7 +9,7 @@ const corsHeaders = {
 
 interface CreatePaymentBody {
   order_id: string
-  idempotency_key: string
+  save_card: boolean
 }
 
 serve(async (req) => {
@@ -40,52 +40,11 @@ serve(async (req) => {
       })
     }
 
-    const { order_id, idempotency_key }: CreatePaymentBody = await req.json()
+    const { order_id, save_card }: CreatePaymentBody = await req.json()
 
-    if (!order_id || !idempotency_key) {
-      return new Response(JSON.stringify({ error: 'order_id and idempotency_key are required' }), {
+    if (!order_id) {
+      return new Response(JSON.stringify({ error: 'order_id is required' }), {
         status: 400,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      })
-    }
-
-    // ─── Idempotency check ─────────────────────────────────────────────────────
-    // Attempt an atomic INSERT; ON CONFLICT returns the existing row so we can
-    // detect duplicates without a race condition.
-    const { data: idempKey, error: idempError } = await supabase
-      .from('payment_idempotency_keys')
-      .upsert(
-        { idempotency_key, order_id, user_id: user.id },
-        { onConflict: 'idempotency_key', ignoreDuplicates: false }
-      )
-      .select('id, attempt_status, payment_id, tilopay_order_id, locked_until')
-      .single()
-
-    if (idempError) throw new Error(idempError.message)
-
-    // If this key was already resolved successfully, return the cached result.
-    if (idempKey.attempt_status === 'succeeded') {
-      return new Response(
-        JSON.stringify({ success: true, tilopay_order_id: idempKey.tilopay_order_id, cached: true }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      )
-    }
-
-    // A concurrent request is still in-flight; tell the client to back off.
-    if (
-      idempKey.attempt_status === 'in_flight' &&
-      new Date(idempKey.locked_until) > new Date()
-    ) {
-      return new Response(JSON.stringify({ error: 'Payment already in progress — please wait' }), {
-        status: 409,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      })
-    }
-
-    // A previous attempt using this key failed — force the client to generate a fresh key.
-    if (idempKey.attempt_status === 'failed') {
-      return new Response(JSON.stringify({ error: 'This idempotency key belongs to a failed attempt — generate a new key and retry' }), {
-        status: 409,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       })
     }
@@ -166,40 +125,15 @@ serve(async (req) => {
     // platform_fee_bps: 500 = 5%. Tilopay expects a decimal percentage (e.g. 5.00)
     const platformFeePercent = (feeBps / 100).toFixed(2)
 
+    // ─── Persist order number to payments row ──────────────────────────────────
+    await supabase.from('payments').update({
+      tilopay_order_id: orderNumber,
+    }).eq('order_id', order_id)
+
     // ─── Mock fast-path ────────────────────────────────────────────────────────
     if (IS_MOCK) {
-      await new Promise((resolve) => setTimeout(resolve, 800))
-
-      const mockTilopayOrderId = `MOCK-${crypto.randomUUID().slice(0, 8)}`
-
-      await supabase.from('payments').update({
-        payment_status: 'processing',
-        tilopay_order_id: mockTilopayOrderId,
-        tilopay_business_account_id: tilopayAccount.id,
-        idempotency_key,
-        updated_at: new Date().toISOString(),
-      }).eq('order_id', order_id)
-
-      await supabase.from('tilopay_payment_events').insert({
-        payment_id: payment.id,
-        tilopay_order_id: mockTilopayOrderId,
-        event_type: 'order_created',
-        event_status: 'success',
-        http_endpoint: '/api/v1/processPayment',
-        raw_payload: { mock: true, order_id, tilopay_order_id: mockTilopayOrderId },
-        response_body: { mock: true },
-        source: 'edge_function',
-      })
-
-      await supabase.from('payment_idempotency_keys').update({
-        attempt_status: 'succeeded',
-        tilopay_order_id: mockTilopayOrderId,
-        payment_id: payment.id,
-        resolved_at: new Date().toISOString(),
-      }).eq('idempotency_key', idempotency_key)
-
       return new Response(
-        JSON.stringify({ success: true, tilopay_order_id: mockTilopayOrderId, redirect_url: null }),
+        JSON.stringify({ url: 'mock://payment' }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     }
@@ -226,6 +160,7 @@ serve(async (req) => {
           platformFeePercent,
           redirect: 'monch://payment-callback',
           language: 'es',
+          subscription: save_card ? 1 : 0,
         }),
       })
 
@@ -245,7 +180,6 @@ serve(async (req) => {
         payment_status: 'processing',
         tilopay_order_id: tilopayOrderId ?? null,
         tilopay_business_account_id: tilopayAccount.id,
-        idempotency_key,
         updated_at: new Date().toISOString(),
       }).eq('order_id', order_id)
 
@@ -260,15 +194,8 @@ serve(async (req) => {
         source: 'edge_function',
       })
 
-      await supabase.from('payment_idempotency_keys').update({
-        attempt_status: 'succeeded',
-        tilopay_order_id: tilopayOrderId ?? null,
-        payment_id: payment.id,
-        resolved_at: new Date().toISOString(),
-      }).eq('idempotency_key', idempotency_key)
-
       return new Response(
-        JSON.stringify({ success: true, tilopay_order_id: tilopayOrderId, redirect_url: redirectUrl }),
+        JSON.stringify({ url: redirectUrl }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     } else {
@@ -287,11 +214,6 @@ serve(async (req) => {
         response_body: tilopayResponse,
         source: 'edge_function',
       })
-
-      await supabase.from('payment_idempotency_keys').update({
-        attempt_status: 'failed',
-        resolved_at: new Date().toISOString(),
-      }).eq('idempotency_key', idempotency_key)
 
       const errorMsg = (tilopayResponse.message ?? tilopayResponse.error ?? 'Payment creation failed') as string
 
