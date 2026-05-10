@@ -6,7 +6,11 @@ import {
   StyleSheet,
   TouchableOpacity,
   Animated,
+  ActivityIndicator,
 } from 'react-native';
+
+const IS_LOCAL = process.env.EXPO_PUBLIC_SUPABASE_ENV === 'local';
+const INBUCKET_URL = process.env.EXPO_PUBLIC_INBUCKET_URL ?? 'http://127.0.0.1:54324';
 import { useLocalSearchParams } from 'expo-router';
 import { useRouter } from 'expo-router';
 import { colors, typography, spacing, borderRadius } from '../../src/theme';
@@ -26,6 +30,7 @@ export default function VerifyScreen() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [cooldown, setCooldown] = useState(RESEND_COOLDOWN);
+  const [fetchingOtp, setFetchingOtp] = useState(false);
 
   const inputRef = useRef<TextInput>(null);
   const shakeAnim = useRef(new Animated.Value(0)).current;
@@ -85,6 +90,26 @@ export default function VerifyScreen() {
       }
     }
   };
+
+  const handleDevAutoFill = useCallback(async () => {
+    setFetchingOtp(true);
+    try {
+      const res = await fetch(
+        `${INBUCKET_URL}/api/v1/messages?query=${encodeURIComponent(`to:${email!}`)}`,
+      );
+      const data: { messages: { Snippet: string }[] } = await res.json();
+      const messages = data.messages ?? [];
+      if (!messages.length) { setError('No emails in Mailpit yet'); return; }
+      const snippet = messages[0].Snippet;
+      const match = snippet.match(/\b(\d{6})\b/);
+      if (!match) { setError('Could not find OTP in email'); return; }
+      await handleCodeChange(match[1]);
+    } catch {
+      setError('Failed to fetch OTP from Mailpit');
+    } finally {
+      setFetchingOtp(false);
+    }
+  }, [email, handleCodeChange]);
 
   const handleResend = async () => {
     if (cooldown > 0) return;
@@ -175,6 +200,18 @@ export default function VerifyScreen() {
             : strings.verify.resend}
         </Text>
       </TouchableOpacity>
+
+      {IS_LOCAL && (
+        <TouchableOpacity
+          onPress={handleDevAutoFill}
+          disabled={fetchingOtp || loading}
+          style={styles.devButton}
+        >
+          {fetchingOtp
+            ? <ActivityIndicator size="small" color={colors.gray[500]} />
+            : <Text style={styles.devButtonText}>⚡ Dev: Auto-fill OTP</Text>}
+        </TouchableOpacity>
+      )}
     </ScreenShell>
   );
 }
@@ -259,5 +296,20 @@ const styles = StyleSheet.create({
   },
   resendTextDisabled: {
     color: colors.text.tertiary,
+  },
+  devButton: {
+    alignSelf: 'center',
+    marginTop: spacing.lg,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.lg,
+    borderWidth: 1,
+    borderColor: colors.gray[300],
+    borderRadius: borderRadius.md,
+    minWidth: 160,
+    alignItems: 'center',
+  },
+  devButtonText: {
+    fontSize: typography.fontSize.sm,
+    color: colors.gray[500],
   },
 });
