@@ -83,7 +83,7 @@ export const strings = {
     addPaymentMethod: 'Agregar método de pago',
     changeMethod: 'Cambiar',
     processing: 'Procesando pago...',
-    payButton: 'Pagar ₡{amount}',
+    payButton: 'Pagar {amount}',
     paymentFailed: 'Pago fallido',
     paymentFailedMessage: 'No se pudo procesar el pago. Intenta de nuevo.',
     tryAgain: 'Intentar de nuevo',

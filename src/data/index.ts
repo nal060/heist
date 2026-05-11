@@ -359,18 +359,17 @@ export async function getAllActiveBags(): Promise<BagWithBusiness[]> {
 
     if (orderError) throw new Error('No se pudo crear el pedido: ' + orderError.message);
 
-    // Create payment record (bypassed — marked as completed)
-    await supabase
+    // Create payment record as pending — completed by tilopay-charge-saved Edge Function
+    const { error: paymentError } = await supabase
       .from('payments')
       .insert({
         order_id: order.id,
         total: input.total,
         subtotal: input.subtotal,
-        payment_method: 'card',
-        payment_status: 'completed',
-        paid_at: new Date().toISOString(),
+        payment_status: 'pending',
         breakdown: { subtotal: input.subtotal, tax: input.tax },
       });
+    if (paymentError) throw new Error('No se pudo registrar el pago: ' + paymentError.message);
 
     // Decrement quantity_available
     await supabase.rpc('decrement_bag_quantity', {
