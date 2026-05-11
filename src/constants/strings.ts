@@ -661,6 +661,8 @@ export const strings = {
     deleteConfirm: 'Eliminar',
     deleteCancel: 'Cancelar',
     expires: 'Vence',
+    expirySeparator: '/',
+    maskedPrefix: '•••• ',
     addingCard: 'Agregando tarjeta...',
     removingCard: 'Eliminando tarjeta...',
   },

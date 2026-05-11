@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, ScrollView, StyleSheet, Text, Alert } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useRouter } from 'expo-router';
 import { colors, spacing, typography } from '../src/theme';
 import { strings } from '../src/constants/strings';
 import { useAuth } from '../src/context/AuthContext';
@@ -11,10 +12,10 @@ import SettingsRow from '../src/components/ui/SettingsRow';
 
 type IoniconsName = React.ComponentProps<typeof import('@expo/vector-icons').Ionicons>['name'];
 
-const SETTINGS_ITEMS: { icon: IoniconsName; label: string }[] = [
+const SETTINGS_ITEMS: { icon: IoniconsName; label: string; route?: string }[] = [
   { icon: 'person-outline', label: strings.settings.accountDetails },
   { icon: 'notifications-outline', label: strings.settings.notifications },
-  { icon: 'card-outline', label: strings.settings.paymentMethods },
+  { icon: 'card-outline', label: strings.settings.paymentMethods, route: '/payment-methods' },
   { icon: 'help-circle-outline', label: strings.settings.help },
   { icon: 'document-text-outline', label: strings.settings.legalInfo },
 ];
@@ -23,6 +24,7 @@ export default function SettingsScreen() {
   const insets = useSafeAreaInsets();
   const { signOut } = useAuth();
   const { clearLocation } = useLocation();
+  const router = useRouter();
 
   const handleLogout = () => {
     Alert.alert(
@@ -45,7 +47,11 @@ export default function SettingsScreen() {
         <View style={styles.section}>
           {SETTINGS_ITEMS.map((item, index) => (
             <React.Fragment key={item.label}>
-              <SettingsRow icon={item.icon} label={item.label} />
+              <SettingsRow
+                icon={item.icon}
+                label={item.label}
+                onPress={item.route ? () => router.push(item.route as `/${string}`) : undefined}
+              />
               {index < SETTINGS_ITEMS.length - 1 && <Divider />}
             </React.Fragment>
           ))}

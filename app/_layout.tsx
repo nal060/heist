@@ -155,6 +155,14 @@ function RootNavigator() {
             animation: 'slide_from_right',
           }}
         />
+        <Stack.Screen
+          name="payment-methods"
+          options={{
+            presentation: 'card',
+            animation: 'slide_from_right',
+            headerShown: false,
+          }}
+        />
       </Stack>
     </>
   );
