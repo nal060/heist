@@ -665,6 +665,20 @@ export const strings = {
     removingCard: 'Eliminando tarjeta...',
   },
 
+  mockCardForm: {
+    simulationBanner: 'MODO SIMULACIÓN',
+    cardNumber: 'Número de tarjeta',
+    expiry: 'Vencimiento',
+    cvv: 'CVV',
+    pay: 'Pagar',
+    simulateError: 'Simular error',
+    processing: 'Procesando...',
+  },
+
+  tilopayWebView: {
+    title: 'Pago seguro',
+  },
+
   businessPayoutSettings: {
     title: 'Configuración de pagos',
     noAccountTitle: 'Cuenta no registrada',
