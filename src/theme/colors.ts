@@ -49,6 +49,7 @@ export const colors = {
     nuevo: { bg: '#E3F2FD', text: '#1565C0' },
     remaining: { bg: '#FFF8E1', text: '#F57F17' },
     soldOut: { bg: '#F5F5F5', text: '#9E9E9E' },
+    suspended: { bg: '#FFEBEE', text: '#C62828' },
   },
 
   tabBar: {

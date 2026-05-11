@@ -89,7 +89,7 @@ export default function BusinessProfileScreen() {
     {
       icon: 'wallet-outline',
       label: strings.businessProfile.payoutSettings,
-      onPress: () => {},
+      onPress: () => router.push('/business-payout-settings'),
     },
     {
       icon: 'help-circle-outline',

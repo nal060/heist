@@ -171,13 +171,14 @@ export async function updateBusiness(
 }
 
 export async function getBusinessForUser(userId: string): Promise<Business | null> {
-  const { data } = await supabase
+  const { data, error } = await supabase
     .from('businesses')
     .select('*')
     .eq('user_id', userId)
-    .single();
+    .maybeSingle();
 
-  return data;
+  if (error) throw new Error('Failed to fetch business: ' + error.message);
+  return data as Business | null;
 }
 
 // --- Categories ---

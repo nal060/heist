@@ -1,5 +1,11 @@
 import { supabase } from '../lib/supabase';
-import type { CardBrand, PaymentMethod } from '../types';
+import type { CardBrand, PaymentMethod, TilopayBusinessAccount } from '../types';
+
+const TILOPAY_ACCOUNT_COLUMNS = [
+  'id', 'business_id', 'tilopay_affiliate_id', 'account_status',
+  'bank_account_last_four', 'bank_name', 'platform_fee_bps',
+  'created_at', 'updated_at',
+].join(', ');
 
 const PAYMENT_METHOD_COLUMNS = [
   'id',
@@ -113,4 +119,15 @@ export async function createHostedPayment(orderId: string, saveCard: boolean): P
   if (error) throw new Error('Failed to create hosted payment: ' + error.message);
   if (!data?.url) throw new Error('No URL returned from server');
   return data.url as string;
+}
+
+export async function getBusinessPayoutAccount(businessId: string): Promise<TilopayBusinessAccount | null> {
+  const { data, error } = await supabase
+    .from('tilopay_business_accounts')
+    .select(TILOPAY_ACCOUNT_COLUMNS)
+    .eq('business_id', businessId)
+    .maybeSingle();
+
+  if (error) throw new Error('Failed to fetch payout account: ' + error.message);
+  return data as unknown as TilopayBusinessAccount | null;
 }
