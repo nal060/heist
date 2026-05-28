@@ -42,6 +42,7 @@ interface TilopayWebViewProps {
   redirectPattern: string;
   onSuccess: (params: Record<string, string>) => void;
   onCancel: () => void;
+  submitLabel?: string;
 }
 
 // ─── Component ────────────────────────────────────────────────────────────────
@@ -51,6 +52,7 @@ export default function TilopayWebView({
   redirectPattern,
   onSuccess,
   onCancel,
+  submitLabel,
 }: TilopayWebViewProps) {
   const insets = useSafeAreaInsets();
   const [webViewLoading, setWebViewLoading] = useState(true);
@@ -98,7 +100,7 @@ export default function TilopayWebView({
 
         {/* Body */}
         {shouldRenderMock ? (
-          <MockCardForm onSuccess={onSuccess} onCancel={onCancel} />
+          <MockCardForm onSuccess={onSuccess} onCancel={onCancel} submitLabel={submitLabel} />
         ) : (
           <View style={styles.webViewContainer}>
             {webViewLoading ? (

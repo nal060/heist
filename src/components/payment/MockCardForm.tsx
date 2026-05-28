@@ -35,11 +35,12 @@ const BANNER_TEXT = colors.badge.remaining.text;
 interface MockCardFormProps {
   onSuccess: (params: Record<string, string>) => void;
   onCancel: () => void;
+  submitLabel?: string;
 }
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
-export default function MockCardForm({ onSuccess, onCancel }: MockCardFormProps) {
+export default function MockCardForm({ onSuccess, onCancel, submitLabel = strings.mockCardForm.pay }: MockCardFormProps) {
   const [cardNumber, setCardNumber] = useState('4111 1111 1111 1111');
   const [expiry, setExpiry] = useState('12/28');
   const [cvv, setCvv] = useState('123');
@@ -99,7 +100,7 @@ export default function MockCardForm({ onSuccess, onCancel }: MockCardFormProps)
         ) : null}
 
         <Button
-          label={strings.mockCardForm.pay}
+          label={submitLabel}
           onPress={handlePay}
           variant="primary"
           size="lg"

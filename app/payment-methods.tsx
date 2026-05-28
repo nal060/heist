@@ -260,6 +260,7 @@ export default function PaymentMethodsScreen() {
           redirectPattern={REDIRECT_PATTERN}
           onSuccess={handleTokenizeSuccess}
           onCancel={handleCancelTokenize}
+          submitLabel={strings.mockCardForm.saveCard}
         />
       )}
     </View>

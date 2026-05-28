@@ -682,6 +682,7 @@ export const strings = {
     expiry: 'Vencimiento',
     cvv: 'CVV',
     pay: 'Pagar',
+    saveCard: 'Guardar tarjeta',
     simulateError: 'Simular error',
     processing: 'Procesando...',
   },
