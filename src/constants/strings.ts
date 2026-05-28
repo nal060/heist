@@ -223,6 +223,15 @@ export const strings = {
     other: 'Otros',
   },
 
+  // Dev-only simulate login
+  simulate: {
+    label: 'Acceso rápido',
+    consumer: 'Quiero comprar',
+    business: 'Tengo un negocio',
+    noConsumer: 'No hay consumidores en el sistema. Crea uno primero.',
+    noBusiness: 'No hay negocios en el sistema. Crea uno primero.',
+  },
+
   // Auth - Welcome
   welcome: {
     tagline: 'Rescata comida, ahorra dinero',

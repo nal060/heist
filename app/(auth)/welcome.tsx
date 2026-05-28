@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { View, Text, StyleSheet, Animated } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -6,10 +6,33 @@ import { colors, typography, spacing } from '../../src/theme';
 import { strings } from '../../src/constants/strings';
 import { APP_NAME } from '../../src/constants/app';
 import Button from '../../src/components/ui/Button';
+import { simulateConsumerLogin, simulateBusinessLogin } from '../../src/data/devSimulate';
+
+const IS_DEV = __DEV__;
 
 export default function WelcomeScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
+
+  const [simulateLoading, setSimulateLoading] = useState<'consumer' | 'business' | null>(null);
+  const [simulateError, setSimulateError] = useState('');
+
+  const handleSimulate = useCallback(async (mode: 'consumer' | 'business') => {
+    setSimulateLoading(mode);
+    setSimulateError('');
+    try {
+      if (mode === 'consumer') {
+        await simulateConsumerLogin();
+      } else {
+        await simulateBusinessLogin();
+      }
+      // AuthContext onAuthStateChange picks up the new session automatically
+    } catch (err: unknown) {
+      setSimulateError(err instanceof Error ? err.message : strings.common.error);
+    } finally {
+      setSimulateLoading(null);
+    }
+  }, []);
 
   const logoOpacity = useRef(new Animated.Value(0)).current;
   const logoScale = useRef(new Animated.Value(0.8)).current;
@@ -90,6 +113,39 @@ export default function WelcomeScreen() {
             fullWidth
           />
         </View>
+
+        {IS_DEV && (
+          <View style={styles.simulateSection}>
+            <View style={styles.simulateDivider}>
+              <View style={styles.simulateLine} />
+              <Text style={styles.simulateLabel}>{strings.simulate.label}</Text>
+              <View style={styles.simulateLine} />
+            </View>
+            <View style={styles.simulateButtons}>
+              <Button
+                label={strings.simulate.consumer}
+                onPress={() => handleSimulate('consumer')}
+                variant="outline"
+                size="sm"
+                loading={simulateLoading === 'consumer'}
+                disabled={simulateLoading !== null}
+                style={styles.simulateButton}
+              />
+              <Button
+                label={strings.simulate.business}
+                onPress={() => handleSimulate('business')}
+                variant="outline"
+                size="sm"
+                loading={simulateLoading === 'business'}
+                disabled={simulateLoading !== null}
+                style={styles.simulateButton}
+              />
+            </View>
+            {!!simulateError && (
+              <Text style={styles.simulateError}>{simulateError}</Text>
+            )}
+          </View>
+        )}
       </Animated.View>
     </View>
   );
@@ -145,5 +201,37 @@ const styles = StyleSheet.create({
   },
   buttonContainer: {
     gap: spacing.sm,
+  },
+  simulateSection: {
+    marginTop: spacing.xl,
+  },
+  simulateDivider: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: spacing.md,
+  },
+  simulateLine: {
+    flex: 1,
+    height: 1,
+    backgroundColor: colors.gray[200],
+  },
+  simulateLabel: {
+    fontSize: typography.fontSize.xs,
+    color: colors.text.tertiary,
+    marginHorizontal: spacing.sm,
+    fontWeight: typography.fontWeight.medium,
+  },
+  simulateButtons: {
+    flexDirection: 'row',
+    gap: spacing.sm,
+  },
+  simulateButton: {
+    flex: 1,
+  },
+  simulateError: {
+    fontSize: typography.fontSize.sm,
+    color: colors.error,
+    textAlign: 'center',
+    marginTop: spacing.sm,
   },
 });
