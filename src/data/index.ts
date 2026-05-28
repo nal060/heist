@@ -366,6 +366,7 @@ export async function getAllActiveBags(): Promise<BagWithBusiness[]> {
         order_id: order.id,
         total: input.total,
         subtotal: input.subtotal,
+        payment_method: 'tilopay',
         payment_status: 'pending',
         breakdown: { subtotal: input.subtotal, tax: input.tax },
       });
