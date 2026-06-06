@@ -41,6 +41,20 @@ serve(async (req) => {
 
     const { order_id, payment_method_id }: ChargeSavedBody = await req.json()
 
+    // ─── Mock fast-path ────────────────────────────────────────────────────────
+    if (IS_MOCK) {
+      await new Promise((resolve) => setTimeout(resolve, 1500))
+      const mockTilopayOrderId = `MOCK-${crypto.randomUUID().slice(0, 8)}`
+      await supabase.from('payments').update({
+        payment_status: 'completed',
+        tilopay_order_id: mockTilopayOrderId,
+        updated_at: new Date().toISOString(),
+      }).eq('order_id', order_id)
+      return new Response(JSON.stringify({ success: true, tilopay_order_id: mockTilopayOrderId }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      })
+    }
+
     // Fetch payment method server-side to get the card_token (never exposed to client)
     const { data: paymentMethod, error: pmError } = await supabase
       .from('payment_methods')
@@ -63,10 +77,10 @@ serve(async (req) => {
       })
     }
 
-    // Fetch payment row → amount
+    // Fetch payment row → total + status for double-charge guard
     const { data: payment, error: paymentError } = await supabase
       .from('payments')
-      .select('id, amount, tilopay_business_account_id')
+      .select('id, total, payment_status, tilopay_business_account_id')
       .eq('order_id', order_id)
       .single()
 
@@ -77,7 +91,7 @@ serve(async (req) => {
       })
     }
 
-    // Fix 3: Guard against double-charge
+    // Guard against double-charge
     if (payment.payment_status === 'completed') {
       return new Response(JSON.stringify({ error: 'This order has already been paid' }), {
         status: 409,
@@ -134,35 +148,8 @@ serve(async (req) => {
       })
     }
 
-    const total = payment.amount as number
+    const total = payment.total as number
     const orderNumber = generateOrderNumber(order_id)
-
-    if (IS_MOCK) {
-      await new Promise((resolve) => setTimeout(resolve, 1500))
-
-      const mockTilopayOrderId = `MOCK-${crypto.randomUUID().slice(0, 8)}`
-
-      await supabase.from('payments').update({
-        payment_status: 'completed',
-        tilopay_order_id: mockTilopayOrderId,
-        updated_at: new Date().toISOString(),
-      }).eq('order_id', order_id)
-
-      const { error: eventInsertError } = await supabase.from('tilopay_payment_events').insert({
-        payment_id: payment.id,
-        tilopay_order_id: mockTilopayOrderId,
-        event_type: 'process_cof',
-        parsed_status: 'approved',
-        http_endpoint: '/api/v1/process_cof',
-        raw_payload: { mock: true, order_id, tilopay_order_id: mockTilopayOrderId },
-        source: 'edge_function',
-      })
-      if (eventInsertError) console.error('Failed to insert tilopay_payment_events (mock):', eventInsertError.message)
-
-      return new Response(JSON.stringify({ success: true, tilopay_order_id: mockTilopayOrderId }), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      })
-    }
 
     // Real mode: call Tilopay process_cof with split payout
     const bearerToken = await getTilopayToken()

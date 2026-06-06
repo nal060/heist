@@ -49,10 +49,18 @@ serve(async (req) => {
       })
     }
 
+    // ─── Mock fast-path ────────────────────────────────────────────────────────
+    if (IS_MOCK) {
+      return new Response(
+        JSON.stringify({ url: 'mock://payment' }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
+
     // ─── Fetch payment row ─────────────────────────────────────────────────────
     const { data: payment, error: paymentError } = await supabase
       .from('payments')
-      .select('id, amount, payment_status, tilopay_business_account_id')
+      .select('id, total, payment_status, tilopay_business_account_id')
       .eq('order_id', order_id)
       .single()
 
@@ -119,19 +127,11 @@ serve(async (req) => {
       })
     }
 
-    const total = payment.amount as number
+    const total = payment.total as number
     const orderNumber = generateOrderNumber(order_id)
     const feeBps = tilopayAccount.platform_fee_bps as number
     // platform_fee_bps: 500 = 5%. Tilopay expects a decimal percentage (e.g. 5.00)
     const platformFeePercent = (feeBps / 100).toFixed(2)
-
-    // ─── Mock fast-path ────────────────────────────────────────────────────────
-    if (IS_MOCK) {
-      return new Response(
-        JSON.stringify({ url: 'mock://payment' }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      )
-    }
 
     // ─── Real mode: call Tilopay processPayment ────────────────────────────────
     const bearerToken = await getTilopayToken()
