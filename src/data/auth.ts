@@ -345,6 +345,29 @@ export async function getBusinessPhotos(businessId: string) {
   return data;
 }
 
+// --- Business Photo Upload ---
+
+export async function uploadBusinessPhoto(uri: string): Promise<string> {
+  const rawExt = (uri.split('.').pop() ?? 'jpg').split('?')[0].toLowerCase();
+  const ext = rawExt.length > 0 ? rawExt : 'jpg';
+  const mimeType = ext === 'jpg' ? 'image/jpeg' : `image/${ext}`;
+  const fileName = `${Date.now()}.${ext}`;
+  const response = await fetch(uri);
+  const arrayBuffer = await response.arrayBuffer();
+
+  const { error: uploadError } = await supabase.storage
+    .from('business-photos')
+    .upload(fileName, arrayBuffer, { contentType: mimeType, upsert: false });
+
+  if (uploadError) throw new Error(`Error al subir foto: ${uploadError.message}`);
+
+  const { data: urlData } = supabase.storage
+    .from('business-photos')
+    .getPublicUrl(fileName);
+
+  return urlData.publicUrl;
+}
+
 // --- Bag Photos ---
 
 export async function uploadBagPhoto(
@@ -352,14 +375,16 @@ export async function uploadBagPhoto(
   uri: string,
   displayOrder: number,
 ): Promise<string> {
-  const ext = uri.split('.').pop() ?? 'jpg';
+  const rawExt = (uri.split('.').pop() ?? 'jpg').split('?')[0].toLowerCase();
+  const ext = rawExt.length > 0 ? rawExt : 'jpg';
+  const mimeType = ext === 'jpg' ? 'image/jpeg' : `image/${ext}`;
   const fileName = `${bagId}/${Date.now()}.${ext}`;
   const response = await fetch(uri);
-  const blob = await response.blob();
+  const arrayBuffer = await response.arrayBuffer();
 
   const { error: uploadError } = await supabase.storage
     .from('bag-photos')
-    .upload(fileName, blob, { contentType: `image/${ext}`, upsert: false });
+    .upload(fileName, arrayBuffer, { contentType: mimeType, upsert: false });
 
   if (uploadError) throw new Error(`Error al subir foto: ${uploadError.message}`);
 
