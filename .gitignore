@@ -5,6 +5,7 @@ node_modules/
 
 # Claude Code
 .claude/
+.superpowers/
 
 # Expo
 .expo/
