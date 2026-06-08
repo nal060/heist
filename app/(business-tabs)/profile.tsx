@@ -17,7 +17,7 @@ import { sharedStyles } from '../../src/styles/shared';
 import { strings } from '../../src/constants/strings';
 import { useAuth } from '../../src/context/AuthContext';
 import { useLocation } from '../../src/context/LocationContext';
-import { getBusinessForUser, getBusinessPhotos } from '../../src/data/auth';
+import { getBusinessForUser } from '../../src/data/auth';
 import type { Business } from '../../src/types';
 import ErrorState from '../../src/components/ui/ErrorState';
 
@@ -28,7 +28,6 @@ export default function BusinessProfileScreen() {
   const { clearLocation } = useLocation();
 
   const [business, setBusiness] = useState<Business | null>(null);
-  const [photoUrl, setPhotoUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -39,13 +38,6 @@ export default function BusinessProfileScreen() {
     try {
       const biz = await getBusinessForUser(user.id);
       setBusiness(biz);
-
-      if (biz) {
-        const photos = await getBusinessPhotos(biz.id);
-        if (photos.length > 0) {
-          setPhotoUrl(photos[0].photo_url);
-        }
-      }
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : strings.common.error;
       setError(message);
@@ -123,8 +115,8 @@ export default function BusinessProfileScreen() {
 
       {/* Business card */}
       <View style={styles.businessCard}>
-        {photoUrl ? (
-          <Image source={{ uri: photoUrl }} style={styles.avatarImage} />
+        {business?.photo_url ? (
+          <Image source={{ uri: business.photo_url }} style={styles.avatarImage} />
         ) : (
           <View style={styles.avatarCircle}>
             <Ionicons name="storefront" size={32} color={colors.primary[500]} />
