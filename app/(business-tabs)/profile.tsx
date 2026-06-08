@@ -2,13 +2,13 @@ import { useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
-  Image,
   StyleSheet,
   ScrollView,
   TouchableOpacity,
   ActivityIndicator,
   Alert,
 } from 'react-native';
+import { Image } from 'expo-image';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -116,7 +116,7 @@ export default function BusinessProfileScreen() {
       {/* Business card */}
       <View style={styles.businessCard}>
         {business?.photo_url ? (
-          <Image source={{ uri: business.photo_url }} style={styles.avatarImage} />
+          <Image source={{ uri: business.photo_url }} style={styles.avatarImage} contentFit="cover" />
         ) : (
           <View style={styles.avatarCircle}>
             <Ionicons name="storefront" size={32} color={colors.primary[500]} />
@@ -248,18 +248,6 @@ const styles = StyleSheet.create({
     marginBottom: spacing.lg,
   },
   logoutText: {
-    fontSize: typography.fontSize.base,
-    color: colors.error,
-    marginLeft: spacing.lg,
-    fontWeight: typography.fontWeight.medium,
-  },
-  deleteButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: spacing.lg,
-    marginBottom: spacing.lg,
-  },
-  deleteText: {
     fontSize: typography.fontSize.base,
     color: colors.error,
     marginLeft: spacing.lg,

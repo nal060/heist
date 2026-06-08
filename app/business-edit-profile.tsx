@@ -22,7 +22,7 @@ import ScreenShell from '../src/components/ui/ScreenShell';
 import FormField from '../src/components/ui/FormField';
 import Button from '../src/components/ui/Button';
 
-const PHOTO_OVERLAY_BG = 'rgba(0, 0, 0, 0.32)';
+const PHOTO_BANNER_HEIGHT = 160;
 
 interface PlaceSuggestion {
   placeId: string;
@@ -176,7 +176,7 @@ export default function BusinessEditProfileScreen() {
     );
   }, []);
 
-  const handleSave = async () => {
+  const handleSave = async (): Promise<void> => {
     if (!business || !name.trim()) return;
 
     // If address was changed but not validated, resolve it
@@ -326,7 +326,7 @@ export default function BusinessEditProfileScreen() {
 const styles = StyleSheet.create({
   photoBanner: {
     width: '100%',
-    height: 160,
+    height: PHOTO_BANNER_HEIGHT,
     borderRadius: borderRadius.lg,
     overflow: 'hidden',
     backgroundColor: colors.gray[100],
@@ -345,7 +345,7 @@ const styles = StyleSheet.create({
   },
   bannerOverlay: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: PHOTO_OVERLAY_BG,
+    backgroundColor: colors.overlay,
     alignItems: 'center',
     justifyContent: 'center',
     flexDirection: 'row',
