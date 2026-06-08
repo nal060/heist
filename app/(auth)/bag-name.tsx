@@ -28,7 +28,7 @@ export default function BagNameScreen() {
       title={strings.bagNameSetup.title}
       subtitle={strings.bagNameSetup.subtitle}
       keyboardAvoiding
-      progress={{ current: 3, total: 6 }}
+      progress={{ current: 4, total: 7 }}
       footer={
         <Button
           label={strings.bagNameSetup.continue}

@@ -99,7 +99,7 @@ export default function BagScheduleScreen() {
     <ScreenShell
       title={strings.bagScheduleSetup.title}
       subtitle={strings.bagScheduleSetup.subtitle}
-      progress={{ current: 5, total: 6 }}
+      progress={{ current: 6, total: 7 }}
       footer={
         <>
           {activeDays > 0 && (

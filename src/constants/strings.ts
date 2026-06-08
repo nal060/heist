@@ -355,6 +355,18 @@ export const strings = {
     continue: 'Continuar',
   },
 
+  // Auth - Business photo upload
+  businessPhoto: {
+    title: 'Foto de tu negocio',
+    subtitle: 'Agrega una foto del exterior o interior de tu negocio. Esto ayuda a los clientes a identificarlo fácilmente.',
+    pickFromLibrary: 'Elegir de la galería',
+    takePhoto: 'Tomar foto',
+    changePhoto: 'Cambiar foto',
+    continue: 'Continuar',
+    photoRequired: 'Agrega una foto para continuar',
+    uploading: 'Subiendo foto...',
+  },
+
   // Auth - Business category selection
   businessCategory: {
     title: 'Tipo de negocio',

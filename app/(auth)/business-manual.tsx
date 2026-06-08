@@ -142,7 +142,7 @@ export default function BusinessManualScreen() {
     }
 
     router.push({
-      pathname: '/(auth)/business-category',
+      pathname: '/(auth)/business-photo',
       params: {
         ...routeParams,
         name: form.name.trim(),
@@ -161,7 +161,7 @@ export default function BusinessManualScreen() {
       title={strings.businessManualEntry.title}
       subtitle={strings.businessManualEntry.subtitle}
       keyboardAvoiding
-      progress={{ current: 1, total: 6 }}
+      progress={{ current: 1, total: 7 }}
       footer={
         <Button
           label={strings.businessManualEntry.continue}

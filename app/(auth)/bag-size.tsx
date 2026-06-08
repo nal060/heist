@@ -55,7 +55,7 @@ export default function BagSizeScreen() {
     <ScreenShell
       title={strings.bagSizeSetup.title}
       subtitle={strings.bagSizeSetup.subtitle}
-      progress={{ current: 3, total: 6 }}
+      progress={{ current: 4, total: 7 }}
       footer={
         <Button
           label={strings.bagSizeSetup.continue}

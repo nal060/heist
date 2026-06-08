@@ -57,7 +57,7 @@ export default function BusinessReviewScreen() {
   const handleContinue = () => {
     if (!details) return;
     router.push({
-      pathname: '/(auth)/business-category',
+      pathname: '/(auth)/business-photo',
       params: {
         name: details.name,
         description: '',
@@ -90,7 +90,7 @@ export default function BusinessReviewScreen() {
       title={strings.businessSearch.reviewTitle}
       subtitle={strings.businessSearch.reviewSubtitle}
       loading={loading}
-      progress={{ current: 1, total: 6 }}
+      progress={{ current: 1, total: 7 }}
       footer={
         <Button
           label={strings.common.continue}

@@ -40,7 +40,7 @@ export default function BagQuantityScreen() {
     <ScreenShell
       title={strings.bagQuantitySetup.title}
       subtitle={strings.bagQuantitySetup.subtitle}
-      progress={{ current: 4, total: 6 }}
+      progress={{ current: 5, total: 7 }}
       footer={
         <Button
           label={strings.bagQuantitySetup.continue}

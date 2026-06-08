@@ -40,6 +40,7 @@ export default function BagReviewScreen() {
     scheduleJson: string;
     earningsPerWeek: string;
     activeDays: string;
+    photoUrl: string;
   }>();
 
   const [loading, setLoading] = useState(false);
@@ -131,7 +132,7 @@ export default function BagReviewScreen() {
     <ScreenShell
       title={strings.bagReviewSetup.title}
       subtitle={strings.bagReviewSetup.subtitle}
-      progress={{ current: 6, total: 6 }}
+      progress={{ current: 7, total: 7 }}
       error={error || undefined}
       footer={
         <>

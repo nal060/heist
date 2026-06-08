@@ -56,7 +56,7 @@ export default function BusinessCategoryScreen() {
       title={strings.businessCategory.title}
       subtitle={strings.businessCategory.subtitle}
       loading={loading}
-      progress={{ current: 2, total: 6 }}
+      progress={{ current: 3, total: 7 }}
       footer={
         <Button
           label={strings.businessCategory.continue}

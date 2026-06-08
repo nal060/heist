@@ -20,6 +20,7 @@ export default function AuthLayout() {
       <Stack.Screen name="business-search" />
       <Stack.Screen name="business-review" />
       <Stack.Screen name="business-manual" />
+      <Stack.Screen name="business-photo" />
       <Stack.Screen name="business-category" />
       <Stack.Screen name="bag-name" />
       <Stack.Screen name="bag-size" />
