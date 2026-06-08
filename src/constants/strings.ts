@@ -606,6 +606,10 @@ export const strings = {
     addressLabel: 'Dirección',
     phoneLabel: 'Teléfono',
     save: 'Guardar cambios',
+    changePhoto: 'Cambiar foto',
+    photoSheetTitle: 'Foto del negocio',
+    photoSheetLibrary: 'Galería de fotos',
+    photoSheetCamera: 'Tomar foto',
   },
 
   // Collect screen
