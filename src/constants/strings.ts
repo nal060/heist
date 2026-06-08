@@ -672,6 +672,7 @@ export const strings = {
     maxPhotosAlert: 'Máximo {max} fotos permitidas.',
     permissionsTitle: 'Permisos',
     permissionsGallery: 'Se necesitan permisos para acceder a la galería.',
+    permissionsCamera: 'Se necesitan permisos para acceder a la cámara.',
   },
 
   paymentMethods: {

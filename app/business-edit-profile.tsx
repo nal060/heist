@@ -6,18 +6,23 @@ import {
   StyleSheet,
   ActivityIndicator,
   Keyboard,
+  Alert,
 } from 'react-native';
+import { Image } from 'expo-image';
+import * as ImagePicker from 'expo-image-picker';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, typography, spacing, borderRadius } from '../src/theme';
 import { strings } from '../src/constants/strings';
 import { useAuth } from '../src/context/AuthContext';
-import { getBusinessForUser, updateBusiness } from '../src/data/auth';
+import { getBusinessForUser, updateBusiness, uploadBusinessPhoto } from '../src/data/auth';
 import { searchAddresses, getPlaceDetails } from '../src/lib/googlePlaces';
 import type { Business } from '../src/types';
 import ScreenShell from '../src/components/ui/ScreenShell';
 import FormField from '../src/components/ui/FormField';
 import Button from '../src/components/ui/Button';
+
+const PHOTO_OVERLAY_BG = 'rgba(0, 0, 0, 0.32)';
 
 interface PlaceSuggestion {
   placeId: string;
@@ -45,6 +50,8 @@ export default function BusinessEditProfileScreen() {
   const [searching, setSearching] = useState(false);
   const [selectedPlaceId, setSelectedPlaceId] = useState<string | null>(null);
   const [addressError, setAddressError] = useState('');
+  const [currentPhotoUrl, setCurrentPhotoUrl] = useState<string | null>(null);
+  const [newPhotoUri, setNewPhotoUri] = useState<string | null>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const loadBusiness = useCallback(async () => {
@@ -58,6 +65,7 @@ export default function BusinessEditProfileScreen() {
         setDescription(biz.description || '');
         setAddress(biz.address);
         setPhone(biz.phone || '');
+        setCurrentPhotoUrl(biz.photo_url ?? null);
         // Mark existing address as already validated
         setSelectedPlaceId('existing');
         setCoords({ latitude: biz.latitude, longitude: biz.longitude });
@@ -121,6 +129,53 @@ export default function BusinessEditProfileScreen() {
 
   const showSuggestions = address.trim().length >= 3 && !selectedPlaceId;
 
+  const handleChangePhoto = useCallback(() => {
+    Alert.alert(
+      strings.businessProfileEdit.photoSheetTitle,
+      undefined,
+      [
+        {
+          text: strings.businessProfileEdit.photoSheetLibrary,
+          onPress: async () => {
+            const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+            if (status !== 'granted') {
+              Alert.alert(strings.bagForm.permissionsTitle, strings.bagForm.permissionsGallery);
+              return;
+            }
+            const result = await ImagePicker.launchImageLibraryAsync({
+              mediaTypes: ['images'],
+              allowsEditing: true,
+              aspect: [4, 3],
+              quality: 0.8,
+            });
+            if (!result.canceled && result.assets[0]) {
+              setNewPhotoUri(result.assets[0].uri);
+            }
+          },
+        },
+        {
+          text: strings.businessProfileEdit.photoSheetCamera,
+          onPress: async () => {
+            const { status } = await ImagePicker.requestCameraPermissionsAsync();
+            if (status !== 'granted') {
+              Alert.alert(strings.bagForm.permissionsTitle, strings.bagForm.permissionsCamera);
+              return;
+            }
+            const result = await ImagePicker.launchCameraAsync({
+              allowsEditing: true,
+              aspect: [4, 3],
+              quality: 0.8,
+            });
+            if (!result.canceled && result.assets[0]) {
+              setNewPhotoUri(result.assets[0].uri);
+            }
+          },
+        },
+        { text: strings.common.cancel, style: 'cancel' },
+      ],
+    );
+  }, []);
+
   const handleSave = async () => {
     if (!business || !name.trim()) return;
 
@@ -155,12 +210,18 @@ export default function BusinessEditProfileScreen() {
     setSaving(true);
     setError(null);
     try {
+      let photoUrl: string | null = currentPhotoUrl;
+      if (newPhotoUri) {
+        photoUrl = await uploadBusinessPhoto(newPhotoUri);
+      }
+
       await updateBusiness(business.id, {
         name: name.trim(),
         description: description.trim() || null,
         address: address.trim(),
         phone: phone.trim() || null,
         ...(finalCoords && { latitude: finalCoords.latitude, longitude: finalCoords.longitude }),
+        ...(photoUrl !== currentPhotoUrl && { photo_url: photoUrl }),
       });
       router.back();
     } catch (err: unknown) {
@@ -191,6 +252,29 @@ export default function BusinessEditProfileScreen() {
         />
       }
     >
+      {/* Photo banner */}
+      <TouchableOpacity
+        style={styles.photoBanner}
+        onPress={handleChangePhoto}
+        activeOpacity={0.85}
+        accessibilityRole="button"
+        accessibilityLabel={strings.businessProfileEdit.changePhoto}
+      >
+        {newPhotoUri ? (
+          <Image source={{ uri: newPhotoUri }} style={styles.bannerImage} contentFit="cover" transition={200} />
+        ) : currentPhotoUrl ? (
+          <Image source={{ uri: currentPhotoUrl }} style={styles.bannerImage} contentFit="cover" transition={200} />
+        ) : (
+          <View style={styles.bannerPlaceholder}>
+            <Ionicons name="storefront-outline" size={40} color={colors.gray[300]} />
+          </View>
+        )}
+        <View style={styles.bannerOverlay}>
+          <Ionicons name="camera-outline" size={20} color={colors.white} />
+          <Text style={styles.bannerOverlayText}>{strings.businessProfileEdit.changePhoto}</Text>
+        </View>
+      </TouchableOpacity>
+
       <FormField label={strings.businessProfileEdit.nameLabel} value={name} onChangeText={setName} />
       <FormField label={strings.businessProfileEdit.descriptionLabel} value={description} onChangeText={setDescription} multiline />
 
@@ -238,6 +322,41 @@ export default function BusinessEditProfileScreen() {
     </ScreenShell>
   );
 }
+
+const styles = StyleSheet.create({
+  photoBanner: {
+    width: '100%',
+    height: 160,
+    borderRadius: borderRadius.lg,
+    overflow: 'hidden',
+    backgroundColor: colors.gray[100],
+    borderWidth: 1,
+    borderColor: colors.gray[200],
+    marginBottom: spacing.lg,
+  },
+  bannerImage: {
+    width: '100%',
+    height: '100%',
+  },
+  bannerPlaceholder: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  bannerOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: PHOTO_OVERLAY_BG,
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexDirection: 'row',
+    gap: spacing.sm,
+  },
+  bannerOverlayText: {
+    fontSize: typography.fontSize.sm,
+    fontWeight: typography.fontWeight.semibold,
+    color: colors.white,
+  },
+});
 
 const addressStyles = StyleSheet.create({
   wrapper: {
