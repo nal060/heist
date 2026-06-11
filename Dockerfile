@@ -28,6 +28,6 @@ COPY . .
 
 EXPOSE 8081
 
-# Web mode: Metro serves on 8081, accessible via localhost:8081 on the host.
+# Tunnel mode: ngrok exposes Metro publicly so Expo Go on any device can scan the QR code.
 # --non-interactive disables the Expo CLI interactive prompt (no guaranteed TTY in all envs).
-CMD ["sh", "-c", "HUSKY=0 npx expo start --web --port 8081 --non-interactive"]
+CMD ["sh", "-c", "HUSKY=0 npx expo start --tunnel --port 8081 --non-interactive"]
