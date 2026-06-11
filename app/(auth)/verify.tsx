@@ -16,6 +16,8 @@ import { useRouter } from 'expo-router';
 import { colors, typography, spacing, borderRadius } from '../../src/theme';
 import { strings } from '../../src/constants/strings';
 import { useAuth } from '../../src/context/AuthContext';
+import { getUserRole } from '../../src/data/auth';
+import { supabase } from '../../src/lib/supabase';
 import ScreenShell from '../../src/components/ui/ScreenShell';
 
 const CODE_LENGTH = 6;
