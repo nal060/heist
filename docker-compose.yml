@@ -1,0 +1,19 @@
+services:
+  app:
+    build: .
+    # Reads all EXPO_PUBLIC_* variables from .env at runtime.
+    # Credentials are never baked into the image — only injected here.
+    env_file:
+      - .env
+    ports:
+      - "8081:8081"
+    volumes:
+      # Live source sync: host file changes are instantly visible to Metro.
+      - .:/app
+      # Anonymous volume for node_modules — CRITICAL for React Native on Docker.
+      # The bind mount above would overwrite /app/node_modules with the host's
+      # macOS binaries. This anonymous volume takes priority for that path,
+      # keeping the Linux-native binaries from the Dockerfile intact.
+      - /app/node_modules
+    stdin_open: true
+    tty: true

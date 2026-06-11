@@ -1,0 +1,49 @@
+# Host node_modules must never enter the image — the Dockerfile installs
+# Linux-native binaries in a separate stage; macOS binaries would break them.
+node_modules/
+
+# iOS native project (Xcode/CocoaPods) — not buildable in a Linux container.
+ios/
+
+# Android native project.
+android/
+
+# Git history — not needed in the image, adds significant size.
+.git/
+.gitignore
+
+# Expo local state — regenerated at runtime.
+.expo/
+
+# Build outputs.
+dist/
+web-build/
+
+# Environment files — injected at runtime via docker-compose env_file.
+# Never bake credentials into an image layer.
+.env
+.env.*
+
+# macOS filesystem artifacts.
+.DS_Store
+
+# Husky git hooks — no .git in the container, hooks would fail.
+.husky/
+
+# Tool and editor files not needed at runtime.
+.claude/
+.superpowers/
+docs/
+inspo/
+
+# TypeScript incremental build cache.
+*.tsbuildinfo
+
+# Logs.
+npm-debug.*
+yarn-debug.*
+yarn-error.*
+
+# Supabase CLI temp files.
+supabase/.temp/
+supabase/.branches/
