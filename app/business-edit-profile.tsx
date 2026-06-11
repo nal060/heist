@@ -1,12 +1,29 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
+import {
+  View,
+  Text,
+  TouchableOpacity,
+  StyleSheet,
+  ActivityIndicator,
+  Keyboard,
+} from 'react-native';
 import { useRouter } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
+import { colors, typography, spacing, borderRadius } from '../src/theme';
 import { strings } from '../src/constants/strings';
 import { useAuth } from '../src/context/AuthContext';
 import { getBusinessForUser, updateBusiness } from '../src/data/auth';
+import { searchAddresses, getPlaceDetails } from '../src/lib/googlePlaces';
 import type { Business } from '../src/types';
 import ScreenShell from '../src/components/ui/ScreenShell';
 import FormField from '../src/components/ui/FormField';
 import Button from '../src/components/ui/Button';
+
+interface PlaceSuggestion {
+  placeId: string;
+  name: string;
+  address: string;
+}
 
 export default function BusinessEditProfileScreen() {
   const router = useRouter();
@@ -22,6 +39,14 @@ export default function BusinessEditProfileScreen() {
   const [address, setAddress] = useState('');
   const [phone, setPhone] = useState('');
 
+  // Address autocomplete state
+  const [coords, setCoords] = useState<{ latitude: number; longitude: number } | null>(null);
+  const [suggestions, setSuggestions] = useState<PlaceSuggestion[]>([]);
+  const [searching, setSearching] = useState(false);
+  const [selectedPlaceId, setSelectedPlaceId] = useState<string | null>(null);
+  const [addressError, setAddressError] = useState('');
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   const loadBusiness = useCallback(async () => {
     if (!user) return;
     setError(null);
@@ -33,6 +58,9 @@ export default function BusinessEditProfileScreen() {
         setDescription(biz.description || '');
         setAddress(biz.address);
         setPhone(biz.phone || '');
+        // Mark existing address as already validated
+        setSelectedPlaceId('existing');
+        setCoords({ latitude: biz.latitude, longitude: biz.longitude });
       }
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : strings.common.error;
@@ -46,8 +74,84 @@ export default function BusinessEditProfileScreen() {
     loadBusiness();
   }, [loadBusiness]);
 
+  const handleAddressChange = (text: string) => {
+    setAddress(text);
+    if (addressError) setAddressError('');
+    if (selectedPlaceId) {
+      setSelectedPlaceId(null);
+      setCoords(null);
+    }
+  };
+
+  // Debounced address search
+  useEffect(() => {
+    if (selectedPlaceId || !address.trim() || address.trim().length < 3) {
+      setSuggestions([]);
+      return;
+    }
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(async () => {
+      setSearching(true);
+      try {
+        const results = await searchAddresses(address.trim());
+        setSuggestions(results);
+      } catch {
+        setSuggestions([]);
+      } finally {
+        setSearching(false);
+      }
+    }, 400);
+    return () => {
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+    };
+  }, [address, selectedPlaceId]);
+
+  const selectSuggestion = async (suggestion: PlaceSuggestion) => {
+    setSelectedPlaceId(suggestion.placeId);
+    setAddress(suggestion.address);
+    setSuggestions([]);
+    setAddressError('');
+    Keyboard.dismiss();
+
+    const details = await getPlaceDetails(suggestion.placeId);
+    if (details) {
+      setCoords({ latitude: details.latitude, longitude: details.longitude });
+    }
+  };
+
+  const showSuggestions = address.trim().length >= 3 && !selectedPlaceId;
+
   const handleSave = async () => {
     if (!business || !name.trim()) return;
+
+    // If address was changed but not validated, resolve it
+    let finalCoords = coords;
+    if (!finalCoords && address.trim()) {
+      setSaving(true);
+      try {
+        const results = await searchAddresses(address.trim());
+        if (results.length === 0) {
+          setAddressError(strings.businessManualEntry.addressNotFound);
+          setSaving(false);
+          return;
+        }
+        const details = await getPlaceDetails(results[0].placeId);
+        if (!details) {
+          setAddressError(strings.businessManualEntry.addressNotFound);
+          setSaving(false);
+          return;
+        }
+        finalCoords = { latitude: details.latitude, longitude: details.longitude };
+        setCoords(finalCoords);
+        setAddress(details.address);
+        setSelectedPlaceId(results[0].placeId);
+      } catch {
+        setAddressError(strings.businessManualEntry.addressNotFound);
+        setSaving(false);
+        return;
+      }
+    }
+
     setSaving(true);
     setError(null);
     try {
@@ -56,6 +160,7 @@ export default function BusinessEditProfileScreen() {
         description: description.trim() || null,
         address: address.trim(),
         phone: phone.trim() || null,
+        ...(finalCoords && { latitude: finalCoords.latitude, longitude: finalCoords.longitude }),
       });
       router.back();
     } catch (err: unknown) {
@@ -88,8 +193,84 @@ export default function BusinessEditProfileScreen() {
     >
       <FormField label={strings.businessProfileEdit.nameLabel} value={name} onChangeText={setName} />
       <FormField label={strings.businessProfileEdit.descriptionLabel} value={description} onChangeText={setDescription} multiline />
-      <FormField label={strings.businessProfileEdit.addressLabel} value={address} onChangeText={setAddress} />
+
+      {/* Address field with autocomplete */}
+      <View style={addressStyles.wrapper}>
+        <FormField
+          label={strings.businessProfileEdit.addressLabel}
+          value={address}
+          onChangeText={handleAddressChange}
+          error={addressError || undefined}
+        />
+        {selectedPlaceId && coords && (
+          <View style={addressStyles.validBadge}>
+            <Ionicons name="checkmark-circle" size={16} color={colors.success} />
+          </View>
+        )}
+        {showSuggestions && (
+          <View style={addressStyles.suggestionsContainer}>
+            {searching ? (
+              <View style={addressStyles.suggestionItem}>
+                <ActivityIndicator size="small" color={colors.primary[500]} />
+              </View>
+            ) : (
+              suggestions.map((item) => (
+                <TouchableOpacity
+                  key={item.placeId}
+                  style={addressStyles.suggestionItem}
+                  onPress={() => selectSuggestion(item)}
+                >
+                  <Ionicons name="location-outline" size={18} color={colors.text.secondary} />
+                  <Text style={addressStyles.suggestionText} numberOfLines={2}>{item.address}</Text>
+                </TouchableOpacity>
+              ))
+            )}
+            {!searching && suggestions.length === 0 && address.trim().length >= 3 && (
+              <View style={addressStyles.suggestionItem}>
+                <Text style={addressStyles.noResultsText}>{strings.changeLocation.noResults}</Text>
+              </View>
+            )}
+          </View>
+        )}
+      </View>
+
       <FormField label={strings.businessProfileEdit.phoneLabel} value={phone} onChangeText={setPhone} keyboardType="phone-pad" />
     </ScreenShell>
   );
 }
+
+const addressStyles = StyleSheet.create({
+  wrapper: {
+    zIndex: 10,
+  },
+  validBadge: {
+    position: 'absolute',
+    right: spacing.lg,
+    top: 40,
+  },
+  suggestionsContainer: {
+    backgroundColor: colors.background.primary,
+    borderRadius: borderRadius.md,
+    marginTop: -spacing.md,
+    marginBottom: spacing.xl,
+    borderWidth: 1,
+    borderColor: colors.gray[200],
+    overflow: 'hidden',
+  },
+  suggestionItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.lg,
+    gap: spacing.sm,
+  },
+  suggestionText: {
+    fontSize: typography.fontSize.sm,
+    color: colors.text.primary,
+    flex: 1,
+  },
+  noResultsText: {
+    fontSize: typography.fontSize.sm,
+    color: colors.text.tertiary,
+  },
+});

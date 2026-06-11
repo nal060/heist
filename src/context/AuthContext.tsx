@@ -29,35 +29,47 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [isLoading, setIsLoading] = useState(true);
   const [isOnboarded, setIsOnboarded] = useState(false);
 
-  // Check for existing session and determine role on mount
+  // Restore session and determine role on mount.
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session: currentSession } }) => {
-      setSession(currentSession);
-      if (currentSession?.user) {
-        getUserRole(currentSession.user.id).then(({ role, profile }) => {
-          setUserRoleState(role);
-          setBusinessIdState(role === 'business' && profile ? (profile as Business).id : null);
-          setIsOnboarded(role !== null);
-          setIsLoading(false);
-        });
-      } else {
-        setIsLoading(false);
-      }
-    });
+    let initialLoad = true;
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (_event, newSession) => {
-        setSession(newSession);
+      (event, newSession) => {
+        // Token refreshes don't change the user role — just update the session.
+        if (event === 'TOKEN_REFRESHED') {
+          setSession(newSession);
+          return;
+        }
+
         if (newSession?.user) {
-          getUserRole(newSession.user.id).then(({ role, profile }) => {
-            setUserRoleState(role);
-            setBusinessIdState(role === 'business' && profile ? (profile as Business).id : null);
-            setIsOnboarded(role !== null);
-          });
+          getUserRole(newSession.user.id)
+            .then(({ role, profile }) => {
+              setSession(newSession);
+              setUserRoleState(role);
+              setBusinessIdState(role === 'business' && profile ? (profile as Business).id : null);
+              setIsOnboarded(role !== null);
+            })
+            .catch(() => {
+              setSession(newSession);
+              setUserRoleState(null);
+              setBusinessIdState(null);
+              setIsOnboarded(false);
+            })
+            .finally(() => {
+              if (initialLoad) {
+                initialLoad = false;
+                setIsLoading(false);
+              }
+            });
         } else {
+          setSession(null);
           setUserRoleState(null);
           setBusinessIdState(null);
           setIsOnboarded(false);
+          if (initialLoad) {
+            initialLoad = false;
+            setIsLoading(false);
+          }
         }
       },
     );

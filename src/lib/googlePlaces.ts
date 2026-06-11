@@ -47,6 +47,37 @@ export async function searchPlaces(
   }));
 }
 
+export async function searchAddresses(
+  query: string,
+  countryCode: string = 'pa',
+): Promise<PlacePrediction[]> {
+  if (!API_KEY) {
+    // eslint-disable-next-line no-console
+    console.warn('[GooglePlaces] No API key found. Check EXPO_PUBLIC_GOOGLE_PLACES_API_KEY in .env');
+    return [];
+  }
+  if (!query.trim()) return [];
+
+  const url = `https://maps.googleapis.com/maps/api/place/autocomplete/json?input=${encodeURIComponent(query)}&types=address&components=country:${countryCode}&language=es&key=${API_KEY}`;
+
+  const res = await fetch(url);
+  const data = await res.json();
+
+  if (data.status !== 'OK') {
+    if (data.status !== 'ZERO_RESULTS') {
+      // eslint-disable-next-line no-console
+      console.warn('[GooglePlaces] Address autocomplete error:', data.status, data.error_message);
+    }
+    return [];
+  }
+
+  return data.predictions.map((p: { place_id: string; structured_formatting: { main_text: string }; description: string }) => ({
+    placeId: p.place_id,
+    name: p.structured_formatting.main_text,
+    address: p.description,
+  }));
+}
+
 export async function getPlaceDetails(placeId: string): Promise<PlaceDetails | null> {
   if (!API_KEY) {
     // eslint-disable-next-line no-console

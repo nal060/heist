@@ -6,6 +6,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { colors, typography, spacing, borderRadius } from '../../theme';
 import { strings } from '../../constants/strings';
 import { useFavorites } from '../../context/FavoritesContext';
+import { useAuth } from '../../context/AuthContext';
 import { setNotificationPreference } from '../../data';
 import Button from '../ui/Button';
 
@@ -21,6 +22,7 @@ interface Props {
 }
 
 const FavoriteBottomSheet = forwardRef<BottomSheetModal, Props>(({ data }, ref) => {
+  const { user } = useAuth();
   const { isBagFavorite, isFavorite, addFavorites, removeBagFavorite, removeBusinessFavorite } = useFavorites();
 
   const [saveBag, setSaveBag] = useState(false);
@@ -59,8 +61,8 @@ const FavoriteBottomSheet = forwardRef<BottomSheetModal, Props>(({ data }, ref) 
     if (!saveStore && wasBizFav) removeBusinessFavorite(data.businessId);
 
     // Notification preferences (fire and forget)
-    if (saveBag) setNotificationPreference('bag', data.bagId, notifyBag);
-    if (saveStore) setNotificationPreference('business', data.businessId, notifyStore);
+    if (user && saveBag) setNotificationPreference(user.id, 'bag', data.bagId, notifyBag);
+    if (user && saveStore) setNotificationPreference(user.id, 'business', data.businessId, notifyStore);
 
     (ref as React.RefObject<BottomSheetModal | null>)?.current?.dismiss();
   }, [data, saveBag, saveStore, notifyBag, notifyStore, ref, isBagFavorite, isFavorite, addFavorites, removeBagFavorite, removeBusinessFavorite]);

@@ -16,6 +16,7 @@ import { colors, typography, spacing, borderRadius } from '../../src/theme';
 import { sharedStyles } from '../../src/styles/shared';
 import { strings } from '../../src/constants/strings';
 import { useAuth } from '../../src/context/AuthContext';
+import { useLocation } from '../../src/context/LocationContext';
 import { getBusinessForUser, getBusinessPhotos } from '../../src/data/auth';
 import type { Business } from '../../src/types';
 import ErrorState from '../../src/components/ui/ErrorState';
@@ -23,7 +24,8 @@ import ErrorState from '../../src/components/ui/ErrorState';
 export default function BusinessProfileScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
-  const { user, signOut, deleteAccount } = useAuth();
+  const { user, signOut } = useAuth();
+  const { clearLocation } = useLocation();
 
   const [business, setBusiness] = useState<Business | null>(null);
   const [photoUrl, setPhotoUrl] = useState<string | null>(null);
@@ -65,33 +67,13 @@ export default function BusinessProfileScreen() {
         {
           text: strings.common.confirm,
           style: 'destructive',
-          onPress: signOut,
+          onPress: async () => { await signOut(); await clearLocation(); },
         },
       ],
     );
   };
 
-  const handleDeleteAccount = () => {
-    Alert.alert(
-      strings.common.deleteAccountTitle,
-      strings.common.deleteAccountMessage,
-      [
-        { text: strings.common.cancel, style: 'cancel' },
-        {
-          text: strings.common.deleteAccountConfirm,
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              await deleteAccount();
-            } catch (err: unknown) {
-              const message = err instanceof Error ? err.message : strings.common.error;
-              Alert.alert(strings.common.error, message);
-            }
-          },
-        },
-      ],
-    );
-  };
+
 
   const menuItems = [
     {
@@ -189,12 +171,6 @@ export default function BusinessProfileScreen() {
       <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
         <Ionicons name="log-out-outline" size={22} color={colors.error} />
         <Text style={styles.logoutText}>{strings.businessProfile.logout}</Text>
-      </TouchableOpacity>
-
-      {/* Delete account */}
-      <TouchableOpacity style={styles.deleteButton} onPress={handleDeleteAccount}>
-        <Ionicons name="trash-outline" size={22} color={colors.error} />
-        <Text style={styles.deleteText}>{strings.common.deleteAccount}</Text>
       </TouchableOpacity>
 
       {/* Email */}

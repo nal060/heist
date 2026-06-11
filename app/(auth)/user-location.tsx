@@ -5,7 +5,7 @@ import {
   StyleSheet,
   ActivityIndicator,
 } from 'react-native';
-import { useRouter, useLocalSearchParams } from 'expo-router';
+import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import * as Location from 'expo-location';
@@ -22,17 +22,15 @@ export default function UserLocationScreen() {
   const insets = useSafeAreaInsets();
   const { user, setOnboarded } = useAuth();
   const { setLocation } = useLocation();
-  const { countryId } = useLocalSearchParams<{ countryId: string }>();
-
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
-  const finishOnboarding = async (lat: number, lon: number) => {
+  const finishOnboarding = async (name: string, lat: number, lon: number) => {
     if (!user) return;
 
     try {
       const emailName = user.email?.split('@')[0] || 'Usuario';
-      await createConsumerProfile(user.id, emailName, countryId);
+      await createConsumerProfile(user.id, emailName);
       await setLocation({ name: strings.discover.defaultLocation, latitude: lat, longitude: lon });
       setOnboarded();
       router.replace('/(tabs)');
@@ -49,24 +47,50 @@ export default function UserLocationScreen() {
     try {
       const { status } = await Location.requestForegroundPermissionsAsync();
       if (status !== 'granted') {
-        setError('Necesitamos acceso a tu ubicacion para mostrarte tiendas cercanas.');
+        setError('Necesitamos acceso a tu ubicación para mostrarte tiendas cercanas.');
         setLoading(false);
         return;
       }
 
-      const location = await Location.getCurrentPositionAsync({});
-      await finishOnboarding(location.coords.latitude, location.coords.longitude);
+      const loc = await Location.getCurrentPositionAsync({});
+      const { latitude, longitude } = loc.coords;
+
+      // Reverse-geocode to get a meaningful location name
+      let name: string = strings.changeLocation.myCurrentLocation;
+      try {
+        const [place] = await Location.reverseGeocodeAsync({ latitude, longitude });
+        if (place) {
+          name = [place.city, place.region].filter(Boolean).join(', ') || name;
+        }
+      } catch {
+        // Keep default name if reverse geocode fails
+      }
+
+      await finishOnboarding(name, latitude, longitude);
     } catch {
-      await finishOnboarding(strings.discover.latitude, strings.discover.longitude);
+      await finishOnboarding(strings.discover.defaultLocation, strings.discover.latitude, strings.discover.longitude);
     } finally {
       setLoading(false);
     }
   };
 
   const handleSelectLocation = async () => {
+    if (!user) return;
     setLoading(true);
-    await finishOnboarding(strings.discover.latitude, strings.discover.longitude);
-    setLoading(false);
+    setError('');
+
+    try {
+      const emailName = user.email?.split('@')[0] || 'Usuario';
+      await createConsumerProfile(user.id, emailName);
+      // Mark onboarded without setting a location — the nav guard in _layout
+      // will redirect to /change-location since no location is set.
+      setOnboarded();
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : strings.common.error;
+      setError(message);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (

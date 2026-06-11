@@ -19,41 +19,13 @@ import { colors, spacing, typography } from '../src/theme';
 import { strings } from '../src/constants/strings';
 import { FIFTY_MILES_IN_METERS } from '../src/data';
 import { useLocation } from '../src/context/LocationContext';
+import { searchAddresses, getPlaceDetails } from '../src/lib/googlePlaces';
 
 interface AddressResult {
   id: string;
   name: string;
   latitude: number;
   longitude: number;
-}
-
-interface NominatimResult {
-  place_id: number;
-  display_name: string;
-  lat: string;
-  lon: string;
-}
-
-async function searchPanamaAddresses(query: string): Promise<AddressResult[]> {
-  const enrichedQuery = /panama/i.test(query) ? query : `${query}, Panama`;
-  const params = new URLSearchParams({
-    q: enrichedQuery,
-    countrycodes: 'pa',
-    format: 'json',
-    limit: '6',
-    addressdetails: '0',
-    'accept-language': 'es',
-  });
-  const response = await fetch(`https://nominatim.openstreetmap.org/search?${params}`, {
-    headers: { 'User-Agent': 'HeistApp/1.0' },
-  });
-  const data: NominatimResult[] = await response.json();
-  return data.map((r) => ({
-    id: String(r.place_id),
-    name: r.display_name,
-    latitude: parseFloat(r.lat),
-    longitude: parseFloat(r.lon),
-  }));
 }
 
 const DEFAULT_REGION = {
@@ -71,7 +43,7 @@ export default function ChangeLocationScreen() {
   const [query, setQuery] = useState('');
   const [selectedAddress, setSelectedAddress] = useState<AddressResult | null>(null);
   const [locating, setLocating] = useState(false);
-  const [suggestions, setSuggestions] = useState<AddressResult[]>([]);
+  const [placeSuggestions, setPlaceSuggestions] = useState<{ placeId: string; address: string }[]>([]);
   const [searching, setSearching] = useState(false);
   const [mapCenter, setMapCenter] = useState<{ latitude: number; longitude: number }>({
     latitude: DEFAULT_REGION.latitude,
@@ -81,17 +53,17 @@ export default function ChangeLocationScreen() {
 
   useEffect(() => {
     if (selectedAddress || !query.trim()) {
-      setSuggestions([]);
+      setPlaceSuggestions([]);
       return;
     }
     if (debounceRef.current) clearTimeout(debounceRef.current);
     debounceRef.current = setTimeout(async () => {
       setSearching(true);
       try {
-        const results = await searchPanamaAddresses(query.trim());
-        setSuggestions(results);
+        const places = await searchAddresses(query.trim());
+        setPlaceSuggestions(places.map((p) => ({ placeId: p.placeId, address: p.address })));
       } catch {
-        setSuggestions([]);
+        setPlaceSuggestions([]);
       } finally {
         setSearching(false);
       }
@@ -103,14 +75,27 @@ export default function ChangeLocationScreen() {
 
   const showSuggestions = query.trim().length > 0 && !selectedAddress;
 
-  function selectAddress(address: AddressResult) {
-    setSelectedAddress(address);
-    setQuery(address.name);
+  async function selectPlace(placeId: string, address: string) {
+    setPlaceSuggestions([]);
+    setQuery(address);
     Keyboard.dismiss();
+    setSearching(true);
 
-    setMapCenter({ latitude: address.latitude, longitude: address.longitude });
+    const details = await getPlaceDetails(placeId);
+    setSearching(false);
+    if (!details) return;
+
+    const resolved: AddressResult = {
+      id: placeId,
+      name: details.address,
+      latitude: details.latitude,
+      longitude: details.longitude,
+    };
+    setSelectedAddress(resolved);
+    setQuery(resolved.name);
+    setMapCenter({ latitude: resolved.latitude, longitude: resolved.longitude });
     mapRef.current?.animateToRegion(
-      { latitude: address.latitude, longitude: address.longitude, latitudeDelta: 1.5, longitudeDelta: 1.5 },
+      { latitude: resolved.latitude, longitude: resolved.longitude, latitudeDelta: 1.5, longitudeDelta: 1.5 },
       500,
     );
   }
@@ -214,13 +199,13 @@ export default function ChangeLocationScreen() {
               </View>
             ) : (
               <FlatList
-                data={suggestions}
-                keyExtractor={(item) => item.id}
+                data={placeSuggestions}
+                keyExtractor={(item) => item.placeId}
                 keyboardShouldPersistTaps="handled"
                 renderItem={({ item }) => (
-                  <TouchableOpacity style={styles.suggestionItem} onPress={() => selectAddress(item)}>
+                  <TouchableOpacity style={styles.suggestionItem} onPress={() => selectPlace(item.placeId, item.address)}>
                     <Ionicons name="location-outline" size={18} color={colors.text.secondary} />
-                    <Text style={styles.suggestionText}>{item.name}</Text>
+                    <Text style={styles.suggestionText}>{item.address}</Text>
                   </TouchableOpacity>
                 )}
                 ListEmptyComponent={

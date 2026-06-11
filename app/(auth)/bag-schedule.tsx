@@ -113,7 +113,6 @@ export default function BagScheduleScreen() {
             onPress={handleContinue}
             size="lg"
             fullWidth
-            disabled={activeDays === 0}
           />
         </>
       }

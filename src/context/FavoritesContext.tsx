@@ -7,6 +7,7 @@ import {
   addFavoriteBusiness as apiBizAdd,
   removeFavoriteBusiness as apiBizRemove,
 } from '../data';
+import { useAuth } from './AuthContext';
 
 interface FavoritesState {
   favoriteBusinessIds: Set<string>;
@@ -72,17 +73,20 @@ interface FavoritesContextType {
 const FavoritesContext = createContext<FavoritesContextType | null>(null);
 
 export function FavoritesProvider({ children }: { children: React.ReactNode }) {
+  const { user } = useAuth();
+  const userId = user?.id ?? null;
   const [state, dispatch] = useReducer(favoritesReducer, initialState);
 
-  // Load from Supabase on mount
+  // Load from Supabase when user is available
   useEffect(() => {
-    getFavoriteBagIds()
+    if (!userId) return;
+    getFavoriteBagIds(userId)
       .then((ids) => dispatch({ type: 'SET_BAGS', ids }))
       .catch(() => {});
-    getFavoriteBusinessIds()
+    getFavoriteBusinessIds(userId)
       .then((ids) => dispatch({ type: 'SET_BUSINESSES', ids }))
       .catch(() => {});
-  }, []);
+  }, [userId]);
 
   const isFavorite = useCallback(
     (businessId: string) => state.favoriteBusinessIds.has(businessId),
@@ -101,25 +105,28 @@ export function FavoritesProvider({ children }: { children: React.ReactNode }) {
   );
 
   const addFavorites = useCallback((bagId: string | null, businessId: string | null) => {
+    if (!userId) return;
     if (bagId) {
       dispatch({ type: 'ADD_BAG', id: bagId });
-      apiBagAdd(bagId).catch(() => dispatch({ type: 'REMOVE_BAG', id: bagId }));
+      apiBagAdd(userId, bagId).catch(() => dispatch({ type: 'REMOVE_BAG', id: bagId }));
     }
     if (businessId) {
       dispatch({ type: 'ADD_BUSINESS', id: businessId });
-      apiBizAdd(businessId).catch(() => dispatch({ type: 'REMOVE_BUSINESS', id: businessId }));
+      apiBizAdd(userId, businessId).catch(() => dispatch({ type: 'REMOVE_BUSINESS', id: businessId }));
     }
-  }, []);
+  }, [userId]);
 
   const removeBagFavorite = useCallback((bagId: string) => {
+    if (!userId) return;
     dispatch({ type: 'REMOVE_BAG', id: bagId });
-    apiBagRemove(bagId).catch(() => dispatch({ type: 'ADD_BAG', id: bagId }));
-  }, []);
+    apiBagRemove(userId, bagId).catch(() => dispatch({ type: 'ADD_BAG', id: bagId }));
+  }, [userId]);
 
   const removeBusinessFavorite = useCallback((businessId: string) => {
+    if (!userId) return;
     dispatch({ type: 'REMOVE_BUSINESS', id: businessId });
-    apiBizRemove(businessId).catch(() => dispatch({ type: 'ADD_BUSINESS', id: businessId }));
-  }, []);
+    apiBizRemove(userId, businessId).catch(() => dispatch({ type: 'ADD_BUSINESS', id: businessId }));
+  }, [userId]);
 
   // Backward compat: toggle business favorite
   const toggleFavorite = useCallback((businessId: string) => {

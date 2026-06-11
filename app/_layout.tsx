@@ -3,45 +3,48 @@ import { Stack, useRouter, useSegments } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { BottomSheetModalProvider } from '@gorhom/bottom-sheet';
-import { StyleSheet, ActivityIndicator, View } from 'react-native';
+import { StyleSheet, ActivityIndicator, View, AppState } from 'react-native';
 import { FavoritesProvider } from '../src/context/FavoritesContext';
-import { LocationProvider } from '../src/context/LocationContext';
+import { LocationProvider, useLocation } from '../src/context/LocationContext';
 import { AuthProvider, useAuth } from '../src/context/AuthContext';
 import { colors } from '../src/theme';
 
 function RootNavigator() {
   const { session, userRole, isLoading, isOnboarded } = useAuth();
+  const { location, isLoaded: locationLoaded } = useLocation();
   const segments = useSegments() as string[];
   const router = useRouter();
 
   useEffect(() => {
-    if (isLoading) return;
+    if (isLoading || !locationLoaded) return;
 
     const inAuthGroup = segments[0] === '(auth)';
+    const inConsumerTabs = segments[0] === '(tabs)';
+    const inBusinessTabs = segments[0] === '(business-tabs)';
+    const onChangeLocation = segments[0] === 'change-location';
 
     if (!session) {
-      // Not signed in — go to auth
       if (!inAuthGroup) {
         router.replace('/(auth)/welcome');
       }
     } else if (!isOnboarded) {
-      // Signed in but hasn't completed onboarding
-      // Let them stay in auth group to finish onboarding flow
+      // Signed in but hasn't completed onboarding — restart from welcome
       if (!inAuthGroup) {
-        router.replace('/(auth)/country-select');
+        router.replace('/(auth)/welcome');
       }
+    } else if (userRole === 'consumer' && !location && !onChangeLocation) {
+      // Consumer finished onboarding but has no location set — send to picker
+      router.replace('/change-location');
     } else if (userRole === 'business') {
-      // Business user — go to business tabs
-      if (inAuthGroup) {
+      if (inAuthGroup || inConsumerTabs) {
         router.replace('/(business-tabs)');
       }
     } else {
-      // Consumer user — go to consumer tabs
-      if (inAuthGroup) {
+      if (inAuthGroup || inBusinessTabs) {
         router.replace('/(tabs)');
       }
     }
-  }, [session, userRole, isLoading, isOnboarded, segments, router]);
+  }, [session, userRole, isLoading, isOnboarded, location, locationLoaded, segments, router]);
 
   if (isLoading) {
     return (

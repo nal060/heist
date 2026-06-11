@@ -4,6 +4,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors, spacing, typography } from '../src/theme';
 import { strings } from '../src/constants/strings';
 import { useAuth } from '../src/context/AuthContext';
+import { useLocation } from '../src/context/LocationContext';
 import Divider from '../src/components/ui/Divider';
 import ScreenHeader from '../src/components/ui/ScreenHeader';
 import SettingsRow from '../src/components/ui/SettingsRow';
@@ -20,7 +21,8 @@ const SETTINGS_ITEMS: { icon: IoniconsName; label: string }[] = [
 
 export default function SettingsScreen() {
   const insets = useSafeAreaInsets();
-  const { signOut, deleteAccount } = useAuth();
+  const { signOut } = useAuth();
+  const { clearLocation } = useLocation();
 
   const handleLogout = () => {
     Alert.alert(
@@ -28,32 +30,11 @@ export default function SettingsScreen() {
       '',
       [
         { text: strings.common.cancel, style: 'cancel' },
-        { text: strings.common.confirm, style: 'destructive', onPress: signOut },
+        { text: strings.common.confirm, style: 'destructive', onPress: async () => { await signOut(); await clearLocation(); } },
       ],
     );
   };
 
-  const handleDeleteAccount = () => {
-    Alert.alert(
-      strings.common.deleteAccountTitle,
-      strings.common.deleteAccountMessage,
-      [
-        { text: strings.common.cancel, style: 'cancel' },
-        {
-          text: strings.common.deleteAccountConfirm,
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              await deleteAccount();
-            } catch (err: unknown) {
-              const message = err instanceof Error ? err.message : strings.common.error;
-              Alert.alert(strings.common.error, message);
-            }
-          },
-        },
-      ],
-    );
-  };
 
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
@@ -77,13 +58,6 @@ export default function SettingsScreen() {
             label={strings.settings.logout}
             danger
             onPress={handleLogout}
-          />
-          <Divider />
-          <SettingsRow
-            icon="trash-outline"
-            label={strings.common.deleteAccount}
-            danger
-            onPress={handleDeleteAccount}
           />
         </View>
 

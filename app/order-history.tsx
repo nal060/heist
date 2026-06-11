@@ -6,6 +6,7 @@ import { Image } from 'expo-image';
 import { colors, spacing, typography, borderRadius, shadows } from '../src/theme';
 import { strings } from '../src/constants/strings';
 import { getOrderHistory } from '../src/data';
+import { useAuth } from '../src/context/AuthContext';
 import EmptyState from '../src/components/ui/EmptyState';
 import Badge from '../src/components/ui/Badge';
 import ScreenHeader from '../src/components/ui/ScreenHeader';
@@ -22,11 +23,13 @@ const STATUS_BADGE_VARIANT: Record<OrderStatus, 'popular' | 'nuevo' | 'remaining
 export default function OrderHistoryScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const { user } = useAuth();
   const [orders, setOrders] = useState<OrderWithDetails[]>([]);
 
   useEffect(() => {
-    getOrderHistory().then(setOrders);
-  }, []);
+    if (!user) return;
+    getOrderHistory(user.id).then(setOrders);
+  }, [user]);
 
   const renderOrder = ({ item }: { item: OrderWithDetails }) => (
     <TouchableOpacity style={styles.orderCard} activeOpacity={0.7}>

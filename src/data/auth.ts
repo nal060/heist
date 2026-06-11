@@ -3,7 +3,6 @@ import type {
   Business,
   ConsumerProfile,
   Category,
-  Country,
   UserPreference,
   PreferenceType,
   BagPickupSchedule,
@@ -12,27 +11,53 @@ import type {
 
 export type UserRole = 'consumer' | 'business';
 
+let cachedPanamaId: string | null = null;
+
+async function getPanamaCountryId(): Promise<string> {
+  if (cachedPanamaId) return cachedPanamaId;
+  const { data, error } = await supabase
+    .from('countries')
+    .select('id')
+    .eq('code', 'PA')
+    .single();
+  if (error || !data) throw new Error('Could not find Panama country record');
+  cachedPanamaId = data.id;
+  return data.id;
+}
+
 interface UserRoleResult {
   role: UserRole | null;
   profile: ConsumerProfile | Business | null;
 }
 
 export async function getUserRole(userId: string): Promise<UserRoleResult> {
-  const { data: consumer } = await supabase
+  // Force a token refresh so subsequent queries use a valid access token.
+  // On cold start the persisted JWT is often expired; getUser() refreshes it.
+  await supabase.auth.getUser();
+
+  const { data: consumer, error: consumerError } = await supabase
     .from('consumer_profiles')
     .select('*')
     .eq('user_id', userId)
-    .single();
+    .maybeSingle();
+
+  if (consumerError) {
+    throw new Error(`consumer_profiles lookup failed: ${consumerError.message}`);
+  }
 
   if (consumer) {
     return { role: 'consumer', profile: consumer };
   }
 
-  const { data: business } = await supabase
+  const { data: business, error: businessError } = await supabase
     .from('businesses')
     .select('*')
     .eq('user_id', userId)
-    .single();
+    .maybeSingle();
+
+  if (businessError) {
+    throw new Error(`businesses lookup failed: ${businessError.message}`);
+  }
 
   if (business) {
     return { role: 'business', profile: business };
@@ -41,29 +66,16 @@ export async function getUserRole(userId: string): Promise<UserRoleResult> {
   return { role: null, profile: null };
 }
 
-// --- Countries ---
-
-export async function getActiveCountries(): Promise<Country[]> {
-  const { data, error } = await supabase
-    .from('countries')
-    .select('*')
-    .eq('is_active', true)
-    .order('name');
-
-  if (error) throw new Error(`Error al obtener paises: ${error.message}`);
-  return data;
-}
-
 // --- Consumer Profile ---
 
 export async function createConsumerProfile(
   userId: string,
   name: string,
-  countryId?: string,
 ): Promise<ConsumerProfile> {
+  const countryId = await getPanamaCountryId();
   const { data, error } = await supabase
     .from('consumer_profiles')
-    .insert({ user_id: userId, name, country_id: countryId || null })
+    .insert({ user_id: userId, name, country_id: countryId })
     .select()
     .single();
 
@@ -117,11 +129,11 @@ interface CreateBusinessInput {
   longitude: number;
   phone?: string;
   photoUrl?: string;
-  countryId?: string;
   googlePlaceId?: string;
 }
 
 export async function createBusiness(input: CreateBusinessInput): Promise<Business> {
+  const countryId = await getPanamaCountryId();
   const { data, error } = await supabase
     .from('businesses')
     .insert({
@@ -133,7 +145,7 @@ export async function createBusiness(input: CreateBusinessInput): Promise<Busine
       longitude: input.longitude,
       phone: input.phone || null,
       photo_url: input.photoUrl || null,
-      country_id: input.countryId || null,
+      country_id: countryId,
       google_place_id: input.googlePlaceId || null,
     })
     .select()

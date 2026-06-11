@@ -14,7 +14,6 @@ export default function AuthLayout() {
       <Stack.Screen name="role-select" />
       <Stack.Screen name="sign-in" />
       <Stack.Screen name="verify" />
-      <Stack.Screen name="country-select" />
       <Stack.Screen name="user-preferences" />
       <Stack.Screen name="pickup-preferences" />
       <Stack.Screen name="user-location" />
