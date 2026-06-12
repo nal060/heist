@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -17,7 +17,7 @@ import MapView, { Circle } from 'react-native-maps';
 import * as Location from 'expo-location';
 import { colors, spacing, typography } from '../src/theme';
 import { strings } from '../src/constants/strings';
-import { FIFTY_MILES_IN_METERS } from '../src/data';
+import { FIVE_MILES_IN_METERS } from '../src/data';
 import { useLocation } from '../src/context/LocationContext';
 import { searchAddresses, getPlaceDetails } from '../src/lib/googlePlaces';
 
@@ -35,6 +35,19 @@ const DEFAULT_REGION = {
   longitudeDelta: 1.5,
 };
 
+const METERS_PER_DEGREE_LAT = 111320;
+const MAP_EDGE_PADDING = { top: 50, right: 50, bottom: 50, left: 50 };
+
+// Corner coordinates of the radius circle's bounding box, used to auto-fit the map.
+function radiusBounds(latitude: number, longitude: number, radiusMeters: number) {
+  const latDelta = radiusMeters / METERS_PER_DEGREE_LAT;
+  const lonDelta = radiusMeters / (METERS_PER_DEGREE_LAT * Math.cos((latitude * Math.PI) / 180));
+  return [
+    { latitude: latitude + latDelta, longitude: longitude + lonDelta },
+    { latitude: latitude - latDelta, longitude: longitude - lonDelta },
+  ];
+}
+
 export default function ChangeLocationScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
@@ -50,6 +63,13 @@ export default function ChangeLocationScreen() {
     longitude: DEFAULT_REGION.longitude,
   });
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const fitToRadius = useCallback((latitude: number, longitude: number) => {
+    mapRef.current?.fitToCoordinates(radiusBounds(latitude, longitude, FIVE_MILES_IN_METERS), {
+      edgePadding: MAP_EDGE_PADDING,
+      animated: true,
+    });
+  }, []);
 
   useEffect(() => {
     if (selectedAddress || !query.trim()) {
@@ -94,10 +114,7 @@ export default function ChangeLocationScreen() {
     setSelectedAddress(resolved);
     setQuery(resolved.name);
     setMapCenter({ latitude: resolved.latitude, longitude: resolved.longitude });
-    mapRef.current?.animateToRegion(
-      { latitude: resolved.latitude, longitude: resolved.longitude, latitudeDelta: 1.5, longitudeDelta: 1.5 },
-      500,
-    );
+    fitToRadius(resolved.latitude, resolved.longitude);
   }
 
   async function handleLocateMe() {
@@ -120,10 +137,7 @@ export default function ChangeLocationScreen() {
         longitude,
       });
       setQuery(strings.changeLocation.myCurrentLocation);
-      mapRef.current?.animateToRegion(
-        { latitude, longitude, latitudeDelta: 1.5, longitudeDelta: 1.5 },
-        500,
-      );
+      fitToRadius(latitude, longitude);
     } catch {
       Alert.alert(strings.common.error, strings.changeLocation.locationError);
     } finally {
@@ -235,10 +249,11 @@ export default function ChangeLocationScreen() {
           ref={mapRef}
           style={styles.map}
           initialRegion={DEFAULT_REGION}
+          onMapReady={() => fitToRadius(mapCenter.latitude, mapCenter.longitude)}
         >
           <Circle
             center={mapCenter}
-            radius={FIFTY_MILES_IN_METERS}
+            radius={FIVE_MILES_IN_METERS}
             strokeColor={colors.primary[500]}
             fillColor="rgba(66, 133, 244, 0.15)"
             strokeWidth={2}

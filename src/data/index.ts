@@ -10,7 +10,7 @@
     SurplusBag,
   } from '../types';
 
-  export const FIFTY_MILES_IN_METERS = 80467.2;
+  export const FIVE_MILES_IN_METERS = 8046.72;
 
 /**
  * Returns all categories from the database.
@@ -62,7 +62,7 @@ export async function getAllActiveBags(): Promise<BagWithBusiness[]> {
 }
 
   /**
-   * Returns surplus bags from businesses within 50 miles of the given coordinates.
+   * Returns surplus bags from businesses within 5 miles of the given coordinates.
    */
   export async function getNearbyBags(
     latitude: number,
@@ -73,7 +73,7 @@ export async function getAllActiveBags(): Promise<BagWithBusiness[]> {
       {
         user_lat: latitude,
         user_lon: longitude,
-        radius_meters: FIFTY_MILES_IN_METERS,
+        radius_meters: FIVE_MILES_IN_METERS,
       },
     );
 
