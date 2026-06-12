@@ -10,9 +10,7 @@ import {
   setBusinessCategory,
   createSurplusBag,
   saveBagSchedule,
-  saveBusinessPhotos,
 } from '../../src/data/auth';
-import { getPhotoUrl } from '../../src/lib/googlePlaces';
 import type { BagSizeType } from '../../src/types';
 import ScreenShell from '../../src/components/ui/ScreenShell';
 import BagSummaryCard from '../../src/components/ui/BagSummaryCard';
@@ -30,7 +28,6 @@ export default function BagReviewScreen() {
     longitude: string;
     googlePlaceId: string;
     categoryId: string;
-    photoRefs: string;
     bagTitle: string;
     bagDescription: string;
     bagSize: string;
@@ -66,21 +63,11 @@ export default function BagReviewScreen() {
         latitude: parseFloat(params.latitude || '8.953'),
         longitude: parseFloat(params.longitude || '-79.534'),
         phone: params.phone || undefined,
+        photoUrl: params.photoUrl || undefined,
         googlePlaceId: params.googlePlaceId || undefined,
       });
 
       await setBusinessCategory(business.id, params.categoryId!);
-
-      const photoRefs = JSON.parse(params.photoRefs || '[]') as string[];
-      if (photoRefs.length > 0) {
-        const photos = photoRefs.map((ref, i) => ({
-          url: getPhotoUrl(ref),
-          source: 'google_maps',
-          isSelected: true,
-          order: i,
-        }));
-        await saveBusinessPhotos(business.id, photos);
-      }
 
       const schedule = JSON.parse(params.scheduleJson || '[]');
       const firstScheduleEntry = schedule[0];

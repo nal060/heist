@@ -25,7 +25,7 @@ export default function BusinessCategoryScreen() {
     latitude: string;
     longitude: string;
     googlePlaceId: string;
-    photoRefs: string;
+    photoUrl: string;
   }>();
 
   const [categories, setCategories] = useState<Category[]>([]);

@@ -266,14 +266,6 @@ export default function EditBagScreen() {
           editAllLabel={strings.bagScheduleSetup.editForAllDays}
         />
       </View>
-
-      {/* Photos */}
-      <ImagePickerSection
-        photos={photos}
-        onAdd={handleAddPhoto}
-        onRemove={handleRemovePhoto}
-        uploading={uploading}
-      />
     </ScreenShell>
   );
 }

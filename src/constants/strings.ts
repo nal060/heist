@@ -365,6 +365,7 @@ export const strings = {
     continue: 'Continuar',
     photoRequired: 'Agrega una foto para continuar',
     uploading: 'Subiendo foto...',
+    googleHint: 'Encontramos esta foto de tu negocio. Puedes mantenerla o reemplazarla.',
   },
 
   // Auth - Business category selection

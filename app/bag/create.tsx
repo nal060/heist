@@ -264,15 +264,6 @@ export default function CreateBagScreen() {
           editAllLabel={strings.bagScheduleSetup.editForAllDays}
         />
       </View>
-
-      {/* Photos */}
-      <View style={styles.section}>
-        <ImagePickerSection
-          photos={pendingPhotos}
-          onAdd={(uri) => setPendingPhotos((prev) => [...prev, { id: `pending-${Date.now()}`, url: uri }])}
-          onRemove={(photo) => setPendingPhotos((prev) => prev.filter((p) => p.id !== photo.id))}
-        />
-      </View>
     </ScreenShell>
   );
 }

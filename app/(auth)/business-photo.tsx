@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import {
   View,
   Text,
@@ -13,16 +13,31 @@ import { Ionicons } from '@expo/vector-icons';
 import { colors, typography, spacing, borderRadius } from '../../src/theme';
 import { strings } from '../../src/constants/strings';
 import { uploadBusinessPhoto } from '../../src/data/auth';
+import { getPhotoUrl } from '../../src/lib/googlePlaces';
 import ScreenShell from '../../src/components/ui/ScreenShell';
 import Button from '../../src/components/ui/Button';
 
 export default function BusinessPhotoScreen() {
   const router = useRouter();
-  const params = useLocalSearchParams();
+  const params = useLocalSearchParams<{ photoRefs?: string }>();
 
-  const [photoUri, setPhotoUri] = useState<string | null>(null);
+  // Default photo pulled from the Google Places result (if the business was looked up).
+  const googlePhotoUrl = useMemo<string | null>(() => {
+    try {
+      const refs = JSON.parse(params.photoRefs || '[]') as string[];
+      return refs.length > 0 ? getPhotoUrl(refs[0], 800) : null;
+    } catch {
+      return null;
+    }
+  }, [params.photoRefs]);
+
+  // User-picked replacement; when null we fall back to the Google default.
+  const [localPhotoUri, setLocalPhotoUri] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState('');
+
+  const displayUri = localPhotoUri ?? googlePhotoUrl;
+  const usingGoogleDefault = !localPhotoUri && !!googlePhotoUrl;
 
   const pickFromLibrary = async () => {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -37,7 +52,7 @@ export default function BusinessPhotoScreen() {
       quality: 0.8,
     });
     if (!result.canceled && result.assets[0]) {
-      setPhotoUri(result.assets[0].uri);
+      setLocalPhotoUri(result.assets[0].uri);
       setError('');
     }
   };
@@ -54,23 +69,26 @@ export default function BusinessPhotoScreen() {
       quality: 0.8,
     });
     if (!result.canceled && result.assets[0]) {
-      setPhotoUri(result.assets[0].uri);
+      setLocalPhotoUri(result.assets[0].uri);
       setError('');
     }
   };
 
   const handleContinue = async () => {
-    if (!photoUri) {
+    // Re-host whichever photo is showing (user replacement or the Google default) to our bucket.
+    const sourceUri = displayUri;
+    if (!sourceUri) {
       setError(strings.businessPhoto.photoRequired);
       return;
     }
     setUploading(true);
     setError('');
     try {
-      const photoUrl = await uploadBusinessPhoto(photoUri);
+      const photoUrl = await uploadBusinessPhoto(sourceUri);
+      const { photoRefs: _photoRefs, ...rest } = params;
       router.push({
         pathname: '/(auth)/business-category',
-        params: { ...params, photoUrl },
+        params: { ...rest, photoUrl },
       });
     } catch (err) {
       console.error('[BusinessPhoto] upload failed:', err);
@@ -93,7 +111,7 @@ export default function BusinessPhotoScreen() {
           size="lg"
           fullWidth
           loading={uploading}
-          disabled={!photoUri || uploading}
+          disabled={!displayUri || uploading}
         />
       }
     >
@@ -103,12 +121,12 @@ export default function BusinessPhotoScreen() {
         onPress={pickFromLibrary}
         activeOpacity={0.85}
         accessibilityRole="button"
-        accessibilityLabel={photoUri ? strings.businessPhoto.changePhoto : strings.businessPhoto.pickFromLibrary}
+        accessibilityLabel={displayUri ? strings.businessPhoto.changePhoto : strings.businessPhoto.pickFromLibrary}
       >
-        {photoUri ? (
+        {displayUri ? (
           <>
             <Image
-              source={{ uri: photoUri }}
+              source={{ uri: displayUri }}
               style={styles.preview}
               contentFit="cover"
               transition={200}
@@ -125,6 +143,10 @@ export default function BusinessPhotoScreen() {
           </View>
         )}
       </TouchableOpacity>
+
+      {usingGoogleDefault && (
+        <Text style={styles.googleHint}>{strings.businessPhoto.googleHint}</Text>
+      )}
 
       {/* Action buttons */}
       <View style={styles.actions}>
@@ -192,6 +214,12 @@ const styles = StyleSheet.create({
   placeholderText: {
     fontSize: typography.fontSize.sm,
     color: colors.text.secondary,
+  },
+  googleHint: {
+    fontSize: typography.fontSize.sm,
+    color: colors.text.secondary,
+    marginTop: -spacing.sm,
+    marginBottom: spacing.lg,
   },
   actions: {
     flexDirection: 'row',

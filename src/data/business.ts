@@ -81,7 +81,7 @@ export async function getBusinessDashboard(businessId: string): Promise<Business
   // Round-trip 1: profile + visible bags (active + draft)
   const [{ data: business, error: bizError }, { data: visibleBagsData, error: bagsError }] =
     await Promise.all([
-      supabase.from('businesses').select('name').eq('id', businessId).single(),
+      supabase.from('businesses').select('name, photo_url').eq('id', businessId).single(),
       supabase
         .from('surplus_bags')
         .select('id, title, quantity_available, quantity_total, discounted_price, status, pickup_start_time, pickup_end_time')
@@ -95,8 +95,8 @@ export async function getBusinessDashboard(businessId: string): Promise<Business
   const bags = visibleBagsData ?? [];
   const bagIds = bags.map((b) => b.id);
 
-  // Round-trip 2: today's stats + recent orders + bag schedules + business photo
-  const [todayRes, recentOrders, scheduleRes, photoRes] = await Promise.all([
+  // Round-trip 2: today's stats + recent orders + bag schedules
+  const [todayRes, recentOrders, scheduleRes] = await Promise.all([
     supabase
       .from('orders')
       .select('total_price, status, surplus_bags!inner(business_id)')
@@ -111,20 +111,13 @@ export async function getBusinessDashboard(businessId: string): Promise<Business
           .in('bag_id', bagIds)
           .eq('is_active', true)
       : Promise.resolve({ data: [], error: null }),
-    supabase
-      .from('business_photos')
-      .select('photo_url')
-      .eq('business_id', businessId)
-      .eq('is_selected', true)
-      .order('display_order')
-      .limit(1),
   ]);
 
   if (todayRes.error) throw new Error('No se pudieron cargar los pedidos: ' + todayRes.error.message);
 
   const todayOrders = todayRes.data ?? [];
   const schedules = (scheduleRes.data ?? []) as { bag_id: string; day_of_week: number; start_time: string; end_time: string }[];
-  const businessPhoto = (photoRes.data ?? [])[0]?.photo_url ?? null;
+  const businessPhoto = business?.photo_url ?? null;
 
   // Group schedules by bag_id
   const scheduleByBag = new Map<string, typeof schedules>();

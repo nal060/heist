@@ -310,47 +310,15 @@ export async function getBagSchedule(bagId: string): Promise<BagPickupSchedule[]
   return data;
 }
 
-// --- Business Photos ---
-
-export async function saveBusinessPhotos(
-  businessId: string,
-  photos: { url: string; source: string; isSelected: boolean; order: number }[],
-) {
-  const rows = photos.map((p) => ({
-    business_id: businessId,
-    photo_url: p.url,
-    source: p.source,
-    is_selected: p.isSelected,
-    display_order: p.order,
-  }));
-
-  const { data, error } = await supabase
-    .from('business_photos')
-    .insert(rows)
-    .select();
-
-  if (error) throw new Error(`Error al guardar fotos: ${error.message}`);
-  return data;
-}
-
-export async function getBusinessPhotos(businessId: string) {
-  const { data, error } = await supabase
-    .from('business_photos')
-    .select('*')
-    .eq('business_id', businessId)
-    .eq('is_selected', true)
-    .order('display_order');
-
-  if (error) throw new Error(`Error al obtener fotos: ${error.message}`);
-  return data;
-}
-
 // --- Business Photo Upload ---
 
+const IMAGE_EXTENSIONS = ['jpg', 'jpeg', 'png', 'webp', 'heic'];
+
 export async function uploadBusinessPhoto(uri: string): Promise<string> {
-  const rawExt = (uri.split('.').pop() ?? 'jpg').split('?')[0].toLowerCase();
-  const ext = rawExt.length > 0 ? rawExt : 'jpg';
-  const mimeType = ext === 'jpg' ? 'image/jpeg' : `image/${ext}`;
+  // Remote URLs (e.g. Google Place photos) carry no usable extension — default to jpeg.
+  const rawExt = (uri.split('?')[0].split('.').pop() ?? '').toLowerCase();
+  const ext = IMAGE_EXTENSIONS.includes(rawExt) ? rawExt : 'jpg';
+  const mimeType = ext === 'jpg' || ext === 'jpeg' ? 'image/jpeg' : `image/${ext}`;
   const fileName = `${Date.now()}.${ext}`;
   const response = await fetch(uri);
   const arrayBuffer = await response.arrayBuffer();
