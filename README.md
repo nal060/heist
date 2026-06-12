@@ -15,30 +15,22 @@ Surplus food marketplace for Latin America. Users discover and reserve surprise 
 
 Requires [Docker Desktop](https://www.docker.com/products/docker-desktop/) only.
 
-```bash
-# First run: build the image and start the web dev server
-docker compose up --build
+The app runs on physical devices over **tunnel mode** — scan the QR code with [Expo Go](https://expo.dev/go). `@expo/ngrok` is already a dependency, so no extra install is needed.
 
-# Subsequent runs
-docker compose up
+```bash
+# First run: build the image and start Metro in tunnel mode
+docker compose run --rm app npx expo start --tunnel
+
+# Rebuild after package.json / package-lock.json changes
+docker compose build
 ```
 
-Open **http://localhost:8081** in a browser. Metro hot reload works automatically on file save.
-
-Rebuild after `package.json` / `package-lock.json` changes:
-```bash
-docker compose up --build
-```
+Scan the QR code with Expo Go. Metro hot reload works automatically on file save.
 
 One-off commands (lint, typecheck):
 ```bash
 docker compose run --rm app npx tsc --noEmit
 docker compose run --rm app npm run lint
-```
-
-**Mobile device (tunnel mode):** scan the QR code with [Expo Go](https://expo.dev/go) — `@expo/ngrok` is already a dependency so no extra install is needed:
-```bash
-docker compose run --rm app npx expo start --tunnel --non-interactive
 ```
 
 ### Option B: Native (required for iOS/Android simulator)
@@ -47,10 +39,10 @@ Requires Node.js 20+, plus Xcode (iOS) or Android Studio (Android).
 
 ```bash
 npm install --legacy-peer-deps
-npx expo start
+npx expo start --tunnel
 ```
 
-Scan the QR code with your phone camera (iOS) or Expo Go app (Android).
+Scan the QR code with the Expo Go app on your device.
 
 ### Environment
 
@@ -61,10 +53,9 @@ cp .env.example .env
 
 | Works in Docker | Requires native setup |
 |---|---|
-| Web dev (`expo start --web`) | iOS Simulator (`npm run ios`) |
+| Tunnel mode for physical devices | iOS Simulator (`npm run ios`) |
 | Typecheck, lint | Android Emulator (`npm run android`) |
 | Supabase JS (hosted) | EAS / Xcode builds |
-| Tunnel mode for physical devices | |
 
 ## Project Structure
 
