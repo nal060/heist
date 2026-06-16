@@ -2,9 +2,8 @@ import { supabase } from '../lib/supabase';
 import type { CardBrand, PaymentMethod, TilopayBusinessAccount } from '../types';
 
 const TILOPAY_ACCOUNT_COLUMNS = [
-  'id', 'business_id', 'tilopay_affiliate_id', 'account_status',
-  'bank_account_last_four', 'bank_name', 'platform_fee_bps',
-  'created_at', 'updated_at',
+  'id', 'business_id', 'tilopay_user_id', 'tilopay_payout_email',
+  'account_status', 'platform_fee_bps', 'created_at', 'updated_at',
 ].join(', ');
 
 const PAYMENT_METHOD_COLUMNS = [

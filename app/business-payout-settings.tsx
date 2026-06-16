@@ -54,9 +54,9 @@ export default function BusinessPayoutSettingsScreen() {
 
   useEffect(() => () => { if (copyTimerRef.current) clearTimeout(copyTimerRef.current); }, []);
 
-  const handleCopyAffiliateId = useCallback(async () => {
-    if (!account) return;
-    await Clipboard.setStringAsync(account.tilopay_affiliate_id);
+  const handleCopyEmail = useCallback(async () => {
+    if (!account?.tilopay_payout_email) return;
+    await Clipboard.setStringAsync(account.tilopay_payout_email);
     setCopied(true);
     if (copyTimerRef.current) clearTimeout(copyTimerRef.current);
     copyTimerRef.current = setTimeout(() => setCopied(false), COPY_CONFIRMATION_MS);
@@ -82,7 +82,7 @@ export default function BusinessPayoutSettingsScreen() {
       <View style={[styles.container, { paddingTop: insets.top }]}>
         <ScreenHeader title={strings.businessPayoutSettings.title} />
         <View style={styles.center}>
-          <ErrorState onRetry={load} />
+          <ErrorState onRetry={load} />menuItems
         </View>
       </View>
     );
@@ -107,7 +107,7 @@ export default function BusinessPayoutSettingsScreen() {
         ) : account.account_status === 'active' ? (
           <ActiveContent
             account={account}
-            onCopy={handleCopyAffiliateId}
+            onCopy={handleCopyEmail}
             copied={copied}
           />
         ) : account.account_status === 'suspended' ? (
@@ -206,17 +206,17 @@ function ActiveContent({ account, onCopy, copied }: ActiveContentProps) {
       <Text style={styles.sectionSubtitle}>{strings.businessPayoutSettings.activeSubtitle}</Text>
       <View style={{ height: spacing.xxl }} />
 
-      {/* Affiliate ID row */}
+      {/* Payout email row */}
       <View style={styles.infoRow}>
         <View style={styles.infoRowContent}>
-          <Text style={styles.infoLabel}>{strings.businessPayoutSettings.affiliateId}</Text>
-          <Text style={styles.infoValue}>{account.tilopay_affiliate_id}</Text>
+          <Text style={styles.infoLabel}>{strings.businessPayoutSettings.payoutEmail}</Text>
+          <Text style={styles.infoValue}>{account.tilopay_payout_email}</Text>
         </View>
         <TouchableOpacity
           onPress={onCopy}
           style={styles.copyButton}
           accessibilityRole="button"
-          accessibilityLabel={strings.businessPayoutSettings.copyAffiliateId}
+          accessibilityLabel={strings.businessPayoutSettings.copyPayoutEmail}
           hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
         >
           <Ionicons

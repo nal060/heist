@@ -201,10 +201,9 @@ export type CardBrand = PaymentMethod['card_brand'];
 export interface TilopayBusinessAccount {
   id: string;
   business_id: string;
-  tilopay_affiliate_id: string;
+  tilopay_user_id: string | null;
+  tilopay_payout_email: string | null;
   account_status: 'pending' | 'active' | 'suspended' | 'offboarded';
-  bank_account_last_four: string | null;
-  bank_name: string | null;
   platform_fee_bps: number;
   created_at: string;
   updated_at: string;

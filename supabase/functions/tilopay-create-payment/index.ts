@@ -115,7 +115,7 @@ serve(async (req) => {
 
     const { data: tilopayAccount, error: accountError } = await supabase
       .from('tilopay_business_accounts')
-      .select('id, tilopay_affiliate_id, platform_fee_bps')
+      .select('id')
       .eq('business_id', bagRow.business_id)
       .eq('account_status', 'active')
       .single()
@@ -129,11 +129,9 @@ serve(async (req) => {
 
     const total = payment.total as number
     const orderNumber = generateOrderNumber(order_id)
-    const feeBps = tilopayAccount.platform_fee_bps as number
-    // platform_fee_bps: 500 = 5%. Tilopay expects a decimal percentage (e.g. 5.00)
-    const platformFeePercent = (feeBps / 100).toFixed(2)
 
     // ─── Real mode: call Tilopay processPayment ────────────────────────────────
+    // Fee split is not part of processPayment — it happens in a separate liquidation/split call
     const bearerToken = await getTilopayToken()
 
     let tilopayResponse: Record<string, unknown>
@@ -151,8 +149,6 @@ serve(async (req) => {
           orderNumber,
           amount: total,
           currency: 'CRC',
-          affiliateId: tilopayAccount.tilopay_affiliate_id,
-          platformFeePercent,
           redirect: 'monch://payment-callback',
           language: 'es',
           subscription: save_card ? 1 : 0,
